@@ -1,0 +1,89 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                   Int                  @id @default(autoincrement())
+  username             String               @unique
+  email                String               @unique
+  password             String
+  avatar               String?
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
+  isOnline             Boolean              @default(false)
+  lastSeen             DateTime?
+  messages             Message[]
+  createdConversations Conversation[]       @relation("CreatedConversations")
+  conversations        ConversationMember[]
+  friendshipsAsUser1   Friendship[]         @relation("FriendshipsAsUser1")
+  friendshipsAsUser2   Friendship[]         @relation("FriendshipsAsUser2")
+}
+
+model Message {
+  id             Int          @id @default(autoincrement())
+  content        String?
+  messageType    MessageType  @default(TEXT)
+  senderId       Int
+  conversationId Int
+  createdAt      DateTime     @default(now())
+  sender         User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+}
+
+model Conversation {
+  id        Int                  @id @default(autoincrement())
+  title     String?
+  type      Type                 @default(PRIVATE)
+  creatorId Int
+  createdAt DateTime             @default(now())
+  updatedAt DateTime             @updatedAt
+  creator   User                 @relation("CreatedConversations", fields: [creatorId], references: [id], onDelete: Cascade)
+  messages  Message[]
+  members   ConversationMember[]
+}
+
+model ConversationMember {
+  id             Int          @id @default(autoincrement())
+  userId         Int
+  conversationId Int
+  joinedAt       DateTime     @default(now())
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, conversationId])
+}
+
+model Friendship {
+  id        Int      @id @default(autoincrement())
+  userId1   Int //Always the smaller id
+  userId2   Int //Always the larger id
+  createdAt DateTime @default(now())
+  user1     User     @relation("FriendshipsAsUser1", fields: [userId1], references: [id], onDelete: Cascade)
+  user2     User     @relation("FriendshipsAsUser2", fields: [userId2], references: [id], onDelete: Cascade)
+
+  @@unique([userId1, userId2])
+}
+
+enum Type {
+  PRIVATE
+  GROUP
+}
+
+enum MessageType {
+  TEXT
+  IMAGE
+  VIDEO
+  FILE
+}
