@@ -2,15 +2,15 @@
 
 ## Current Status
 
-**Phase:** Phase 1 - Foundation  
-**Focus:** Project setup, planning, and documentation  
-**Started:** Week 1
+**Phase:** Phase 2: Authentication
+**Focus:** User registration and login system
+**Started:** Week 2
 
 ---
 
 ## Phase 1: Foundation
 
-**Status:** 🚧 In Progress  
+**Status:** DONE
 **Focus:** Project setup, planning, database design
 
 **Deliverables:**
