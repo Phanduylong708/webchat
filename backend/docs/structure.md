@@ -8,13 +8,14 @@ backend/
 │   │   │   └── auth.routes.js
 │   │   ├── controllers/
 │   │   │   └── auth.controller.js
-│   │   ├── services/
-│   │   │   └── auth.service.js
-│   │   └── middlewares/
+│   │   └── services/
+│   │       └── auth.service.js
 │   ├── shared/
 │   │   ├── config/
+│   │   │   └── passport.config.js
 │   │   ├── utils/
 │   │   │   ├── hash.util.js
+│   │   │   ├── jwt.util.js
 │   │   │   └── response.util.js
 │   │   └── prisma.js
 │   └── server.js

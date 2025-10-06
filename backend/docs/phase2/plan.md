@@ -1,118 +1,146 @@
-⎿ Phase 2: Authentication System - Implementation Plan (REVISED with Passport.js)
+# Phase 2: Authentication System - Backend Implementation
 
-    Approach: Bottom-up + Passport.js ecosystem (Learn by doing)
+**Status:** ✅ COMPLETED
+**Approach:** Manual Registration + Passport.js for Login & Protected Routes
+**Duration:** ~4 hours (including learning Passport, testing)
 
-    ---
-    STEP 1: Setup Server cơ bản ✅ DONE
+---
 
-    - Code src/server.js: Express app cơ bản với middlewares (json, cors)
-    - Test: Start server → verify chạy được trên PORT
+## Architecture Overview
 
-    STEP 2: Health Check Route ✅ DONE
+**Authentication Flow:**
+- Register: Manual validation → Service layer → Prisma (create user)
+- Login: Passport-local verify credentials → Generate JWT → Return token
+- Protected Routes: Passport-JWT extract & verify token → Attach user to req.user
 
-    - Tạo src/api/routes/health.routes.js: Simple GET /api/health endpoint
-    - Mount vào server.js
-    - Test: GET /api/health → return "OK"
+**Key Decisions:**
+- Stateless JWT authentication (NO sessions, NO serialize/deserialize)
+- Login with identifier field (accepts email OR username)
+- JWT payload: minimal (`sub: userId` only)
+- JWT stored client-side in localStorage
+- Logout: client-side only (remove token from storage, no backend endpoint)
+- Security: Generic error messages to avoid user enumeration
+- Password always excluded from API responses
 
-    STEP 3: Prisma Connection ✅ DONE
+---
 
-    - Tạo src/shared/prisma.js: Export Prisma Client singleton
-    - Import vào server.js để test connection
-    - Test: Query database (SELECT 1 hoặc count users)
+## Implementation Summary
 
-    STEP 4: Register Feature (Manual - REFACTORING to Passport)
+### ✅ STEP 1-3: Foundation Setup (from previous session)
+- Express server with JSON & CORS middleware
+- Prisma Client singleton with lazy connection
+- Global error handling middleware
 
-    OLD approach (manual validation):
-    - ✅ Created utils (hash, response)
-    - ✅ Created service, controller, routes
-    - 🔄 NEED REFACTOR: Convert to Passport-local strategy
+### ✅ STEP 4: User Registration (Manual Approach)
 
-    STEP 5: Passport Setup & Refactor (CURRENT)
+**Endpoint:** `POST /api/auth/register`
 
-    Sub-step 5.1: Install Passport packages
-    - Install: passport, passport-local, passport-jwt, jsonwebtoken
-    - Verify package.json
+**Design Decision:** Registration kept MANUAL (not using Passport) because Passport is designed for authentication, not user creation. Registration is business logic, not authentication.
 
-    Sub-step 5.2: Create Passport configuration
-    - Tạo src/shared/config/passport.config.js
-    - Configure passport-local strategy (for register/login)
-    - Configure passport-jwt strategy (for protected routes)
-    - Initialize Passport in server.js
+**Implementation:**
+- Created utility modules: hash.util.js (bcryptjs), response.util.js (standardized responses)
+- Service layer: register() function with duplicate check (OR query for email/username)
+- Controller: Manual validation (email format, password length, required fields)
+- Password hashed before database storage
+- Response excludes password field
 
-    Sub-step 5.3: Create JWT utilities
-    - Tạo src/shared/config/jwt.config.js: JWT secret & options từ .env
-    - Tạo src/shared/utils/jwt.util.js: generateToken(), verifyToken()
-    - Update .env: JWT_SECRET, JWT_EXPIRES_IN
+**Files:** auth.service.js, auth.controller.js, auth.routes.js, hash.util.js, response.util.js
 
-    Sub-step 5.4: Refactor Register với Passport-local
-    - Update auth.routes.js: Use passport.authenticate('local-register')
-    - Simplify auth.controller.js: Remove manual validation (Passport handles)
-    - Update auth.service.js: Adapt for Passport callback pattern
-    - Test: POST /api/auth/register
-      - Success (201 + user data without password)
-      - Duplicate email/username (409)
-      - Validation errors (400)
+### ✅ STEP 5: User Login (Passport-local + JWT)
 
-    Sub-step 5.5: Implement Login với Passport-local
-    - Add 'local-login' strategy in passport.config.js
-    - Add login route: POST /api/auth/login with passport.authenticate()
-    - Generate JWT after successful login
-    - Return { user, token }
-    - Test: POST /api/auth/login
-      - Success (200 + user + JWT token)
-      - Invalid credentials (401 generic message)
-      - Missing fields (400)
+**Endpoint:** `POST /api/auth/login`
 
-    STEP 6: Protected Routes với Passport-JWT
+**Packages Installed:** passport, passport-local, passport-jwt, jsonwebtoken
 
-    - Use passport.authenticate('jwt') middleware
-    - Tạo test protected route: GET /api/auth/me
-    - Test:
-      - With valid JWT in Authorization header → 200 + user data
-      - Without token → 401 Unauthorized
-      - With invalid token → 401 Unauthorized
+**Implementation:**
 
-    STEP 7: Logout (Client-side)
+**JWT Utilities:**
+- Created jwt.util.js with generateToken() and verifyToken() functions
+- Environment variables: JWT_SECRET, JWT_EXPIRES_IN (configured as 1 day)
+- JWT payload contains only `sub: userId` (minimal for security)
 
-    - Document logout strategy: Client removes JWT from localStorage
-    - No backend endpoint needed (stateless JWT)
-    - Token expires after JWT_EXPIRES_IN (7 days)
+**Passport Configuration:**
+- Created passport.config.js with multiple strategies
+- Local strategy for login with custom usernameField: "identifier"
+- Strategy verifies credentials using findUserByIdentifier() service function
+- Generic error message "Invalid credentials" for both wrong password and user not found
+- Password removed from user object before calling done()
 
-    STEP 8: Final Testing
+**Service Layer:**
+- Added findUserByIdentifier() function
+- Prisma query with OR condition (email OR username)
+- Selects password field (needed for comparison) unlike register response
 
-    - Complete flow: Register → Login → Access protected route
-    - Error handling verification
-    - JWT expiry testing
+**Login Route:**
+- Custom callback pattern with passport.authenticate()
+- Generates JWT after successful authentication
+- Response format: `{ user, token }`
 
-    STEP 9: Documentation Update
+**Files:** jwt.util.js, passport.config.js, updated auth.service.js and auth.routes.js
 
-    - Update backend/docs/structure.md với files mới
-    - Update docs/roadmap.md: Phase 2 status → Completed
-    - Document Passport architecture decisions
+### ✅ STEP 6: Protected Routes (Passport-JWT)
 
-    ---
-    KEY CHANGES from original plan:
-    - Use Passport.js ecosystem (passport-local + passport-jwt)
-    - Stateless JWT authentication (NO sessions, NO serialize/deserialize)
-    - Login with email OR username (single 'identifier' field)
-    - Client-side logout (remove JWT from localStorage)
-    - Authorization header with Bearer schema
-    - Generic error messages for security (avoid user enumeration)
+**Endpoint:** `GET /api/auth/me` (test endpoint)
 
-    Files structure:
-    - src/shared/config/passport.config.js (NEW)
-    - src/shared/config/jwt.config.js (NEW)
-    - src/shared/utils/jwt.util.js (NEW)
-    - src/shared/utils/hash.util.js (existing, keep)
-    - src/shared/utils/response.util.js (existing, keep)
-    - src/api/services/auth.service.js (refactor)
-    - src/api/controllers/auth.controller.js (simplify)
-    - src/api/routes/auth.routes.js (use passport middlewares)
-    - src/server.js (initialize Passport)
+**Implementation:**
 
-    Estimate: 3-4 giờ (với refactoring, learning Passport, testing)
-    Benefit:
-    - Learn Passport ecosystem (industry standard)
-    - Cleaner architecture (less boilerplate)
-    - Easy to add more strategies later
-    - Consistent authentication pattern
+**Passport JWT Strategy:**
+- Extracts JWT from Authorization header using Bearer schema
+- Verifies token signature with JWT_SECRET
+- Decodes payload and extracts userId from `sub` claim
+- Queries user from database (without password field)
+- Attaches user object to req.user for route handlers
+- Returns done(null, false) if user not found (token valid but user deleted)
+
+**Passport Initialization:**
+- Added passport.initialize() middleware to server.js
+- NO session middleware (stateless approach)
+- NO serialize/deserialize functions (not needed for JWT)
+
+**Protected Route Pattern:**
+- Use passport.authenticate('jwt', { session: false }) as middleware
+- Route handlers access authenticated user via req.user
+- Automatic 401 response if token missing or invalid
+
+**Files:** Updated passport.config.js, auth.routes.js, server.js
+
+### ✅ STEP 7: Testing & Verification
+
+**Test Cases Completed:**
+- Register: Success (201), Duplicate email/username (409), Validation errors (400)
+- Login: Success (200 + user + token), Invalid credentials (401), Missing fields (400)
+- Protected route: Valid JWT (200 + user data), No token (401), Invalid token (401)
+
+---
+
+## Files Structure
+
+**Created:**
+- src/shared/config/passport.config.js - Passport strategies configuration
+- src/shared/utils/jwt.util.js - JWT generation and verification
+- src/shared/utils/hash.util.js - Password hashing utilities
+- src/shared/utils/response.util.js - Standardized response builders
+
+**Updated:**
+- src/api/services/auth.service.js - register(), findUserByIdentifier()
+- src/api/controllers/auth.controller.js - registerController
+- src/api/routes/auth.routes.js - /register, /login, /me routes
+- src/server.js - Passport initialization
+- .env - JWT_SECRET, JWT_EXPIRES_IN
+- package.json - Passport packages
+
+---
+
+## API Endpoints
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| POST | /api/auth/register | Public | Create new user (email, username, password) |
+| POST | /api/auth/login | Public | Authenticate and receive JWT token |
+| GET | /api/auth/me | Protected | Get current authenticated user info |
+
+---
+
+## Next Phase
+
+**Frontend Implementation** - See docs/roadmap.md Phase 2 Frontend Deliverables

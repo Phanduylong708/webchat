@@ -2,8 +2,8 @@
 
 ## Current Status
 
-**Phase:** Phase 2: Authentication
-**Focus:** User registration and login system
+**Phase:** Phase 2: Authentication (Backend DONE, Frontend Pending)
+**Focus:** User authentication with JWT (stateless)
 **Started:** Week 2
 
 ---
@@ -25,18 +25,26 @@
 
 ## Phase 2: Authentication
 
-**Status:** ⏳ Not Started  
-**Focus:** User registration and login system
+**Status:** 🟡 Backend DONE | Frontend Pending
+**Focus:** User authentication with JWT (stateless)
 
-**Deliverables:**
+**Backend Deliverables (✅ COMPLETED):**
 
-- User registration API (email + password)
-- Login/logout API
-- JWT authentication middleware
-- Password hashing (bcrypt)
-- Frontend auth pages (login, register)
-- Protected routes setup
-- Session management
+- User registration API (email, username, password)
+- User login API (identifier: email OR username)
+- Passport.js integration (passport-local + passport-jwt)
+- JWT token generation and verification
+- Protected routes middleware
+- Password hashing (bcryptjs)
+
+**Frontend Deliverables (⏳ PENDING):**
+
+- Auth pages (login, register)
+- Auth state management (React Context)
+- Protected route wrapper
+- JWT storage (localStorage)
+- Auto-login functionality
+- Logout (client-side)
 
 ---
 
