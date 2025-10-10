@@ -5,7 +5,7 @@ frontend/
 ├── src/
 │   ├── api/
 │   │   # API service layer - Axios calls to backend
-│   │   # Example: auth.api.ts, friends.api.ts, chat.api.ts
+│   │   └── auth.api.ts
 │   │
 │   ├── components/
 │   │   ├── ui/           # ShadCN components (auto-generated)
@@ -13,11 +13,11 @@ frontend/
 │   │
 │   ├── contexts/
 │   │   # React Context for global state
-│   │   # Example: AuthContext.tsx, SocketContext.tsx
+│   │
 │   │
 │   ├── hooks/
 │   │   # Custom React hooks
-│   │   # Example: useAuth.ts, useLocalStorage.ts
+│   │
 │   │
 │   ├── pages/
 │   │   # Page components (route destinations)
@@ -25,15 +25,15 @@ frontend/
 │   │
 │   ├── types/
 │   │   # TypeScript interfaces and types
-│   │   # Example: auth.types.ts, user.types.ts, api.types.ts
+│   │   └── auth.type.ts
 │   │
 │   ├── utils/
 │   │   # Helper/utility functions
-│   │   # Example: localStorage.util.ts, validation.util.ts
+│   │   └── localStorage.util.ts
 │   │
 │   ├── lib/
 │   │   ├── utils.ts      # ShadCN cn() helper
-│   │   └── ...           # Library configurations
+│   │   └── axios.config.ts
 │   │
 │   ├── assets/           # Static files (images, icons)
 │   ├── App.tsx           # Root component
