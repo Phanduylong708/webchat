@@ -13,11 +13,11 @@ frontend/
 │   │
 │   ├── contexts/
 │   │   # React Context for global state
-│   │
+│   │   └── authContext.tsx
 │   │
 │   ├── hooks/
 │   │   # Custom React hooks
-│   │
+│   │   └── useAuth.tsx
 │   │
 │   ├── pages/
 │   │   # Page components (route destinations)

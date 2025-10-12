@@ -36,8 +36,8 @@ interface AuthState {
 }
 
 interface AuthContextType extends AuthState {
-    login: (data: LoginRequest) => Promise<void>;
-    register: (data: RegisterRequest) => Promise<void>;
+    login: (data: LoginRequest) => Promise<boolean>;
+    register: (data: RegisterRequest) => Promise<boolean>;
     logout: () => void;
     checkAuth: () => Promise<void>;
 }

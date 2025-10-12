@@ -1,1 +1,0 @@
-Không phải nó còn có stat

@@ -20,13 +20,14 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
     removeToken();
   }
 
-  async function login(credentials: LoginRequest): Promise<void> {
+  async function login(credentials: LoginRequest): Promise<boolean> {
     try {
       setLoading(true);
       setError(null);
       const data = await loginUser(credentials);
       setUser(data.user);
       saveToken(data.token);
+      return true; //for navigation after successful login
     } catch (err) {
       const caughtError = err as {
         message: string;
@@ -35,16 +36,18 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
       };
       setError(caughtError.message || "Login failed. Please try again.");
       setUser(null);
+      return false;
     } finally {
       setLoading(false);
     }
   }
 
-  async function register(credentials: RegisterRequest): Promise<void> {
+  async function register(credentials: RegisterRequest): Promise<boolean> {
     try {
       setLoading(true);
       setError(null);
       await registerUser(credentials);
+      return true; //for navigation after successful registration
     } catch (err) {
       const caughtError = err as {
         message: string;
@@ -52,6 +55,7 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
         status: number;
       };
       setError(caughtError.message || "Registration failed. Please try again.");
+      return false;
     } finally {
       setLoading(false);
     }
