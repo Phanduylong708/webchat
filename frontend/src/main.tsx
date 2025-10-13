@@ -3,10 +3,12 @@ import { createRoot } from "react-dom/client";
 import "./index.css";
 import App from "./App.tsx";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
-import LoginPage from "./pages/LoginPage.tsx";
-import SignUp from "./pages/SignUp.tsx";
-import HomePage from "./pages/HomePage.tsx";
+import { Navigate } from "react-router-dom";
+import LoginPage from "./pages/auth/LoginPage.tsx";
+import SignUp from "./pages/auth/SignUp.tsx";
+import HomePage from "./pages/home/HomePage.tsx";
 import ProtectedRoute from "./components/ProtectedRoute.tsx";
+import FriendsPage from "./pages/home/FriendsPage.tsx";
 
 const router = createBrowserRouter([
   {
@@ -14,21 +16,25 @@ const router = createBrowserRouter([
     element: <App />,
     children: [
       {
-        index: true,
+        path: "",
         element: (
           <ProtectedRoute>
             <HomePage />
           </ProtectedRoute>
         ),
+        children: [
+          {
+            index: true,
+            element: <Navigate to="/friends" replace />,
+          },
+          {
+            path: "friends",
+            element: <FriendsPage />,
+          },
+        ],
       },
-      {
-        path: "login",
-        element: <LoginPage />,
-      },
-      {
-        path: "signup",
-        element: <SignUp />,
-      },
+      { path: "login", element: <LoginPage /> },
+      { path: "signup", element: <SignUp /> },
     ],
   },
 ]);

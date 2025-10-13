@@ -20,7 +20,13 @@ async function register(email, password, username) {
         password: hashedPassword,
         username,
       },
-      select: { id: true, email: true, username: true, createdAt: true },
+      select: {
+        id: true,
+        email: true,
+        username: true,
+        createdAt: true,
+        avatar: true,
+      },
     });
     return newUser;
   } catch (error) {
@@ -40,6 +46,7 @@ async function findUserByIdentifier(identifier) {
         username: true,
         password: true,
         createdAt: true,
+        avatar: true,
       },
     });
     return user;

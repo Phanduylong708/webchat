@@ -2,10 +2,10 @@
 
 ## Current Status
 
-**Phase:** Phase 2: Authentication (COMPLETED ✅)
-**Focus:** User authentication with JWT (stateless)
-**Started:** Week 2
-**Completed:** Week 3
+**Phase:** Phase 3: Friend System (IN PROGRESS ⏳)
+**Focus:** Friend management functionality
+**Started:** Week 4
+**Status:** Backend completed, Frontend pending
 
 ---
 
@@ -51,27 +51,37 @@
 
 ## Phase 3: Friend System
 
-**Status:** ⏳ Not Started  
+**Status:** ⏳ IN PROGRESS (Backend ✅ | Frontend ⏳)
 **Focus:** Friend management functionality
 
-**Deliverables:**
+**Backend Deliverables (✅ COMPLETED):**
 
-- Add friend functionality (auto-accept)
-- Friends list API and UI
+- Add friend API (POST /api/friends - auto-accept)
+- Get friends list API (GET /api/friends)
+- Remove friend API (DELETE /api/friends/:friendId)
+- Friend service layer with business logic validation
+- Friendship model with normalized IDs (userId1 < userId2)
+- All endpoints protected with JWT authentication
+
+**Frontend Deliverables (⏳ NOT STARTED):**
+
+- Friends page/component UI
+- Add friend form/modal
+- Friends list display
 - Remove friend functionality
-- Online/offline status tracking
-- Friend-related database models
+- Integration with backend APIs
 
 ---
 
 ## Phase 4: Chat System
 
-**Status:** ⏳ Not Started  
+**Status:** ⏳ Not Started
 **Focus:** Real-time messaging (1-1 and group)
 
 **Deliverables:**
 
 - Socket.IO server setup
+- Online/offline status tracking (real-time with WebSocket)
 - Private chat (1-1) functionality
 - Group chat functionality
 - Message persistence (database)
