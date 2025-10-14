@@ -1,43 +1,29 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { Button } from "../ui/button";
 import { Separator } from "../ui/separator";
 import { Plus, Trash2 } from "lucide-react";
 import { Input } from "../ui/input";
 import { ScrollArea } from "../ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
+import type { Friend } from "@/types/friend.type";
+import { useFriend } from "@/hooks/useFriend";
 
-const MOCK_FRIENDS = [
-  {
-    id: 1,
-    username: "john_doe",
-    avatar: null,
-    isOnline: true,
-    lastSeen: null,
-  },
-  {
-    id: 2,
-    username: "sarah_wilson",
-    avatar: null,
-    isOnline: false,
-    lastSeen: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
-  },
-  {
-    id: 3,
-    username: "mike_chen",
-    avatar: null,
-    isOnline: true,
-    lastSeen: null,
-  },
-  {
-    id: 4,
-    username: "emma_davis",
-    avatar: null,
-    isOnline: false,
-    lastSeen: new Date(Date.now() - 24 * 60 * 60 * 1000), // 1 day ago
-  },
-];
+//helper function to format last seen time
+function formatLastSeen(date: string | null): string {
+  if (!date) return "recently";
 
-function FriendItem({ friend }: { friend: any }) {
+  const now = new Date();
+  const diff = now.getTime() - new Date(date).getTime();
+  const hours = Math.floor(diff / (1000 * 60 * 60));
+  const days = Math.floor(hours / 24);
+
+  if (hours < 1) return "recently";
+  if (hours < 24) return `${hours}h ago`;
+  if (days < 7) return `${days}d ago`;
+  return new Date(date).toLocaleDateString();
+}
+
+function FriendItem({ friend }: { friend: Friend }): React.JSX.Element {
   return (
     <div
       className="group flex items-center gap-3 p-3 rounded-lg bg-background border
@@ -74,21 +60,47 @@ function FriendItem({ friend }: { friend: any }) {
   );
 }
 
-function formatLastSeen(date: Date | null): string {
-  if (!date) return "recently";
-
-  const now = new Date();
-  const diff = now.getTime() - date.getTime();
-  const hours = Math.floor(diff / (1000 * 60 * 60));
-  const days = Math.floor(hours / 24);
-
-  if (hours < 1) return "recently";
-  if (hours < 24) return `${hours}h ago`;
-  if (days < 7) return `${days}d ago`;
-  return date.toLocaleDateString();
-}
-
 export default function FriendListPanel(): React.JSX.Element {
+  const { friends, loading, error, fetchFriends } = useFriend();
+
+  useEffect(() => {
+    fetchFriends();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  //helper component to render friend list
+  function renderFriendList(): React.JSX.Element {
+    if (loading) {
+      return (
+        <div className="text-center text-muted-foreground py-8">Loading...</div>
+      );
+    }
+
+    if (error) {
+      return (
+        <div className="text-center text-muted-foreground py-8">
+          <Button onClick={fetchFriends}>Error: {error}. Retry</Button>
+        </div>
+      );
+    }
+
+    if (friends.length === 0) {
+      return (
+        <div className="text-center text-muted-foreground py-8">
+          No friends yet. Add some!
+        </div>
+      );
+    }
+
+    return (
+      <>
+        {friends.map((friend) => (
+          <FriendItem key={friend.id} friend={friend} />
+        ))}
+      </>
+    );
+  }
+
   return (
     <div className="h-full flex flex-col bg-muted border-r border-border">
       <div className="p-4 flex items-center justify-between">
@@ -103,17 +115,7 @@ export default function FriendListPanel(): React.JSX.Element {
       </div>
       <Separator />
       <ScrollArea className="flex-1">
-        <div className="p-2 gap-2 flex flex-col">
-          {MOCK_FRIENDS.length === 0 ? (
-            <div className="text-center text-muted-foreground py-8">
-              No friends yet. Add some!
-            </div>
-          ) : (
-            MOCK_FRIENDS.map((friend) => (
-              <FriendItem key={friend.id} friend={friend} />
-            ))
-          )}
-        </div>
+        <div className="p-2 gap-2 flex flex-col">{renderFriendList()}</div>
       </ScrollArea>
     </div>
   );

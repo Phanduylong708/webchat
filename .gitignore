@@ -51,6 +51,6 @@ node_modules
 .env
 
 */generated/prisma
-.serena
 draft.md
 .claude
+.private

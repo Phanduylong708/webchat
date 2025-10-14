@@ -5,6 +5,7 @@ import { passport } from "./shared/config/passport.config.js";
 import { sendErrors } from "./shared/utils/response.util.js";
 import { authRoutes } from "./api/routes/auth.routes.js";
 import { friendRoutes } from "./api/routes/friend.routes.js";
+import { userRoutes } from "./api/routes/user.routes.js";
 
 dotenv.config();
 
@@ -15,6 +16,7 @@ app.use(cors());
 app.use(passport.initialize());
 app.use("/api/auth", authRoutes);
 app.use("/api/friends", friendRoutes);
+app.use("/api/users", userRoutes);
 app.listen(process.env.PORT || 3000, () => {
   console.log(`Server is running on port ${process.env.PORT || 3000}`);
 });
