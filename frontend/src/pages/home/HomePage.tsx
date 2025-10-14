@@ -8,7 +8,7 @@ function HomePage() {
   }
 
   return (
-    <div className="grid grid-cols-[80px_1fr] h-screen">
+    <div className="grid grid-cols-[minmax(56px,80px)_1fr] h-screen">
       <SideBar />
       <Outlet />
     </div>

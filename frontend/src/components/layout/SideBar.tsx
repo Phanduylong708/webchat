@@ -1,12 +1,14 @@
 import React from "react";
 import { User, MessageCircle } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { LogOut } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 
 export default function SideBar(): React.JSX.Element {
   const { user, logout } = useAuth();
+  const location = useLocation();
+  const isFriendsPage = location.pathname === "/friends";
   return (
     <div className="bg-sidebar text-sidebar-foreground p-1 flex flex-col h-full">
       <div className=" p-4 text-center">
@@ -15,8 +17,10 @@ export default function SideBar(): React.JSX.Element {
       <div className="flex-1 flex flex-col items-center gap-4 py-8">
         <Link
           to="/friends"
-          className="w-16 h-16 flex flex-col items-center justify-center gap-1 rounded-lg hover:bg-sidebar-accent hover:text-sidebar-accent-foreground
-  transition-colors"
+          className={`w-16 h-16 flex flex-col items-center justify-center gap-1 rounded-lg hover:bg-sidebar-accent hover:text-sidebar-accent-foreground
+  transition-colors ${
+    isFriendsPage ? "bg-sidebar-accent text-sidebar-accent-foreground" : ""
+  }`}
         >
           <User size={24} />
           <span className="text-xs">Friends</span>

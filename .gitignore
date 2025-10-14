@@ -53,3 +53,4 @@ node_modules
 */generated/prisma
 .serena
 draft.md
+.claude
