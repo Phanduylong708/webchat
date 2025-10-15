@@ -37,8 +37,6 @@ function FriendProvider({
     } catch (err) {
       const caughtError = err as {
         message: string;
-        code: string;
-        status: number;
       };
       setError(
         caughtError.message || "Failed to fetch friends. Please try again."
@@ -48,7 +46,9 @@ function FriendProvider({
     }
   }
 
-  async function removeFriend(id: number): Promise<boolean> {
+  async function removeFriend(
+    id: number
+  ): Promise<{ success: boolean; message?: string }> {
     try {
       setLoading(true);
       setError(null);
@@ -57,46 +57,46 @@ function FriendProvider({
       if (selectedFriendId === id) {
         setSelectedFriendId(null);
       }
-      return true;
+      return { success: true };
     } catch (err) {
       const caughtError = err as {
-        message: string;
-        code: string;
-        status: number;
+        message?: string;
       };
-      setError(
-        caughtError.message || "Failed to remove friend. Please try again."
-      );
-      return false;
+      return {
+        success: false,
+        message:
+          caughtError.message ?? "Failed to remove friend. Please try again.",
+      };
     } finally {
       setLoading(false);
     }
   }
 
-  async function addFriend(username: string): Promise<boolean> {
+  async function addFriend(
+    username: string
+  ): Promise<{ success: boolean; message?: string }> {
     try {
       setLoading(true);
       setError(null);
       const trimmed = username.trim();
       if (!trimmed) {
         setError("Username cannot be empty.");
-        return false;
+        return { success: false };
       }
       const user = await searchUserByUsername(trimmed);
       await addFriendById(user.id);
       await fetchFriends();
       setSelectedFriendId(user.id);
-      return true;
+      return { success: true };
     } catch (err) {
       const caughtError = err as {
-        message: string;
-        code: string;
-        status: number;
+        message?: string;
       };
-      setError(
-        caughtError.message || "Failed to add friend. Please try again."
-      );
-      return false;
+      return {
+        success: false,
+        message:
+          caughtError.message ?? "Failed to add friend. Please try again.",
+      };
     } finally {
       setLoading(false);
     }

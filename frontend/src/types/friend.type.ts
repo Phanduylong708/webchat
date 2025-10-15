@@ -19,8 +19,8 @@ interface FriendState {
     loading: boolean;                                                                                                                                           
     error: string | null;                                                                                                                                       
     fetchFriends: () => Promise<void>;                                                                                                                          
-    addFriend: (username: string) => Promise<boolean>;                                                                                                          
-    removeFriend: (id: number) => Promise<boolean>;                                                                                                             
+    addFriend: (username: string) => Promise<{ success: boolean; message?: string }>;                                                                                                          
+    removeFriend: (id: number) => Promise<{ success: boolean; message?: string }>;                                                                                                             
     selectFriend: (id: number | null) => void;                                                                                                                  
   }    
 
