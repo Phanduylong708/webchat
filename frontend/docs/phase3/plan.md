@@ -1,6 +1,6 @@
 # Phase 3: Friend System - Frontend Implementation
 
-**Status:** PENDING
+**Status:** COMPLETED
 **Approach:** Feature-by-feature + Bottom-up (Hybrid)
 
 **Sub-phases:**
@@ -12,12 +12,18 @@
 
 ## Architecture Overview
 
-**Three-Column Layout:**
+**Implemented Structure: Nested Routing with Layout Wrapper**
+
+- **HomePage** - Layout wrapper with persistent SideBar (Col 1) + `<Outlet />` for child routes
+- **FriendsPage** - Child route with 2-column layout (FriendListPanel + MainContentPanel)
+- Routing: `/` → `/friends` (index redirect)
+
+**Visual Layout:**
 
 ```
 +--------+---------------+--------------------+
 | Col 1  |    Col 2      |       Col 3        |
-| Nav    | FriendList    | FriendProfile      |
+| SideBar| FriendList    | FriendProfile      |
 |        |               | or EmptyState      |
 | [F][C] | [Friends +]   |                    |
 |        | [Search...]   | [Avatar]           |
@@ -25,6 +31,8 @@
 |        | Friend Item   | Status             |
 | [User] |               | [Send] [Remove]    |
 +--------+---------------+--------------------+
+HomePage: grid-cols-[minmax(56px,80px)_1fr]
+FriendsPage: grid-cols-[300px_1fr]
 ```
 
 **Friend System Flow:**
@@ -34,63 +42,69 @@
 - **Select:** Click friend -> Show profile
 - **Remove:** Confirmation -> DELETE -> Refresh
 
-**Key Decisions:**
+**Key Implementation Decisions:**
 
-- Three-column layout for scalability (future: Chats, Groups)
-- Friend Context for state management
+- **Nested routing architecture** - HomePage as layout wrapper, child routes control content
+- **ID-based friend selection** - Store `selectedFriendId` internally, expose computed `selectedFriend` object
+- **Scoped error handling** - Dialogs use local error state, context error only for fetch operations
+- **Reusable RemoveFriendDialog** - Accepts trigger prop, used by both FriendItem and FriendProfile
+- Friend Context for state management with `useMemo` for computed values
 - Modal pattern for Add/Remove (focused actions)
-- Username-based adding (requires new backend search API)
+- Username-based adding with backend search API
 - Search box placeholder only (no logic this phase)
 - Send Message button disabled (Phase 4 preview)
-- Bottom up approach for each sub-phase
-- THE PLAN DO NOT PRESENT THE FINAL DECISION, DURING IMPLEMENTATION DIFFERENT CHOICE CAN BE MAKE IF THE CHOICE IS SUPPOSEDLY BETTER THAN THE PLAN DECISION.
+- Bottom-up implementation approach
 
 ---
 
 ## Phase 3A: Layout Foundation
 
-### [STEP 1] HomePage Restructure
+### [STEP 1] Layout Structure with Nested Routing
 
-**Goal:** Transform HomePage to three-column layout
+**Goal:** Create layout wrapper with nested routing for child pages
 
 **Components:**
 
-- `HomePage.tsx` - Grid container
-- `NavigationBar.tsx` - Col 1 (nav icons)
-- `FriendListPanel.tsx` - Col 2 (placeholder)
-- `MainContentPanel.tsx` - Col 3 (empty state)
+- `HomePage.tsx` - Layout wrapper with SideBar + Outlet (grid: `grid-cols-[minmax(56px,80px)_1fr]`)
+- `FriendsPage.tsx` - Child route with 2-column grid (grid: `grid-cols-[300px_1fr]`)
+- `SideBar.tsx` - Col 1 (persistent nav icons)
+- `FriendListPanel.tsx` - Col 2 (friends list with mock data)
+- `MainContentPanel.tsx` - Col 3 (generic container)
 
-**NavigationBar:**
+**SideBar:**
 
 - Logo (top)
-- Friends icon - active default
-- Chats icon - disabled, tooltip "Coming soon"
+- Friends link - active with useLocation detection
+- Chats disabled placeholder
 - User block (bottom) - avatar, username, logout
 
-**Styling:**
+**Routing:**
 
-- Grid: `grid-cols-[80px_300px_1fr]`, `h-screen`
-- Col 1: `bg-gray-900`, Col 2: `bg-gray-100`, Col 3: `bg-white`
+- main.tsx: Nested route structure with index redirect to `/friends`
+- FriendsPage renders when `/friends` route active
 
 ### [STEP 2] Navigation State
 
-**State:** `type NavItem = 'friends' | 'chats'`
+**Implementation:** useLocation hook from react-router-dom
 
 **Logic:**
 
-- Friends active by default
-- Chats disabled
-- Pass activeNav to panels
+- Detect current route with `location.pathname`
+- Conditional className for active state highlighting
+- Friends link active when pathname === "/friends"
+- Chats remains disabled placeholder
 
 ### [STEP 3] Responsive & Polish
 
-**Responsive:**
+**Status:** DEFERRED to later phase
 
-- Mobile: 40px nav width
-- Tablet: 250px list width
-- Desktop: 80px | 300px | remaining
+**Planned:**
 
-**Polish:** Hover states, transitions, spacing
+- Mobile: Responsive sidebar and panel widths
+- Tablet: Adjusted column sizing
+- Desktop: Current implementation sufficient
+
+**Completed Polish:** Hover states, transitions, spacing with CSS variables
 
 ---
 
@@ -137,17 +151,34 @@ interface Friend {
   lastSeen: Date | null;
 }
 
+interface FriendState {
+  friends: Friend[];
+  selectedFriendId: number | null; // Internal state
+  loading: boolean;
+  error: string | null;
+}
+
 interface FriendContextType {
   friends: Friend[];
-  selectedFriend: Friend | null;
+  selectedFriend: Friend | null; // Computed from friends + selectedFriendId
   loading: boolean;
   error: string | null;
   fetchFriends: () => Promise<void>;
-  addFriend: (username: string) => Promise<void>;
-  removeFriend: (friendId: number) => Promise<void>;
-  selectFriend: (friend: Friend | null) => void;
+  addFriend: (
+    username: string
+  ) => Promise<{ success: boolean; message?: string }>;
+  removeFriend: (
+    friendId: number
+  ) => Promise<{ success: boolean; message?: string }>;
+  selectFriend: (id: number | null) => void; // ID-based selection
 }
 ```
+
+**Key Design:**
+
+- ID-based selection prevents stale data issues
+- Return objects for scoped error handling in dialogs
+- `selectedFriend` computed with useMemo
 
 ### [STEP 3] Friend API Layer
 
@@ -166,30 +197,51 @@ async function searchUserByUsername(username: string): Promise<Friend>;
 
 **Files:** `src/contexts/friendContext.tsx`, `src/hooks/useFriend.tsx`
 
-**Logic:**
+**Implementation:**
 
-- `addFriend(username)`: Search user -> Add by ID -> Refresh
-- `removeFriend(id)`: Delete -> Refresh
-- `selectFriend(friend)`: Set state
+- Internal state: `friends`, `selectedFriendId`, `loading`, `error`
+- Computed value: `selectedFriend = useMemo(() => friends.find(f => f.id === selectedFriendId) || null, [friends, selectedFriendId])`
+- No useCallback (follow authContext pattern)
+- No auto-fetch in useEffect (component-controlled)
+
+**Method Logic:**
+
+- `addFriend(username)`: Search user -> Add by ID -> Auto-select -> Refresh -> Return `{ success, message }`
+- `removeFriend(id)`: Delete -> Deselect if currently selected -> Refresh -> Return `{ success, message }`
+- `selectFriend(id)`: Set `selectedFriendId` state (sync)
+- `fetchFriends()`: Fetch list, only set context error for fetch failures
 
 ### [STEP 5] FriendList Component
 
-**File:** `src/components/layout/FriendListPanel.tsx`, `src/components/friends/FriendItem.tsx`
+**File:** `src/components/layout/FriendListPanel.tsx` (FriendItem inline, not separate file)
 
-**Structure:**
+**Implementation:**
 
-- Header: Title + [+] button
-- Search input (disabled placeholder)
-- Friend items: Avatar, username, status (online/last seen)
-- Empty state: Message + CTA button
+- Replace mock data with `useFriend()` hook
+- Call `fetchFriends()` in useEffect on mount
+- Helper function `renderFriendList()` with conditional rendering:
+  - Loading state: "Loading friends..."
+  - Error state with retry button (only when `error && friends.length === 0`)
+  - Empty state: "No friends yet. Add some!"
+  - Friend list: Map over friends array
+- FriendItem inline component with click handler calling `selectFriend(friend.id)`
+- Header with AddFriendDialog (replaces plain button)
+- Search input disabled placeholder
+- formatLastSeen helper for status display
 
 ### [STEP 6] AddFriendDialog
 
 **File:** `src/components/friends/AddFriendDialog.tsx`
 
-**Modal:** Username input -> Add button -> Success/Error handling
+**Implementation:**
 
-**Errors:** User not found (404), Already friends (409), Can't add self (400)
+- Self-contained Dialog with trigger (Plus button)
+- Local states: `isOpen`, `username`, `localError`, `isSubmitting`
+- Validation: Trim input, check empty before submit
+- Call `addFriend(username)` from context, check `{ success, message }` return
+- On success: Clear input, close dialog
+- On fail: Copy `message` to `localError` for scoped display
+- Error displayed in dialog only (not global context error)
 
 **Install:** `npx shadcn-ui add dialog`
 
@@ -197,19 +249,46 @@ async function searchUserByUsername(username: string): Promise<Friend>;
 
 **Files:** `src/components/friends/FriendProfile.tsx`, `src/components/friends/EmptyState.tsx`
 
-**Profile Card:**
+**FriendProfile Implementation:**
 
-- Avatar (large)
-- Username
-- Status (online/last seen)
-- Send Message (disabled, tooltip)
-- Remove Friend (destructive)
+- Accepts `friend` prop from parent
+- ShadCN Card component structure
+- Avatar (large, centered - size-24)
+- Username (text-2xl, centered)
+- Status: Conditional online/offline with formatLastSeen
+- Send Message button (disabled, title tooltip "Coming in Phase 4")
+- Remove Friend button uses RemoveFriendDialog (reusable component)
+- Local error handling with `localError` state
+- Integrates with context via useFriend hook
 
-### [STEP 8] RemoveFriendDialog
+**EmptyState Implementation:**
+
+- Simple centered message: "Select a friend to view their profile"
+- Displayed when `selectedFriend === null`
+
+### [STEP 8] RemoveFriendDialog (Reusable Component)
 
 **File:** `src/components/friends/RemoveFriendDialog.tsx`
 
-**Confirmation:** AlertDialog -> Confirm/Cancel -> Remove action
+**Design Pattern: Reusable with Trigger Prop**
+
+**Props:**
+
+- `friend: Friend` - Friend to remove
+- `trigger: React.ReactNode` - Custom trigger element (button/icon)
+- `onRemoved?: () => void` - Optional callback after successful removal
+
+**Implementation:**
+
+- Internal states: `isOpen`, `isRemoving`, `localError`
+- AlertDialog structure with dynamic trigger
+- Confirmation message includes friend username
+- Calls `removeFriend(friend.id)` from context
+- On success: Calls `onRemoved()` callback (if provided), closes dialog
+- On fail: Display `localError` in dialog
+- Used by both FriendItem (trash icon) and FriendProfile (button)
+
+**Benefits:** DRY principle, consistent UX, single source of truth
 
 **Install:** `npx shadcn-ui add alert-dialog`
 
@@ -217,62 +296,79 @@ async function searchUserByUsername(username: string): Promise<Friend>;
 
 **Integration:**
 
-- Wrap HomePage with FriendProvider
-- Call fetchFriends() on mount
-- Loading states (skeletons)
-- Toast notifications
+- FriendProvider wraps FriendsPageContent (not HomePage) - Context scoped to friends route
+- FriendsPageContent component uses useFriend hook - Refactor to avoid "must be used within provider" error
+- FriendListPanel calls fetchFriends() in useEffect on mount
+- Loading states with conditional rendering (no skeletons implemented)
+- Conditional render in FriendsPage: `selectedFriend ? <FriendProfile /> : <EmptyState />`
 
-**Utilities:** `src/utils/date.util.ts` - formatLastSeen()
+**Utilities:**
 
-**Install:** `npm install react-hot-toast`, `npx shadcn-ui add avatar toast`
+- `src/utils/date.util.js` - formatLastSeen() helper extracted from FriendListPanel
 
-### [STEP 10] Testing
+**Deferred:**
 
-**Phase 3A:**
+- Toast notifications (DEFERRED - not implemented in this phase)
+- Skeleton loading states (basic text loading states used instead)
 
-- [ ] Three columns render correctly
-- [ ] Navigation responds to clicks
-- [ ] User profile shows and logout works
-- [ ] Responsive layout
-
-**Phase 3B:**
-
-- [ ] Empty state when no friends
-- [ ] Add friend modal works
-- [ ] Search by username (success/error)
-- [ ] Friend appears in list after add
-- [ ] Error handling (409, 400)
-- [ ] Select friend shows profile
-- [ ] Status displays correctly
-- [ ] Remove confirmation works
-- [ ] List refreshes after actions
-
----
+**ShadCN Components Used:** dialog, alert-dialog, avatar, card
 
 ## Files Summary
 
 **Backend (4 files):**
 
-- New: user.service.js, user.controller.js, user.routes.js
-- Updated: server.js
+- New: `src/api/services/user.service.js`
+- New: `src/api/controllers/user.controller.js`
+- New: `src/api/routes/user.routes.js`
+- Updated: `src/server.js`
 
-**Frontend (14 files):**
+**Frontend (13 files):**
 
-- New: NavigationBar, FriendListPanel, MainContentPanel (layout)
-- New: friend.type.ts, friend.api.ts, friendContext.tsx, useFriend.tsx
-- New: FriendItem, FriendProfile, AddFriendDialog, RemoveFriendDialog, EmptyState, date.util.ts
-- Updated: HomePage.tsx, auth.type.ts (avatar field)
+**Layout Components:**
 
-**ShadCN:** dialog, alert-dialog, avatar, toast
+- New: `src/components/layout/SideBar.tsx` (not NavigationBar)
+- New: `src/components/layout/FriendListPanel.tsx` (FriendItem inline)
+- New: `src/components/layout/MainContentPanel.tsx`
+
+**Friend Components:**
+
+- New: `src/components/friends/FriendProfile.tsx`
+- New: `src/components/friends/AddFriendDialog.tsx`
+- New: `src/components/friends/RemoveFriendDialog.tsx` (reusable)
+- New: `src/components/friends/EmptyState.tsx`
+
+**Core Infrastructure:**
+
+- New: `src/types/friend.type.ts`
+- New: `src/api/friend.api.ts`
+- New: `src/contexts/friendContext.tsx`
+- New: `src/hooks/useFriend.tsx`
+- New: `src/utils/date.util.js` (formatLastSeen helper)
+
+**Updated:**
+
+- `src/pages/home/HomePage.tsx` (layout wrapper with Outlet)
+- `src/pages/home/FriendsPage.tsx` (provider + content split)
+
+**ShadCN Components:** dialog, alert-dialog, avatar, card
 
 ---
 
 ## Dependencies
 
+**ShadCN Components Installed:**
+
 ```bash
-npm install react-hot-toast
-npx shadcn-ui add dialog alert-dialog avatar toast
+npx shadcn-ui add dialog
+npx shadcn-ui add alert-dialog
+npx shadcn-ui add avatar
+npx shadcn-ui add card
 ```
+
+**Deferred (not installed):**
+
+- `npm install react-hot-toast` - Toast notifications deferred
+- `npx shadcn-ui add toast` - Toast component deferred
 
 ---
 

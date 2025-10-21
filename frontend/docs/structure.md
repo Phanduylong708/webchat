@@ -4,33 +4,59 @@
 frontend/
 ├── src/
 │   ├── api/
-│   │   └── auth.api.ts
+│   │   ├── auth.api.ts
+│   │   └── friend.api.ts
 │   │
 │   ├── components/
-│   │   ├── ui/ (Shadcn components no need to read)
+│   │   ├── ui/ (ShadCN components - no need to read)
+│   │   │   ├── alert-dialog.tsx
+│   │   │   ├── avatar.tsx
 │   │   │   ├── button.tsx
+│   │   │   ├── card.tsx
+│   │   │   ├── dialog.tsx
 │   │   │   ├── field.tsx
 │   │   │   ├── input.tsx
 │   │   │   ├── label.tsx
+│   │   │   ├── scroll-area.tsx
 │   │   │   └── separator.tsx
+│   │   │
+│   │   ├── layout/
+│   │   │   ├── SideBar.tsx
+│   │   │   ├── FriendListPanel.tsx
+│   │   │   └── MainContentPanel.tsx
+│   │   │
+│   │   ├── friends/
+│   │   │   ├── AddFriendDialog.tsx
+│   │   │   ├── RemoveFriendDialog.tsx
+│   │   │   ├── FriendProfile.tsx
+│   │   │   └── EmptyState.tsx
+│   │   │
 │   │   └── ProtectedRoute.tsx
 │   │
 │   ├── contexts/
-│   │   └── authContext.tsx
+│   │   ├── authContext.tsx
+│   │   └── friendContext.tsx
 │   │
 │   ├── hooks/
-│   │   └── useAuth.tsx
+│   │   ├── useAuth.tsx
+│   │   └── useFriend.tsx
 │   │
 │   ├── pages/
-│   │   ├── HomePage.tsx
-│   │   ├── LoginPage.tsx
-│   │   └── SignUp.tsx
+│   │   ├── auth/
+│   │   │   ├── LoginPage.tsx
+│   │   │   └── SignUp.tsx
+│   │   │
+│   │   └── home/
+│   │       ├── HomePage.tsx
+│   │       └── FriendsPage.tsx
 │   │
 │   ├── types/
-│   │   └── auth.type.ts
+│   │   ├── auth.type.ts
+│   │   └── friend.type.ts
 │   │
 │   ├── utils/
-│   │   └── localStorage.util.ts
+│   │   ├── localStorage.util.ts
+│   │   └── date.util.ts
 │   │
 │   ├── lib/
 │   │   ├── axios.config.ts
@@ -42,7 +68,9 @@ frontend/
 │
 ├── docs/
 │   ├── structure.md
-│   └── phase2/
+│   ├── phase2/
+│   │   └── plan.md
+│   └── phase3/
 │       └── plan.md
 │
 ├── public/               # Public static files

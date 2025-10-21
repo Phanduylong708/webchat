@@ -2,10 +2,10 @@
 
 ## Current Status
 
-**Phase:** Phase 3: Friend System (IN PROGRESS ⏳)
-**Focus:** Friend management functionality
-**Started:** Week 4
-**Status:** Backend completed, Frontend pending
+**Phase:** Phase 4: Chat System (NEXT ⏳)
+**Focus:** Real-time messaging with Socket.IO
+**Started:** TBD
+**Status:** Phase 3 completed - Ready to begin Phase 4
 
 ---
 
@@ -51,7 +51,7 @@
 
 ## Phase 3: Friend System
 
-**Status:** ⏳ IN PROGRESS (Backend ✅ | Frontend ⏳)
+**Status:** ✅ COMPLETED
 **Focus:** Friend management functionality
 
 **Backend Deliverables (✅ COMPLETED):**
@@ -59,17 +59,22 @@
 - Add friend API (POST /api/friends - auto-accept)
 - Get friends list API (GET /api/friends)
 - Remove friend API (DELETE /api/friends/:friendId)
+- Search user API (GET /api/users/search?username=...)
 - Friend service layer with business logic validation
 - Friendship model with normalized IDs (userId1 < userId2)
 - All endpoints protected with JWT authentication
 
-**Frontend Deliverables (⏳ NOT STARTED):**
+**Frontend Deliverables (✅ COMPLETED):**
 
-- Friends page/component UI
-- Add friend form/modal
-- Friends list display
-- Remove friend functionality
-- Integration with backend APIs
+- Nested routing architecture (HomePage wrapper + FriendsPage child route)
+- Three-column layout (SideBar, FriendListPanel, MainContentPanel)
+- Friend Context with ID-based selection and computed selectedFriend
+- Add friend dialog with username search
+- Remove friend confirmation dialog (reusable component)
+- Friend profile display with status (online/last seen)
+- Friends list with real-time data from backend APIs
+- Error handling with scoped local states in dialogs
+- Empty states and loading states
 
 ---
 

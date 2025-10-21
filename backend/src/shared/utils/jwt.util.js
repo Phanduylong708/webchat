@@ -11,6 +11,7 @@ function verifyToken(token) {
   try {
     return jwt.verify(token, JWT_SECRET);
   } catch (err) {
+    console.error("JWT Verification Error:", err);
     return null;
   }
 }
