@@ -1,6 +1,7 @@
 import {
   getConversations,
   getConversationDetails,
+  createGroupConversation,
 } from "../services/conversation.service.js";
 import { sendSuccess, sendErrors } from "../../shared/utils/response.util.js";
 
@@ -27,6 +28,13 @@ async function getConversationsController(req, res, next) {
 async function getConversationDetailsController(req, res, next) {
   try {
     const conversationId = parseInt(req.params.conversationId, 10);
+    if (isNaN(conversationId)) {
+      return sendErrors(res, {
+        statusCode: 400,
+        message: "Invalid conversation ID",
+      });
+    }
+
     const userId = req.user.id;
     const conversationDetails = await getConversationDetails(
       conversationId,
@@ -42,4 +50,27 @@ async function getConversationDetailsController(req, res, next) {
   }
 }
 
-export { getConversationsController, getConversationDetailsController };
+async function createGroupConversationController(req, res, next) {
+  try {
+    const { title, memberIds } = req.body;
+    const userId = req.user.id;
+    const conversation = await createGroupConversation(
+      userId,
+      title,
+      memberIds
+    );
+    return sendSuccess(res, {
+      statusCode: 201,
+      data: { conversation },
+      message: "Group conversation created successfully",
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export {
+  getConversationsController,
+  getConversationDetailsController,
+  createGroupConversationController,
+};

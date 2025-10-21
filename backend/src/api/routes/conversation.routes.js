@@ -2,6 +2,7 @@ import { Router } from "express";
 import {
   getConversationsController,
   getConversationDetailsController,
+  createGroupConversationController,
 } from "../controllers/conversation.controller.js";
 import { passport } from "../../shared/config/passport.config.js";
 
@@ -17,4 +18,10 @@ conversationRoute.get(
   "/:conversationId",
   passport.authenticate("jwt", { session: false }),
   getConversationDetailsController
+);
+
+conversationRoute.post(
+  "/group",
+  passport.authenticate("jwt", { session: false }),
+  createGroupConversationController
 );

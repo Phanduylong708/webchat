@@ -29,11 +29,11 @@ async function getConversations(userId) {
   });
 
   const conversations = memberships.map(({ conversation }) => {
-    // 📩 Get the latest message for preview
+    // Get the latest message for preview
     // Assumes `conversation.messages` is sorted by createdAt DESC (newest first)
     const lastMessage = conversation.messages[0] || null;
 
-    // 👤 If this is a PRIVATE conversation (1-on-1 chat)
+    // If this is a PRIVATE conversation (1-on-1 chat)
     if (conversation.type === "PRIVATE") {
       // Find the other participant (exclude the current user)
       const otherMember = conversation.members.find(
@@ -62,7 +62,7 @@ async function getConversations(userId) {
       };
     }
 
-    // 👥 If this is a GROUP conversation
+    // If this is a GROUP conversation
     // Build a small "preview" list of up to 3 other members for UI display
     const previewMembers = conversation.members
       // Exclude the current user from the preview
@@ -138,4 +138,74 @@ async function getConversationDetails(conversationId, userId) {
   };
 }
 
-export { getConversations, getConversationDetails };
+async function createGroupConversation(userId, title, memberIds) {
+  //validate title
+  if (!title || title.trim().length === 0) {
+    const error = new Error("Title is required for group conversations");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  memberIds = memberIds || [];
+  //validate memberIds
+  if (!Array.isArray(memberIds)) {
+    const error = new Error("memberIds must be an array of user IDs");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const uniqueIds = [...new Set(memberIds)] // remove duplicates
+    .map((id) => Number(id)) // convert to numbers
+    .filter((id) => Number.isInteger(id) && id !== userId); // filter out invalid IDs and the creator's ID
+
+  if (uniqueIds.length < 2) {
+    // at least 2 members besides the creator
+    const error = new Error(
+      "At least two valid member IDs (excluding the creator) are required to create a group conversation"
+    );
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const foundUsers = await prisma.user.findMany({
+    // validate that all member IDs exist
+    where: { id: { in: uniqueIds } },
+  });
+
+  if (foundUsers.length !== uniqueIds.length) {
+    // some IDs do not correspond to existing users
+    const error = new Error("One or more members not found");
+    error.statusCode = 404;
+    throw error;
+  }
+  const conversation = await prisma.$transaction(async (tx) => {
+    const createdConversation = await tx.conversation.create({
+      data: {
+        type: "GROUP",
+        title: title.trim(),
+        creatorId: userId,
+      },
+    });
+
+    await tx.conversationMember.create({
+      data: {
+        conversationId: createdConversation.id,
+        userId,
+      },
+    });
+
+    await tx.conversationMember.createMany({
+      data: uniqueIds.map((memberId) => ({
+        conversationId: createdConversation.id,
+        userId: memberId,
+      })),
+      skipDuplicates: true,
+    });
+
+    return createdConversation;
+  });
+
+  return getConversationDetails(conversation.id, userId);
+}
+
+export { getConversations, getConversationDetails, createGroupConversation };

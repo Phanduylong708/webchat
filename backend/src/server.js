@@ -22,7 +22,12 @@ app.use("/api/users", userRoutes);
 app.use("/api/conversations", conversationRoute);
 const httpServer = createServer(app);
 initializeSocketServer(httpServer);
-app.use((err, req, res) => {
+// eslint-disable-next-line no-unused-vars
+app.use((err, req, res, next) => {
+  console.log("=== ERROR MIDDLEWARE TRIGGERED ===");
+  console.log("Error object:", err);
+  console.log("err.statusCode:", err.statusCode);
+  console.log("err.message:", err.message);
   const statusCode = err.statusCode || 500;
   const message = err.message || "Internal Server Error";
   console.error("Server Error:", err);

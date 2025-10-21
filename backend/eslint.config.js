@@ -1,17 +1,21 @@
 // eslint.config.js
 import js from "@eslint/js";
 import globals from "globals";
-
+import pluginN from "eslint-plugin-n";
 export default [
-  // 1) Ignore trước
   {
     ignores: ["node_modules/**", "dist/**", ".env"],
   },
 
-  // 2) Base rule set cho JS (flat config: đưa thẳng vào mảng, KHÔNG dùng "extends")
   js.configs.recommended,
+  pluginN.configs["flat/recommended"],
 
-  // 3) Tuỳ biến cho file .js
+  {
+    files: ["eslint.config.js"],
+    rules: {
+      "n/no-unpublished-import": "off",
+    },
+  },
   {
     files: ["**/*.{js,mjs,cjs}"],
     languageOptions: {
@@ -20,8 +24,6 @@ export default [
       globals: globals.node,
     },
     rules: {
-      // thêm rule của bạn ở đây nếu cần
-      // "no-unused-vars": "warn",
       eqeqeq: "error",
     },
   },

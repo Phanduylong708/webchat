@@ -19,6 +19,7 @@
   "devDependencies": {
     "@eslint/js": "^9.38.0",
     "eslint": "^9.38.0",
+    "eslint-plugin-n": "^17.23.1",
     "globals": "^16.4.0",
     "nodemon": "^3.1.10",
     "prisma": "^6.16.3",
