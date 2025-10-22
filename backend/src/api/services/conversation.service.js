@@ -208,4 +208,68 @@ async function createGroupConversation(userId, title, memberIds) {
   return getConversationDetails(conversation.id, userId);
 }
 
-export { getConversations, getConversationDetails, createGroupConversation };
+async function addMemberToGroup(conversationId, currentUserId, newUserId) {
+  const conversation = await prisma.conversation.findUnique({
+    // find conversation and members
+    where: { id: conversationId },
+    include: { members: true },
+  });
+
+  if (!conversation) {
+    // check if conversation exists
+    const error = new Error("Conversation not found");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  if (conversation.type !== "GROUP") {
+    // check if conversation is group type
+    const error = new Error("Cannot add members to a private conversation");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (conversation.creatorId !== currentUserId) {
+    // check if current user is creator
+    const error = new Error("Only the conversation creator can add members");
+    error.statusCode = 403;
+    throw error;
+  }
+
+  const newUser = await prisma.user.findUnique({
+    // check if new user exists
+    where: { id: newUserId },
+    select: { id: true, username: true, avatar: true },
+  });
+  if (!newUser) {
+    const error = new Error("User to be added not found");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  //check if new user is already a member
+  const isAlreadyMember = conversation.members.some(
+    (member) => member.userId === newUserId
+  );
+  if (isAlreadyMember) {
+    const error = new Error("User is already a member of the conversation");
+    error.statusCode = 409;
+    throw error;
+  }
+
+  await prisma.conversationMember.create({
+    // add new member
+    data: {
+      conversationId,
+      userId: newUserId,
+    },
+  });
+
+  return { conversationId, member: newUser }; // return conversation ID and new member info
+}
+export {
+  getConversations,
+  getConversationDetails,
+  createGroupConversation,
+  addMemberToGroup,
+};

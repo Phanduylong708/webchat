@@ -3,6 +3,7 @@ import {
   getConversationsController,
   getConversationDetailsController,
   createGroupConversationController,
+  addMemberToGroupController,
 } from "../controllers/conversation.controller.js";
 import { passport } from "../../shared/config/passport.config.js";
 
@@ -24,4 +25,10 @@ conversationRoute.post(
   "/group",
   passport.authenticate("jwt", { session: false }),
   createGroupConversationController
+);
+
+conversationRoute.post(
+  "/:conversationId/members",
+  passport.authenticate("jwt", { session: false }),
+  addMemberToGroupController
 );

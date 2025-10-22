@@ -2,19 +2,15 @@ import {
   getConversations,
   getConversationDetails,
   createGroupConversation,
+  addMemberToGroup,
 } from "../services/conversation.service.js";
-import { sendSuccess, sendErrors } from "../../shared/utils/response.util.js";
+import { parseId } from "../../shared/utils/parse.util.js";
+import { sendSuccess } from "../../shared/utils/response.util.js";
 
 async function getConversationsController(req, res, next) {
   try {
-    const userId = req.user.id;
-    if (isNaN(userId)) {
-      return sendErrors(res, {
-        statusCode: 400,
-        message: "Invalid user ID",
-      });
-    }
-    const conversations = await getConversations(userId);
+    const currentUserId = req.user.id; // user.id from prisma id always integer so no need check
+    const conversations = await getConversations(currentUserId);
     return sendSuccess(res, {
       statusCode: 200,
       data: { conversations },
@@ -27,18 +23,14 @@ async function getConversationsController(req, res, next) {
 
 async function getConversationDetailsController(req, res, next) {
   try {
-    const conversationId = parseInt(req.params.conversationId, 10);
-    if (isNaN(conversationId)) {
-      return sendErrors(res, {
-        statusCode: 400,
-        message: "Invalid conversation ID",
-      });
-    }
-
-    const userId = req.user.id;
+    const conversationId = parseId(
+      req.params.conversationId,
+      "conversation ID"
+    );
+    const currentUserId = req.user.id;
     const conversationDetails = await getConversationDetails(
       conversationId,
-      userId
+      currentUserId
     );
     return sendSuccess(res, {
       statusCode: 200,
@@ -53,9 +45,9 @@ async function getConversationDetailsController(req, res, next) {
 async function createGroupConversationController(req, res, next) {
   try {
     const { title, memberIds } = req.body;
-    const userId = req.user.id;
+    const currentUserId = req.user.id;
     const conversation = await createGroupConversation(
-      userId,
+      currentUserId,
       title,
       memberIds
     );
@@ -69,8 +61,34 @@ async function createGroupConversationController(req, res, next) {
   }
 }
 
+async function addMemberToGroupController(req, res, next) {
+  try {
+    const conversationIdParam = parseId(
+      // helper to validate and parse ID params
+      req.params.conversationId,
+      "conversation ID"
+    );
+    const userId = parseId(req.body.userId, "user ID"); // parse userId from request body
+    const currentUserId = req.user.id;
+
+    const { conversationId, member } = await addMemberToGroup(
+      conversationIdParam,
+      currentUserId,
+      userId
+    );
+    return sendSuccess(res, {
+      statusCode: 201,
+      data: { conversationId, member },
+      message: "Member added to group conversation successfully",
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
 export {
   getConversationsController,
   getConversationDetailsController,
   createGroupConversationController,
+  addMemberToGroupController,
 };
