@@ -267,9 +267,37 @@ async function addMemberToGroup(conversationId, currentUserId, newUserId) {
 
   return { conversationId, member: newUser }; // return conversation ID and new member info
 }
+
+async function leaveGroup(conversationId, userId) {
+  const membership = await prisma.conversationMember.findUnique({
+    // get membership record include conversation type for validation
+    where: { userId_conversationId: { userId, conversationId } },
+    include: { conversation: { select: { type: true } } },
+  });
+
+  if (!membership) {
+    // check if user is a member of the conversation
+    const error = new Error("Not a member of this conversation");
+    error.statusCode = 404;
+    throw error;
+  }
+  if (membership.conversation.type !== "GROUP") {
+    // check if conversation is group type
+    const error = new Error("Cannot leave a private conversation");
+    error.statusCode = 400;
+    throw error;
+  }
+  await prisma.conversationMember.delete({
+    // remove membership record
+    where: { userId_conversationId: { userId, conversationId } },
+  });
+
+  return { message: "Left group conversation successfully" };
+}
 export {
   getConversations,
   getConversationDetails,
   createGroupConversation,
   addMemberToGroup,
+  leaveGroup,
 };

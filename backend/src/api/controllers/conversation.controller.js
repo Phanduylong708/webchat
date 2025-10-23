@@ -3,6 +3,7 @@ import {
   getConversationDetails,
   createGroupConversation,
   addMemberToGroup,
+  leaveGroup,
 } from "../services/conversation.service.js";
 import { parseId } from "../../shared/utils/parse.util.js";
 import { sendSuccess } from "../../shared/utils/response.util.js";
@@ -86,9 +87,27 @@ async function addMemberToGroupController(req, res, next) {
   }
 }
 
+async function leaveGroupController(req, res, next) {
+  try {
+    const conversationId = parseId(
+      req.params.conversationId,
+      "conversation ID"
+    );
+    const currentUserId = req.user.id;
+    await leaveGroup(conversationId, currentUserId);
+    return sendSuccess(res, {
+      statusCode: 200,
+      message: "Left group conversation successfully",
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
 export {
   getConversationsController,
   getConversationDetailsController,
   createGroupConversationController,
   addMemberToGroupController,
+  leaveGroupController,
 };
