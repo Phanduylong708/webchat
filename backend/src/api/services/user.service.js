@@ -1,4 +1,6 @@
 import { prisma } from "../../shared/prisma.js";
+import { createHTTPError } from "../../shared/utils/error.util.js";
+
 async function searchUserByUsername(username) {
   const existingUser = await prisma.user.findUnique({
     where: { username },
@@ -11,9 +13,7 @@ async function searchUserByUsername(username) {
     },
   });
   if (!existingUser) {
-    const error = new Error("User not found");
-    error.statusCode = 404;
-    throw error;
+    throw createHTTPError(404, "User not found");
   }
   return existingUser;
 }

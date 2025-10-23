@@ -376,14 +376,15 @@ npm install socket.io
 
 ### STEP 4: Message History API (REST)
 
-**Goal:** Provide paginated message history for conversations.
+**Goal:** Provide cursor-based paginated message history for conversations.
 
-**Endpoint:** `GET /api/messages/:conversationId?page=1&limit=50`
+**Endpoint:** `GET /api/messages/:conversationId?before=<messageId>&limit=50`
 
 **Validation:**
 
 - User must be a member of conversation (403)
-- page and limit must be positive integers (default: page=1, limit=50)
+- before (optional): message ID cursor, must be valid integer if provided (400)
+- limit (optional): default 50, min 1, max 100
 
 **Response:**
 
@@ -406,30 +407,33 @@ npm install socket.io
       }
     ],
     "meta": {
-      "page": 1,
       "limit": 50,
-      "total": 150,
+      "nextCursor": 73,
       "hasMore": true
     }
   }
 }
 ```
 
-**Service:** `getMessages(conversationId, userId, page, limit)`
+**Service:** `getMessages(conversationId, userId, { before, limit })`
 
 - Verify user is member of conversation (throw 403 if not)
-- Query Messages where `conversationId = conversationId`
-- Order by `createdAt DESC` (newest first)
-- Paginate: `skip = (page - 1) * limit`, `take = limit`
+- Normalize limit (clamp between 1-100, default 50)
+- Build where clause: `{ conversationId, ...(before && { id: { lt: before } }) }`
+- Query Messages: `orderBy: { id: 'desc' }`, `take: limit + 1` (extra for hasMore detection)
 - Include sender (id, username, avatar)
-- Count total messages for `hasMore` calculation
-- Return messages + pagination meta
+- Determine hasMore: if `messages.length > limit`, pop last item and set `nextCursor = messages[messages.length - 1].id`
+- Reverse messages to return ascending order (oldest first)
+- Return messages + meta (limit, nextCursor, hasMore)
+
+**Helpers:** `parseOptionalId`, `parseLimit` in `src/shared/utils/parse.util.js`
 
 **Files:**
 
 - `src/api/services/message.service.js` (new)
 - `src/api/controllers/message.controller.js` (new)
 - `src/api/routes/message.routes.js` (new)
+- `src/shared/utils/parse.util.js` (updated - add helpers)
 
 **Updated:**
 

@@ -1,11 +1,11 @@
 import { prisma } from "../../shared/prisma.js";
+import { createHTTPError } from "../../shared/utils/error.util.js";
 
 async function addFriend(currentUserId, friendId) {
   if (currentUserId === friendId) {
-    const error = new Error("You cannot add yourself as a friend");
-    error.statusCode = 400;
-    throw error;
+    throw createHTTPError(400, "You cannot add yourself as a friend");
   }
+
   const existingUser = await prisma.user.findUnique({
     where: {
       id: friendId,
@@ -19,9 +19,7 @@ async function addFriend(currentUserId, friendId) {
     },
   });
   if (!existingUser) {
-    const error = new Error("User not found");
-    error.statusCode = 404;
-    throw error;
+    throw createHTTPError(404, "User not found");
   }
   const userId1 = Math.min(currentUserId, friendId);
   const userId2 = Math.max(currentUserId, friendId);
@@ -32,9 +30,7 @@ async function addFriend(currentUserId, friendId) {
     },
   });
   if (existingFriendShip) {
-    const error = new Error("You are already friends with this user");
-    error.statusCode = 409;
-    throw error;
+    throw createHTTPError(409, "You are already friends with this user");
   }
   await prisma.friendship.create({
     data: { userId1: userId1, userId2: userId2 },
@@ -84,9 +80,7 @@ async function removeFriend(currentUserId, friendId) {
     },
   });
   if (!existingFriendShip) {
-    const error = new Error("You are not friends with this user");
-    error.statusCode = 404;
-    throw error;
+    throw createHTTPError(404, "You are not friends with this user");
   }
   await prisma.friendship.delete({
     where: { id: existingFriendShip.id },

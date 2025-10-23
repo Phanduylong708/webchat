@@ -1,5 +1,6 @@
 import { prisma } from "../../shared/prisma.js";
 import { hashPassword } from "../../shared/utils/hash.util.js";
+import { createHTTPError } from "../../shared/utils/error.util.js";
 
 async function register(email, password, username) {
   const existingUser = await prisma.user.findFirst({
@@ -8,9 +9,7 @@ async function register(email, password, username) {
     },
   });
   if (existingUser) {
-    const error = new Error("Email or username already in use");
-    error.statusCode = 409;
-    throw error;
+    throw createHTTPError(409, "Email or username already in use");
   }
   const hashedPassword = await hashPassword(password);
   const newUser = await prisma.user.create({

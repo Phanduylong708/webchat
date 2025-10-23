@@ -1,4 +1,5 @@
 import { prisma } from "../../shared/prisma.js";
+import { createHTTPError } from "../../shared/utils/error.util.js";
 
 async function getConversations(userId) {
   const memberships = await prisma.conversationMember.findMany({
@@ -100,9 +101,7 @@ async function getConversationDetails(conversationId, userId) {
     },
   });
   if (!isMember) {
-    const error = new Error("Not a member of conversation");
-    error.statusCode = 403;
-    throw error;
+    throw createHTTPError(403, "Not a member of conversation");
   }
   const conversation = await prisma.conversation.findUnique({
     where: { id: conversationId },
@@ -118,9 +117,7 @@ async function getConversationDetails(conversationId, userId) {
   });
 
   if (!conversation) {
-    const error = new Error("Conversation not found");
-    error.statusCode = 404;
-    throw error;
+    throw createHTTPError(404, "Conversation not found");
   }
   const members = conversation.members.map((member) => {
     return {
@@ -141,17 +138,13 @@ async function getConversationDetails(conversationId, userId) {
 async function createGroupConversation(userId, title, memberIds) {
   //validate title
   if (!title || title.trim().length === 0) {
-    const error = new Error("Title is required for group conversations");
-    error.statusCode = 400;
-    throw error;
+    throw createHTTPError(400, "Title is required for group conversations");
   }
 
   memberIds = memberIds || [];
   //validate memberIds
   if (!Array.isArray(memberIds)) {
-    const error = new Error("memberIds must be an array of user IDs");
-    error.statusCode = 400;
-    throw error;
+    throw createHTTPError(400, "memberIds must be an array of user IDs");
   }
 
   const uniqueIds = [...new Set(memberIds)] // remove duplicates
@@ -160,11 +153,10 @@ async function createGroupConversation(userId, title, memberIds) {
 
   if (uniqueIds.length < 2) {
     // at least 2 members besides the creator
-    const error = new Error(
+    throw createHTTPError(
+      400,
       "At least two valid member IDs (excluding the creator) are required to create a group conversation"
     );
-    error.statusCode = 400;
-    throw error;
   }
 
   const foundUsers = await prisma.user.findMany({
@@ -174,9 +166,7 @@ async function createGroupConversation(userId, title, memberIds) {
 
   if (foundUsers.length !== uniqueIds.length) {
     // some IDs do not correspond to existing users
-    const error = new Error("One or more members not found");
-    error.statusCode = 404;
-    throw error;
+    throw createHTTPError(404, "One or more members not found");
   }
   const conversation = await prisma.$transaction(async (tx) => {
     const createdConversation = await tx.conversation.create({
@@ -217,23 +207,17 @@ async function addMemberToGroup(conversationId, currentUserId, newUserId) {
 
   if (!conversation) {
     // check if conversation exists
-    const error = new Error("Conversation not found");
-    error.statusCode = 404;
-    throw error;
+    throw createHTTPError(404, "Conversation not found");
   }
 
   if (conversation.type !== "GROUP") {
     // check if conversation is group type
-    const error = new Error("Cannot add members to a private conversation");
-    error.statusCode = 400;
-    throw error;
+    throw createHTTPError(400, "Cannot add members to a private conversation");
   }
 
   if (conversation.creatorId !== currentUserId) {
     // check if current user is creator
-    const error = new Error("Only the conversation creator can add members");
-    error.statusCode = 403;
-    throw error;
+    throw createHTTPError(403, "Only the conversation creator can add members");
   }
 
   const newUser = await prisma.user.findUnique({
@@ -242,9 +226,7 @@ async function addMemberToGroup(conversationId, currentUserId, newUserId) {
     select: { id: true, username: true, avatar: true },
   });
   if (!newUser) {
-    const error = new Error("User to be added not found");
-    error.statusCode = 404;
-    throw error;
+    throw createHTTPError(404, "User to be added not found");
   }
 
   //check if new user is already a member
@@ -252,9 +234,7 @@ async function addMemberToGroup(conversationId, currentUserId, newUserId) {
     (member) => member.userId === newUserId
   );
   if (isAlreadyMember) {
-    const error = new Error("User is already a member of the conversation");
-    error.statusCode = 409;
-    throw error;
+    throw createHTTPError(409, "User is already a member of the conversation");
   }
 
   await prisma.conversationMember.create({
@@ -277,15 +257,11 @@ async function leaveGroup(conversationId, userId) {
 
   if (!membership) {
     // check if user is a member of the conversation
-    const error = new Error("Not a member of this conversation");
-    error.statusCode = 404;
-    throw error;
+    throw createHTTPError(404, "Not a member of this conversation");
   }
   if (membership.conversation.type !== "GROUP") {
     // check if conversation is group type
-    const error = new Error("Cannot leave a private conversation");
-    error.statusCode = 400;
-    throw error;
+    throw createHTTPError(400, "Cannot leave a private conversation");
   }
   await prisma.conversationMember.delete({
     // remove membership record
@@ -294,6 +270,7 @@ async function leaveGroup(conversationId, userId) {
 
   return { message: "Left group conversation successfully" };
 }
+
 export {
   getConversations,
   getConversationDetails,

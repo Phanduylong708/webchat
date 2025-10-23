@@ -9,6 +9,7 @@ import { authRoutes } from "./api/routes/auth.routes.js";
 import { friendRoutes } from "./api/routes/friend.routes.js";
 import { userRoutes } from "./api/routes/user.routes.js";
 import { conversationRoute } from "./api/routes/conversation.routes.js";
+import { messageRoute } from "./api/routes/message.routes.js";
 
 dotenv.config();
 
@@ -20,6 +21,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/friends", friendRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/conversations", conversationRoute);
+app.use("/api/messages", messageRoute);
 const httpServer = createServer(app);
 initializeSocketServer(httpServer);
 // eslint-disable-next-line no-unused-vars
