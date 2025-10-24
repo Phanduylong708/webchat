@@ -14,4 +14,26 @@ async function joinUserConversations(io, socket, userId) {
   });
 }
 
-export { joinUserConversations };
+async function verifyMembership(userId, conversationId) {
+  const membership = await prisma.conversationMember.findUnique({
+    where: {
+      userId_conversationId: { userId, conversationId },
+    },
+  });
+  return membership !== null;
+}
+
+function getUserRoom(userId) {
+  // centralized function for user room naming
+  return `user_${userId}`;
+}
+
+function getConversationRoom(conversationId) {
+  return `conversation_${conversationId}`;
+}
+export {
+  joinUserConversations,
+  verifyMembership,
+  getUserRoom,
+  getConversationRoom,
+};

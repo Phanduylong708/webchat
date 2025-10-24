@@ -245,7 +245,23 @@ async function addMemberToGroup(conversationId, currentUserId, newUserId) {
     },
   });
 
-  return { conversationId, member: newUser }; // return conversation ID and new member info
+  //fetch new conversation
+  const updatedConversation = await getConversationDetails(
+    conversationId,
+    currentUserId
+  );
+
+  return {
+    conversationId,
+    member: newUser,
+    conversation: {
+      id: updatedConversation.id,
+      type: updatedConversation.type,
+      title: updatedConversation.title,
+      creatorId: updatedConversation.creatorId,
+      members: updatedConversation.members,
+    },
+  };
 }
 
 async function leaveGroup(conversationId, userId) {
@@ -271,10 +287,71 @@ async function leaveGroup(conversationId, userId) {
   return { message: "Left group conversation successfully" };
 }
 
+async function findOrCreatePrivateConversation(userId, recipientId) {
+  // function for lazy connection (1-on-1 chat)
+  //validate if not self
+  if (userId === recipientId) {
+    throw createHTTPError(
+      400,
+      "Cannot create private conversation with yourself"
+    );
+  }
+  // check if recipient exists
+  const recipient = await prisma.user.findUnique({
+    // query recipient user
+    where: { id: recipientId }, // find by id
+    select: { id: true, username: true, avatar: true },
+  });
+  if (!recipient) {
+    throw createHTTPError(404, "Recipient user not found");
+  }
+  //query all memberships of userId
+  const memberships = await prisma.conversationMember.findMany({
+    where: { userId },
+    include: {
+      conversation: {
+        include: {
+          members: true, // include members to check for recipient
+        },
+      },
+    },
+  });
+  // filter
+  const existingConversation = memberships.find(({ conversation }) => {
+    // look for existing private conversation
+    return (
+      conversation.type === "PRIVATE" && // must be private
+      conversation.members.length === 2 && // must have exactly 2 members
+      conversation.members.some((member) => member.userId === recipientId)
+    ); // must include recipient
+  });
+  if (existingConversation) {
+    // if found existing conversation
+    return existingConversation.conversation.id; // return existing conversation ID
+  }
+  //transaction to create new private conversation
+  const conversationId = await prisma.$transaction(async (tx) => {
+    // create new conversation
+    const newConversation = await tx.conversation.create({
+      data: { type: "PRIVATE", creatorId: userId, title: null }, // private type, no title
+    });
+    // create conversation member
+    await tx.conversationMember.createMany({
+      data: [
+        { userId, conversationId: newConversation.id }, // add current user
+        { userId: recipientId, conversationId: newConversation.id }, // add recipient user
+      ],
+    });
+    return newConversation.id;
+  });
+  return conversationId;
+}
+
 export {
   getConversations,
   getConversationDetails,
   createGroupConversation,
   addMemberToGroup,
   leaveGroup,
+  findOrCreatePrivateConversation,
 };

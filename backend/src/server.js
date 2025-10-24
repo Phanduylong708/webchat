@@ -17,13 +17,19 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 app.use(passport.initialize());
+
+const httpServer = createServer(app);
+const io = initializeSocketServer(httpServer);
+app.use((req, res, next) => {
+  req.io = io;
+  next();
+});
+
 app.use("/api/auth", authRoutes);
 app.use("/api/friends", friendRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/conversations", conversationRoute);
 app.use("/api/messages", messageRoute);
-const httpServer = createServer(app);
-initializeSocketServer(httpServer);
 // eslint-disable-next-line no-unused-vars
 app.use((err, req, res, next) => {
   console.log("=== ERROR MIDDLEWARE TRIGGERED ===");

@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Socket Test – User 2</title>
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+  </head>
+  <body>
+    <h1>Socket.IO Test – User 2 (phanduylong708)</h1>
+
+    <section>
+      <h2>Connection</h2>
+      <p>Status: <span id="status">Connecting…</span></p>
+    </section>
+
+    <section>
+      <h2>Send Message</h2>
+      <label>
+        Conversation ID:
+        <input id="conversation-id" type="number" placeholder="e.g. 1" />
+      </label>
+      <br />
+      <label>
+        Recipient ID (for new 1-1):
+        <input id="recipient-id" type="number" placeholder="e.g. 4" />
+      </label>
+      <br />
+      <label>
+        Content:
+        <input id="message-content" type="text" placeholder="Message content" />
+      </label>
+      <br />
+      <button id="send-message">Send Message</button>
+    </section>
+
+    <section>
+      <h2>Typing Indicator</h2>
+      <label>
+        Conversation ID:
+        <input id="typing-conversation-id" type="number" placeholder="e.g. 1" />
+      </label>
+      <br />
+      <button id="typing-start">typing:start</button>
+      <button id="typing-stop">typing:stop</button>
+    </section>
+
+    <section>
+      <h2>Logs</h2>
+      <pre id="logs"></pre>
+    </section>
+
+    <script>
+      const logEl = document.getElementById("logs");
+      const statusEl = document.getElementById("status");
+
+      function log(label, data) {
+        const time = new Date().toISOString();
+        logEl.textContent += `[${time}] ${label}: ${JSON.stringify(
+          data,
+          null,
+          2
+        )}\n`;
+        logEl.scrollTop = logEl.scrollHeight;
+        console.log(label, data);
+      }
+
+      async function init() {
+        const loginRes = await fetch("http://localhost:5000/api/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            identifier: "phanduylong708@gmail.com",
+            password: "adu115",
+          }),
+        }).then((res) => res.json());
+
+        const token = loginRes?.data?.token;
+        if (!token) {
+          statusEl.textContent = "Login failed";
+          log("loginError", loginRes);
+          return;
+        }
+
+        const socket = io("http://localhost:5000", { auth: { token } });
+        window.socket = socket;
+
+        socket.on("connect", () => {
+          statusEl.textContent = `Connected (${socket.id})`;
+          log("connected", { socketId: socket.id });
+        });
+
+        socket.on("disconnect", (reason) => {
+          statusEl.textContent = `Disconnected (${reason})`;
+          log("disconnect", { reason });
+        });
+
+        socket.on("connect_error", (err) => {
+          statusEl.textContent = "Connect error";
+          log("connect_error", { message: err.message, data: err.data });
+        });
+
+        socket.on("newMessage", (msg) => log("newMessage", msg));
+        socket.on("userTyping", (payload) => log("userTyping", payload));
+
+        document
+          .getElementById("send-message")
+          .addEventListener("click", () => {
+            if (!socket.connected) {
+              return log("warn", "Socket not connected");
+            }
+
+            const conversationId = Number(
+              document.getElementById("conversation-id").value
+            );
+            const recipientId = Number(
+              document.getElementById("recipient-id").value
+            );
+            const content = document.getElementById("message-content").value;
+
+            const payload = { content };
+            if (!Number.isNaN(conversationId) && conversationId > 0) {
+              payload.conversationId = conversationId;
+            }
+            if (!Number.isNaN(recipientId) && recipientId > 0) {
+              payload.recipientId = recipientId;
+            }
+
+            socket.emit("sendMessage", payload, (ack) => log("ack", ack));
+          });
+
+        document
+          .getElementById("typing-start")
+          .addEventListener("click", () => emitTyping(true));
+        document
+          .getElementById("typing-stop")
+          .addEventListener("click", () => emitTyping(false));
+
+        function emitTyping(isTyping) {
+          if (!socket.connected) {
+            return log("warn", "Socket not connected");
+          }
+          const conversationId = Number(
+            document.getElementById("typing-conversation-id").value
+          );
+          if (Number.isNaN(conversationId) || conversationId <= 0) {
+            return log("warn", "Typing conversationId is required");
+          }
+          const event = isTyping ? "typing:start" : "typing:stop";
+          socket.emit(event, { conversationId });
+          log(`emit ${event}`, { conversationId });
+        }
+      }
+
+      init();
+    </script>
+  </body>
+</html>

@@ -7,7 +7,11 @@ import {
 } from "../services/conversation.service.js";
 import { parseId } from "../../shared/utils/parse.util.js";
 import { sendSuccess } from "../../shared/utils/response.util.js";
-
+import {
+  getUserRoom,
+  getConversationRoom,
+} from "../../sockets/helpers/helpers.js";
+import { createHTTPError } from "../../shared/utils/error.util.js";
 async function getConversationsController(req, res, next) {
   try {
     const currentUserId = req.user.id; // user.id from prisma id always integer so no need check
@@ -69,14 +73,28 @@ async function addMemberToGroupController(req, res, next) {
       req.params.conversationId,
       "conversation ID"
     );
+    const io = req.io;
+    if (!io) {
+      throw createHTTPError(500, "Socket server not initialized");
+    }
     const userId = parseId(req.body.userId, "user ID"); // parse userId from request body
     const currentUserId = req.user.id;
 
-    const { conversationId, member } = await addMemberToGroup(
+    const { conversationId, conversation, member } = await addMemberToGroup(
       conversationIdParam,
       currentUserId,
       userId
     );
+
+    io.in(getUserRoom(member.id)).socketsJoin(
+      getConversationRoom(conversationId)
+    );
+    io.to(getConversationRoom(conversationId)).emit("memberAdded", {
+      conversationId,
+      member,
+    });
+    io.to(getUserRoom(member.id)).emit("addedToConversation", { conversation });
+
     return sendSuccess(res, {
       statusCode: 201,
       data: { conversationId, member },
@@ -93,8 +111,19 @@ async function leaveGroupController(req, res, next) {
       req.params.conversationId,
       "conversation ID"
     );
+    const io = req.io;
+    if (!io) {
+      throw createHTTPError(500, "Socket server not initialized");
+    }
     const currentUserId = req.user.id;
     await leaveGroup(conversationId, currentUserId);
+    io.in(getUserRoom(currentUserId)).socketsLeave(
+      getConversationRoom(conversationId)
+    );
+    io.to(getConversationRoom(conversationId)).emit("memberLeft", {
+      conversationId,
+      userId: currentUserId,
+    });
     return sendSuccess(res, {
       statusCode: 200,
       message: "Left group conversation successfully",
