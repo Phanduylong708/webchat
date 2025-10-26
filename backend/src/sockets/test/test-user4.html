@@ -101,6 +101,11 @@
 
         socket.on("newMessage", (msg) => log("newMessage", msg));
         socket.on("userTyping", (payload) => log("userTyping", payload));
+        socket.on("memberAdded", (payload) => log("memberAdded", payload));
+        socket.on("memberLeft", (payload) => log("memberLeft", payload));
+        socket.on("addedToConversation", (payload) =>
+          log("addedToConversation", payload)
+        );
 
         document
           .getElementById("send-message")

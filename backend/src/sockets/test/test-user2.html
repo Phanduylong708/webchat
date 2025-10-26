@@ -6,7 +6,7 @@
     <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
   </head>
   <body>
-    <h1>Socket.IO Test – User 6 (phanduylong711)</h1>
+    <h1>Socket.IO Test – User 2 (phanduylong708)</h1>
 
     <section>
       <h2>Connection</h2>
@@ -69,7 +69,7 @@
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            identifier: "phanduylong711@gmail.com",
+            identifier: "phanduylong708@gmail.com",
             password: "adu115",
           }),
         }).then((res) => res.json());
@@ -101,6 +101,11 @@
 
         socket.on("newMessage", (msg) => log("newMessage", msg));
         socket.on("userTyping", (payload) => log("userTyping", payload));
+        socket.on("memberAdded", (payload) => log("memberAdded", payload));
+        socket.on("memberLeft", (payload) => log("memberLeft", payload));
+        socket.on("addedToConversation", (payload) =>
+          log("addedToConversation", payload)
+        );
 
         document
           .getElementById("send-message")
