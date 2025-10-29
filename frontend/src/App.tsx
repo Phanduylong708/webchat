@@ -1,4 +1,5 @@
 import { AuthProvider } from "@/contexts/authContext";
+import { SocketProvider } from "./contexts/socketProvider";
 import { useAuth } from "@/hooks/useAuth";
 import { Outlet } from "react-router-dom";
 import React from "react";
@@ -16,7 +17,12 @@ function AppContent() {
 export default function App() {
   return (
     <AuthProvider>
-      <AppContent />
+      <SocketProvider>
+        <AppContent />
+      </SocketProvider>
     </AuthProvider>
   );
 }
+
+//socket needs to be inside auth to access the token
+//AppContent to wait for auth check before rendering routes
