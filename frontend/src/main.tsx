@@ -9,6 +9,7 @@ import SignUp from "./pages/auth/SignUp.tsx";
 import HomePage from "./pages/home/HomePage.tsx";
 import ProtectedRoute from "./components/ProtectedRoute.tsx";
 import FriendsPage from "./pages/home/FriendsPage.tsx";
+import ChatPage from "./pages/chat/ChatPage.tsx";
 
 const router = createBrowserRouter([
   {
@@ -31,6 +32,7 @@ const router = createBrowserRouter([
             path: "friends",
             element: <FriendsPage />,
           },
+          { path: "chat", element: <ChatPage /> },
         ],
       },
       { path: "login", element: <LoginPage /> },
