@@ -103,6 +103,7 @@ function FriendProvider({
   }
 
   const value = {
+    //TODO Add useMemo
     friends,
     selectedFriend,
     loading,

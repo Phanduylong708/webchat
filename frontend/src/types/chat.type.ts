@@ -46,3 +46,15 @@ export interface ConversationContextValue extends ConversationState {
   selectConversation: (id: number) => Promise<void>;
   // Additional actions and setters will be added as we implement more steps
 }
+
+export interface MessageState {
+  messagesByConversation: Map<number, Messages[]>; // cache messages per conversation
+  // pagination: Map<number, {cursor: number | null; hasMore: boolean}>; // meta for infinite scroll
+  loadingMessages: boolean;
+  error: string | null;
+}
+
+export interface MessageContextValue extends MessageState {
+  fetchMessages(conversationId: number): Promise<void>;
+  // loadOlderMessages(conversationId: number): Promise<void>; //TODO
+}

@@ -24,7 +24,6 @@ function ConversationProvider({children}: {children: React.ReactNode}): JSX.Elem
         setError(null);
         try {
             const data = await getConversations();
-            console.log("Fetched conversations:", data);
             setConversations(data);
         } catch (error) {
             console.error("Error fetching conversations:", error);
