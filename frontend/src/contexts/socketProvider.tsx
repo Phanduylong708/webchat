@@ -24,19 +24,23 @@ function SocketProvider({
     if (user) {
       const token = getToken();
       if (token) {
-        initializeSocket(token); // initialize socket with token
+        initializeSocket(token);
       }
     } else {
-      disconnectSocket(); // disconnect if no user (logged out)
+      disconnectSocket();
     }
-    return () => {
-      disconnectSocket(); // cleanup on unmount
-    };
   }, [user]);
 
   // Listen for connection events
   useEffect(() => {
     if (!socketInstance) return;
+
+    // Check if already connected (missed event)
+    if (socketInstance.connected) {
+      setIsConnected(true);
+      console.log("Socket already connected");
+    }
+
     // Handle connection established
     const handleConnect = () => {
       setIsConnected(true);

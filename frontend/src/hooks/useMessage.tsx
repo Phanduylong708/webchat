@@ -1,4 +1,4 @@
-import { MessageContext } from "@/contexts/messageContext";
+import { MessageContext } from "@/contexts/messageContext.ts";
 import { useContext } from "react";
 import type { MessageContextValue } from "@/types/chat.type";
 

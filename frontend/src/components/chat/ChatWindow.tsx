@@ -1,5 +1,6 @@
 import { useConversation } from "@/hooks/useConversation";
 import MessageList from "./MessageList";
+import ChatInput from "./ChatInput";
 
 function ChatWindow(): React.JSX.Element {
   const { conversations, activeConversationId } = useConversation();
@@ -30,14 +31,7 @@ function ChatWindow(): React.JSX.Element {
         </p>
       </div>
       <MessageList />
-      <div className="border-t p-4">
-        <input
-          type="text"
-          placeholder="Message input coming soon..."
-          disabled
-          className="w-full px-4 py-2 border rounded-lg bg-muted"
-        />
-      </div>
+      <ChatInput conversationId={activeConversations.id} />
     </div>
   );
 }

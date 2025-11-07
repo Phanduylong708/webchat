@@ -56,5 +56,6 @@ export interface MessageState {
 
 export interface MessageContextValue extends MessageState {
   fetchMessages(conversationId: number): Promise<void>;
+  sendMessage(conversationId: number, content: string): Promise<void>;
   // loadOlderMessages(conversationId: number): Promise<void>; //TODO
 }

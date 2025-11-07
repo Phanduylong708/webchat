@@ -14,24 +14,20 @@ function getSocket(): Socket {
   return socketInstance;
 }
 
-function initializeSocket(token: string): void { // token come from provider
+function initializeSocket(token: string): void {
   if (socketInstance) {
-    console.log("Re-initializing socket with new token")
     socketInstance.auth = { token };
     socketInstance.connect();
     return;
   }
-  console.log("Initializing socket with token")
   const socket = getSocket();
   socket.auth = { token };
   socket.connect();
-
 }
 
 function disconnectSocket(): void {
-  if (socketInstance) {
+  if (socketInstance && socketInstance.connected) {
     socketInstance.disconnect();
-    socketInstance = null; // new connection when login/logout
   }
 }
 

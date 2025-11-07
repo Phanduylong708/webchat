@@ -35,7 +35,6 @@ function ConversationProvider({children}: {children: React.ReactNode}): JSX.Elem
 
     async function selectConversation(id: number): Promise<void> {
         setActiveConversationId(id);
-        console.log("Selected conversation ID:", id);
         // Additional logic to load messages can be added here
     }
 

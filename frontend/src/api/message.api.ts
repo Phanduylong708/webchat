@@ -23,7 +23,6 @@ async function getMessages(conversationsId: number, before?: number , limit?: nu
                 limit
             }
         });
-        console.log("Messages fetched:", response.data);
         return response.data;
     } catch (error) {
         throw handleApiError(error);
