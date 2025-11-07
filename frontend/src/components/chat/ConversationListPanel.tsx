@@ -11,22 +11,28 @@ function ConversationItem({
 }: {
   conversation: ConversationsResponse;
 }): React.JSX.Element {
-  const { selectConversation, activeConversationId } = useConversation();
+  const { selectConversation, activeConversationId, onlineUsers } =
+    useConversation();
   const isGroup = conversation.type === "GROUP";
   const firstPreview = conversation.previewMembers?.[0];
   const isActive = conversation.id === activeConversationId;
+  const otherUser = conversation.otherUser;
+
+  const isPrivate = conversation.type === "PRIVATE";
+  const isOnline =
+    isPrivate && otherUser ? onlineUsers.has(otherUser.id) : false;
 
   const avatarSrc = isGroup
     ? firstPreview?.avatar ?? undefined
-    : conversation.otherUser?.avatar ?? undefined;
+    : otherUser?.avatar ?? undefined;
 
   const fallback = isGroup
     ? firstPreview?.username[0].toUpperCase() ?? "G"
-    : conversation.otherUser?.username[0].toUpperCase() ?? "U";
+    : otherUser?.username[0].toUpperCase() ?? "U";
 
   const title = isGroup
     ? conversation.title ?? "Unnamed Group"
-    : conversation.otherUser?.username ?? "Unknown user";
+    : otherUser?.username ?? "Unknown user";
   return (
     <div
       className={`group flex items-center gap-3 p-3 rounded-lg border border-transparent cursor-pointer transition-all ${
@@ -65,7 +71,9 @@ function ConversationItem({
               }`}
             >
               {/* TODO: online badge */}
-              <span className="text-green-500">Online</span>
+              <span className="text-green-500">
+                {isOnline ? "Online" : "Offline"}
+              </span>
             </span>
           )}
         </div>

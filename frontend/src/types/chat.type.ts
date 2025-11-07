@@ -44,6 +44,7 @@ export interface ConversationState {
 export interface ConversationContextValue extends ConversationState {
   fetchConversations: () => Promise<void>;
   selectConversation: (id: number) => Promise<void>;
+  onlineUsers: Set<number>;
   // Additional actions and setters will be added as we implement more steps
 }
 

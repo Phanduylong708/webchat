@@ -1,4 +1,4 @@
-import { useState, useCallback, type JSX, useMemo } from "react";
+import { useState, useCallback, type JSX, useMemo, useEffect } from "react";
 import type { Messages } from "@/types/chat.type";
 import { getMessages } from "@/api/message.api";
 import useSocket from "@/hooks/useSocket";
@@ -64,6 +64,22 @@ function MessageProvider({
   const { socket } = useSocket();
   const { user } = useAuth();
 
+  // Listen for incoming messages
+  useEffect(() => {
+    if (!socket) return; // wait for socket to be available
+    function handleNewMessage(message: Messages) {
+      console.log("Received message", message);
+      setMessagesByConversation((prev) => {
+        return addMessageToMap(prev, message.conversationId, message);
+      });
+    }
+    socket.on("newMessage", handleNewMessage);
+    return () => {
+      socket.off("newMessage", handleNewMessage);
+    };
+  }, [socket]);
+
+  // Send a message
   const sendMessage = useCallback(
     async (conversationId: number, content: string): Promise<void> => {
       console.log(

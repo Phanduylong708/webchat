@@ -1,4 +1,4 @@
-import { ConversationProvider } from "@/contexts/conversationContext";
+import { ConversationProvider } from "@/contexts/conversationProvider";
 import { MessageProvider } from "@/contexts/messageProvider";
 import { useEffect } from "react";
 import { useConversation } from "@/hooks/useConversation";

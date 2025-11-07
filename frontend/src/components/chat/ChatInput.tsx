@@ -47,7 +47,7 @@ export default function ChatInput({
   return (
     <div className="border-t p-4">
       <form className="flex gap-2" onSubmit={handleFormSubmit}>
-        <div className="flex-1">
+        <div className="flex-1 min-w-0  ">
           <Textarea
             value={inputValue}
             placeholder="Type your message.."

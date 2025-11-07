@@ -3,7 +3,9 @@ import MessageList from "./MessageList";
 import ChatInput from "./ChatInput";
 
 function ChatWindow(): React.JSX.Element {
-  const { conversations, activeConversationId } = useConversation();
+  const { conversations, activeConversationId, onlineUsers } =
+    useConversation();
+  let statusText: string;
   const activeConversations = conversations.find(
     (c) => c.id === activeConversationId
   );
@@ -16,6 +18,14 @@ function ChatWindow(): React.JSX.Element {
     );
   }
 
+  if (activeConversations.type == "GROUP") {
+    statusText = `${activeConversations.memberCount} members`;
+  } else {
+    const isOnline = activeConversations?.otherUser
+      ? onlineUsers.has(activeConversations.otherUser.id)
+      : false;
+    statusText = isOnline ? "Online" : "Offline";
+  }
   return (
     <div className="flex flex-col h-full">
       <div className="border-b p-4">
@@ -24,11 +34,7 @@ function ChatWindow(): React.JSX.Element {
             ? activeConversations.otherUser?.username
             : activeConversations.title}
         </h2>
-        <p className="text-sm text-muted-foreground">
-          {activeConversations.type === "GROUP"
-            ? `${activeConversations.memberCount} members`
-            : "Online"}
-        </p>
+        <p className="text-sm text-muted-foreground">{statusText}</p>
       </div>
       <MessageList />
       <ChatInput conversationId={activeConversations.id} />
