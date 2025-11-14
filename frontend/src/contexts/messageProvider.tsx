@@ -58,8 +58,13 @@ function MessageProvider({
     Map<number, Messages[]>
   >(new Map());
   const [loadingMessages, setLoadingMessages] = useState<boolean>(false);
+  const [loadingOlderByConversation, setLoadingOlderByConversation] = useState<
+    Set<number>
+  >(new Set());
   const [error, setError] = useState<string | null>(null);
-  // const [pagination, setPagination] = useState<Map<number, {cursor: number | null; hasMore: boolean}>>(new Map());
+  const [pagination, setPagination] = useState<
+    Map<number, { nextCursor: number | null; hasMore: boolean }>
+  >(new Map());
 
   const { socket } = useSocket();
   const { user } = useAuth();
@@ -145,10 +150,16 @@ function MessageProvider({
       setLoadingMessages(true);
       setError(null);
       try {
-        const data = await getMessages(conversationId);
+        const data = await getMessages(conversationId, undefined, 10);
         const messages = data.messages;
         setMessagesByConversation((prev) =>
           new Map(prev).set(conversationId, messages)
+        );
+        setPagination((prev) =>
+          new Map(prev).set(conversationId, {
+            nextCursor: data.meta.nextCursor,
+            hasMore: data.meta.hasMore,
+          })
         );
       } catch (error) {
         console.error(
@@ -162,20 +173,77 @@ function MessageProvider({
     },
     [messagesByConversation]
   );
-  // async function loadOlderMessages(conversationId: number): Promise<void> {
-  //     //TODO
 
-  // }
+  const loadOlderMessages = useCallback(
+    async (conversationId: number): Promise<void> => {
+      const currentMessages = messagesByConversation.get(conversationId); // Get current messages
+      const paginationInfo = pagination.get(conversationId);
+      // prettier-ignore
+      if (!currentMessages || currentMessages.length === 0) return; // No messages to load older from
+      if (
+        !paginationInfo?.hasMore ||
+        !paginationInfo.nextCursor ||
+        loadingOlderByConversation.has(conversationId)
+      )
+        return; // No more messages or already loading
+      setLoadingOlderByConversation((prev) => {
+        const updated = new Set(prev);
+        updated.add(conversationId);
+        return updated;
+      });
+      try {
+        // prettier-ignore
+        const data = await getMessages(conversationId, paginationInfo.nextCursor, 10);
+        // Prepend messages
+        setMessagesByConversation((prev) => {
+          const existing = prev.get(conversationId) || [];
+          const updated = [...data.messages, ...existing]; // Prepend!
+          return new Map(prev).set(conversationId, updated);
+        });
+        // Update pagination
+        setPagination((prev) =>
+          new Map(prev).set(conversationId, {
+            nextCursor: data.meta.nextCursor,
+            hasMore: data.meta.hasMore,
+          })
+        );
+      } catch (error) {
+        console.error(
+          `Error loading older messages for conversation ${conversationId}:`,
+          error
+        );
+      } finally {
+        setLoadingOlderByConversation((prev) => {
+          const updated = new Set(prev);
+          updated.delete(conversationId);
+          return updated;
+        });
+      }
+    },
+    [loadingOlderByConversation, messagesByConversation]
+  );
 
   const value = useMemo(
     () => ({
       messagesByConversation,
       loadingMessages,
+      loadingOlderByConversation,
       error,
+      pagination,
       fetchMessages,
       sendMessage,
+      loadOlderMessages,
     }),
-    [messagesByConversation, loadingMessages, error, fetchMessages, sendMessage]
+    [
+      messagesByConversation,
+      loadingMessages,
+      loadingOlderByConversation,
+      error,
+      pagination,
+      fetchMessages,
+      sendMessage,
+      loadOlderMessages,
+    ]
   );
 
   return (

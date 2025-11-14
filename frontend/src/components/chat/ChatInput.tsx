@@ -1,18 +1,36 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Textarea } from "../ui/textarea";
 import { Send } from "lucide-react";
 import { useMessage } from "@/hooks/useMessage";
-export default function ChatInput({
-  conversationId,
-}: {
-  conversationId: number;
-}): React.JSX.Element {
+import useSocket from "@/hooks/useSocket";
+
+//prettier-ignore
+export default function ChatInput({conversationId}: {conversationId: number;}): React.JSX.Element {
+  
   const [inputValue, setInputValue] = useState<string>("");
   const [isSending, setIsSending] = useState<boolean>(false);
-  const { sendMessage } = useMessage();
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isCurrentlyTypingRef = useRef<boolean>(false); // track if we are in typing state
 
+  const { socket } = useSocket();
+
+  // Handle typing indicator
+  const { sendMessage } = useMessage();
   function handleInputChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
     setInputValue(e.target.value);
+
+    if (!socket) return;
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current); // if already typing, reset timer
+    if (!isCurrentlyTypingRef.current) {
+      socket.emit("typing:start", { conversationId });
+      isCurrentlyTypingRef.current = true;
+    }
+
+    typingTimeoutRef.current = setTimeout(() => {
+    socket.emit("typing:stop", { conversationId });
+    isCurrentlyTypingRef.current = false;
+    typingTimeoutRef.current = null;
+  }, 2500);
   }
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
@@ -30,6 +48,12 @@ export default function ChatInput({
     try {
       await sendMessage(conversationId, trimmed);
       console.log("Send:", trimmed); // Placeholder
+      socket?.emit("typing:stop", { conversationId }); // Stop typing on send
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+        typingTimeoutRef.current = null;
+      }
+      isCurrentlyTypingRef.current = false;
       setInputValue(""); // Clear input on success
     } catch (error) {
       console.error("Send failed:", error);

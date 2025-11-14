@@ -54,3 +54,4 @@ node_modules
 draft.md
 .claude
 .private
+*.png

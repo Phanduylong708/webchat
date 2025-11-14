@@ -8,6 +8,28 @@ import type { Messages } from "@/types/chat.type";
 import useSocket from "@/hooks/useSocket";
 import { ConversationContext } from "./conversationContext";
 
+//helper
+function updateTypingMap(
+  map: Map<number, Map<number, string>>,
+  conversationId: number,
+  userId: number,
+  username: string,
+  isTyping: boolean
+): Map<number, Map<number, string>> {
+  const updated = new Map(map); // Clone outer Map
+  const currentInnerMap =
+    updated.get(conversationId) || new Map<number, string>();
+  const newInnerMap = new Map(currentInnerMap); // Clone inner Map
+
+  if (isTyping) {
+    newInnerMap.set(userId, username);
+  } else {
+    newInnerMap.delete(userId);
+  }
+  updated.set(conversationId, newInnerMap);
+  return updated;
+}
+
 // prettier-ignore
 function ConversationProvider({children}: {children: React.ReactNode}): JSX.Element {
     // prettier-ignore
@@ -17,6 +39,7 @@ function ConversationProvider({children}: {children: React.ReactNode}): JSX.Elem
     // prettier-ignore
     const [loadingConversations, setLoadingConversations] = useState<boolean>(false);
     const [onlineUsers, setOnlineUsers] = useState<Set<number>>(new Set());
+    const [typingByConversation, setTypingByConversation] = useState<Map<number, Map<number, string>>>(new Map());
     // prettier-ignore
     const [error, setError] = useState<string | null>(null);
 
@@ -24,7 +47,6 @@ function ConversationProvider({children}: {children: React.ReactNode}): JSX.Elem
     // Listen for new messages to update conversation list
     useEffect(() => {
       if (!socket) return;
-
       function handleNewMessage(message: Messages) {
         console.log("New message received in conversation context:", message);
         setConversations((prev) => {
@@ -52,7 +74,7 @@ function ConversationProvider({children}: {children: React.ReactNode}): JSX.Elem
         socket.off("newMessage", handleNewMessage);
       };
     }, [socket]);
-
+    // Listen for online/offline user events
     useEffect(() => {
       if (!socket) return;
 
@@ -80,6 +102,21 @@ function ConversationProvider({children}: {children: React.ReactNode}): JSX.Elem
       return () => {
         socket.off("friendOnline", handleOnlineUsers);
         socket.off("friendOffline", handleOfflineUsers);
+      };
+    }, [socket]);
+    // Listen for typing events
+    useEffect(() => {
+      if (!socket) return;
+
+      function handleTypingEvent(payload: { userId: number, username: string, conversationId: number, isTyping: boolean }) {
+        console.log("Typing event received:", payload);
+        setTypingByConversation((prev) => 
+          updateTypingMap(prev, payload.conversationId, payload.userId, payload.username, payload.isTyping)
+        );
+      }
+      socket.on("userTyping", handleTypingEvent);
+      return () => {
+        socket.off("userTyping", handleTypingEvent);
       };
     }, [socket]);
 
@@ -112,6 +149,7 @@ function ConversationProvider({children}: {children: React.ReactNode}): JSX.Elem
       loadingConversations,
       error,
       onlineUsers,
+      typingByConversation,
       fetchConversations,
       selectConversation,
     };

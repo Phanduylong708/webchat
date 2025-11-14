@@ -2,10 +2,21 @@ import { useMessage } from "@/hooks/useMessage";
 import { useConversation } from "@/hooks/useConversation";
 import { useAuth } from "@/hooks/useAuth";
 import MessageItem from "./MessageItem";
+import TypingIndicator from "./TypingIndicator";
+import InfiniteScroll from "react-infinite-scroll-component";
 
 export default function MessageList() {
-  const { messagesByConversation, loadingMessages, error } = useMessage();
+  const {
+    messagesByConversation,
+    loadingMessages,
+    loadOlderMessages,
+    pagination,
+    error,
+  } = useMessage();
   const { activeConversationId } = useConversation();
+  const paginationInfo = activeConversationId
+    ? pagination.get(activeConversationId)
+    : undefined;
   const { user } = useAuth();
   if (!activeConversationId) {
     return (
@@ -39,11 +50,26 @@ export default function MessageList() {
     );
   }
   return (
-    <div className="flex flex-col flex-1 overflow-y-auto px-4 py-6 space-y-4">
-      {messages.map((message) => {
-        const isOwn = message.senderId === user?.id;
-        return <MessageItem key={message.id} message={message} isOwn={isOwn} />;
-      })}
+    //prettier-ignore
+    <div id="scrollableDiv" className="flex flex-col-reverse flex-1 overflow-y-auto px-4 py-6">
+      <InfiniteScroll
+        dataLength={messages.length}
+        next={() => loadOlderMessages(activeConversationId)}
+        hasMore = {paginationInfo?.hasMore ?? false}
+        loader= {null}
+        scrollableTarget="scrollableDiv"
+        inverse ={true}
+      >
+        <div className="space-y-4">
+        {messages.map((message) => {
+          const isOwn = message.senderId === user?.id;
+          return (
+            <MessageItem key={message.id} message={message} isOwn={isOwn} />
+          );
+        })}
+        <TypingIndicator conversationId={activeConversationId} />
+        </div>
+      </InfiniteScroll>
     </div>
   );
 }
