@@ -5,6 +5,7 @@ import { Separator } from "../ui/separator";
 import { Input } from "../ui/input";
 import { ScrollArea } from "../ui/scroll-area";
 import { useEffect } from "react";
+import CreateGroupDialog from "./CreateGroupDialog";
 
 function ConversationItem({
   conversation,
@@ -129,6 +130,7 @@ export default function ConversationListPanel(): React.JSX.Element {
     <div className="h-full flex flex-col bg-muted border-r border-border">
       <div className="p-4 flex items-center justify-between">
         <h2 className="text-xl font-semibold">Conversations</h2>
+        <CreateGroupDialog />
       </div>
       <Separator />
       <div className="p-4">

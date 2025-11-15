@@ -45,6 +45,30 @@
     </section>
 
     <section>
+      <h2>Group Membership</h2>
+      <label>
+        Conversation ID:
+        <input
+          id="membership-conversation-id"
+          type="number"
+          placeholder="Group conversation ID"
+        />
+      </label>
+      <br />
+      <label>
+        User ID to add (optional):
+        <input
+          id="membership-user-id"
+          type="number"
+          placeholder="Leave blank to use current user"
+        />
+      </label>
+      <br />
+      <button id="join-group">Join / Add Member</button>
+      <button id="leave-group">Leave Group</button>
+    </section>
+
+    <section>
       <h2>Logs</h2>
       <pre id="logs"></pre>
     </section>
@@ -75,11 +99,14 @@
         }).then((res) => res.json());
 
         const token = loginRes?.data?.token;
+        const currentUser = loginRes?.data?.user;
         if (!token) {
           statusEl.textContent = "Login failed";
           log("loginError", loginRes);
           return;
         }
+        const authHeader = { Authorization: `Bearer ${token}` };
+        const jsonAuthHeaders = { ...authHeader, "Content-Type": "application/json" };
 
         const socket = io("http://localhost:5000", { auth: { token } });
         window.socket = socket;
@@ -134,6 +161,12 @@
         document
           .getElementById("typing-stop")
           .addEventListener("click", () => emitTyping(false));
+        document
+          .getElementById("join-group")
+          .addEventListener("click", handleJoinGroup);
+        document
+          .getElementById("leave-group")
+          .addEventListener("click", handleLeaveGroup);
 
         function emitTyping(isTyping) {
           if (!socket.connected) {
@@ -148,6 +181,67 @@
           const event = isTyping ? "typing:start" : "typing:stop";
           socket.emit(event, { conversationId });
           log(`emit ${event}`, { conversationId });
+        }
+
+        function getMembershipConversationId() {
+          const conversationId = Number(
+            document.getElementById("membership-conversation-id").value
+          );
+          if (Number.isNaN(conversationId) || conversationId <= 0) {
+            log("warn", "Membership conversationId is required");
+            return null;
+          }
+          return conversationId;
+        }
+
+        async function handleJoinGroup() {
+          const conversationId = getMembershipConversationId();
+          if (!conversationId) {
+            return;
+          }
+          let userId = Number(
+            document.getElementById("membership-user-id").value
+          );
+          if (Number.isNaN(userId) || userId <= 0) {
+            userId = currentUser?.id;
+          }
+          if (!userId) {
+            return log("warn", "User ID is required for join/add action");
+          }
+          try {
+            const res = await fetch(
+              `http://localhost:5000/api/conversations/${conversationId}/members`,
+              {
+                method: "POST",
+                headers: jsonAuthHeaders,
+                body: JSON.stringify({ userId }),
+              }
+            );
+            const data = await res.json();
+            log("joinGroup", { status: res.status, data });
+          } catch (error) {
+            log("joinGroupError", { message: error.message });
+          }
+        }
+
+        async function handleLeaveGroup() {
+          const conversationId = getMembershipConversationId();
+          if (!conversationId) {
+            return;
+          }
+          try {
+            const res = await fetch(
+              `http://localhost:5000/api/conversations/${conversationId}/leave`,
+              {
+                method: "DELETE",
+                headers: authHeader,
+              }
+            );
+            const data = await res.json().catch(() => ({}));
+            log("leaveGroup", { status: res.status, data });
+          } catch (error) {
+            log("leaveGroupError", { message: error.message });
+          }
         }
       }
 

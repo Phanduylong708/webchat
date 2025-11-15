@@ -51,11 +51,26 @@ async function createGroupConversationController(req, res, next) {
   try {
     const { title, memberIds } = req.body;
     const currentUserId = req.user.id;
+    const io = req.io;
+    if (!io) {
+      throw createHTTPError(500, "Socket server not initialized");
+    }
     const conversation = await createGroupConversation(
       currentUserId,
       title,
       memberIds
     );
+
+    const conversationRoom = getConversationRoom(conversation.id);
+    const processedUserIds = new Set();
+    conversation.members.forEach((member) => {
+      if (processedUserIds.has(member.id)) return;
+      processedUserIds.add(member.id);
+      const userRoom = getUserRoom(member.id);
+      io.in(userRoom).socketsJoin(conversationRoom);
+      io.to(userRoom).emit("addedToConversation", { conversation });
+    });
+
     return sendSuccess(res, {
       statusCode: 201,
       data: { conversation },

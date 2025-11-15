@@ -2,8 +2,15 @@ import { useEffect, useState, type JSX } from "react";
 import type {
   ConversationsResponse,
   ConversationContextValue,
+  User,
+  ConversationsDetail,
 } from "@/types/chat.type";
-import { getConversations } from "@/api/conversation.api";
+import {
+  getConversations,
+  createGroupApi,
+  addMemberApi,
+  leaveGroupApi,
+} from "@/api/conversation.api";
 import type { Messages } from "@/types/chat.type";
 import useSocket from "@/hooks/useSocket";
 import { ConversationContext } from "./conversationContext";
@@ -120,6 +127,9 @@ function ConversationProvider({children}: {children: React.ReactNode}): JSX.Elem
       };
     }, [socket]);
 
+
+
+
    async function fetchConversations(): Promise<void> {
         setLoadingConversations(true);
         setError(null);
@@ -143,6 +153,133 @@ function ConversationProvider({children}: {children: React.ReactNode}): JSX.Elem
     void fetchConversations();
     }, []);
 
+    //GROUP 
+  async function createGroup(title: string, memberIds: number[]): Promise<{ success: boolean; message?: string
+  }> {
+    setError(null);
+    try {
+      await createGroupApi(title, memberIds);
+      await fetchConversations();
+      return { success: true };
+    } catch (error) {
+      console.error("Error creating group:", error);
+      const message = "Failed to create group";
+      setError(message);
+      return { success: false, message };
+    }
+  }
+
+    async function addMember(conversationId: number, userId: number): Promise<void> {
+      setError(null);
+      try {
+        await addMemberApi(conversationId, userId);
+      } catch (error) {
+        console.error("Error adding member:", error);
+        setError("Failed to add member");
+      }
+    }
+
+    async function leaveGroup(conversationId: number): Promise<void> {
+      setError(null);
+      try {
+        await leaveGroupApi(conversationId);
+        // Remove the conversation from the list
+        setConversations((prev) => prev.filter(c => c.id !== conversationId));
+        // If the active conversation is the one left, clear it
+        if (activeConversationId === conversationId) {
+          setActiveConversationId(null);
+        }
+      } catch (error) {
+        console.error("Error leaving group:", error);
+        setError("Failed to leave group");
+      }
+    }
+
+    useEffect(() => {
+      if (!socket) return;
+
+      function handleMemberAdded(payload: {
+        conversationId: number;
+        member: User;
+      }) {
+        // Listen for member added events
+        console.log("Member added to conversation:", payload);
+        setConversations((prev) => {
+          // Update the conversation's member list
+          return prev.map((c) => {
+            if (c.id === payload.conversationId) {  
+              const existingMembers = c.previewMembers || [];
+              const memberExists = existingMembers.some(m => m.id === payload.member.id);
+              if (memberExists) return c; // No change if member already exists
+              const updatedMembers = [...existingMembers, payload.member];
+              const updatedCount = (c.memberCount || 0) + 1; // Increment count
+              return {
+                ...c,
+                previewMembers: updatedMembers,
+                memberCount: updatedCount,
+              }; 
+            }
+            return c; 
+          });
+        });
+      }
+      socket.on("memberAdded", handleMemberAdded);
+      return () => {
+        socket.off("memberAdded", handleMemberAdded);
+      };
+    }, [socket]);
+
+    useEffect(() => {
+      if (!socket) return;
+      function handleAddedToConversation(payload: {conversation: ConversationsDetail}) {
+        console.log("Added to new conversation:", payload);
+        const newConv: ConversationsResponse = {
+          id: payload.conversation.id,
+          title: payload.conversation.title,
+          type: payload.conversation.type,
+          memberCount: payload.conversation.members.length,
+          previewMembers: payload.conversation.members.slice(0, 3),
+          lastMessage: null,
+        };
+          setConversations((prev) => {
+            const exists = prev.some((c) => c.id === newConv.id);
+            if (exists) return prev; // Already exists
+            return [newConv, ...prev];
+          });
+      }
+      socket.on("addedToConversation", handleAddedToConversation);
+      return () => {
+        socket.off("addedToConversation", handleAddedToConversation);
+      };
+    }, [socket]);
+
+    useEffect(() => {
+      if (!socket) return;
+      function handleMemberLeft(payload: { conversationId: number; userId: number }) {
+      console.log("Member left conversation:", payload);
+      setConversations((prev) => {
+        return prev.map((c) => {
+          if (c.id === payload.conversationId) {
+            const existingMembers = c.previewMembers || [];
+            const updatedMembers = existingMembers.filter(
+              (m) => m.id !== payload.userId
+            );
+            const updatedCount = Math.max(0, (c.memberCount || 1) - 1); // Decrement count
+            return {
+              ...c,
+              previewMembers: updatedMembers,
+              memberCount: updatedCount,
+            };
+          }
+          return c;
+        });
+      });
+    }
+    socket.on("memberLeft", handleMemberLeft);
+    return () => {socket.off("memberLeft", handleMemberLeft)};
+    }, [socket]);
+
+
     const value: ConversationContextValue = {
       conversations,
       activeConversationId,
@@ -152,6 +289,9 @@ function ConversationProvider({children}: {children: React.ReactNode}): JSX.Elem
       typingByConversation,
       fetchConversations,
       selectConversation,
+      createGroup,
+      addMember,
+      leaveGroup,
     };
     return <ConversationContext.Provider value={value}>{children}</ConversationContext.Provider>;
 }
