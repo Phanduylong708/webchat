@@ -57,9 +57,10 @@ export interface ConversationContextValue extends ConversationState {
   selectConversation: (id: number) => Promise<void>;
   onlineUsers: Set<number>;
   typingByConversation: Map<number, Map<number, string>>;
+  systemMessages: Map<number, string>;
   createGroup: (title: string, memberIds: number[]) => Promise<{ success: boolean; message?: string }>;
-  addMember: (conversationId: number, userId: number) => Promise<void>;
-  leaveGroup: (conversationId: number) => Promise<void>;
+  addMember: (conversationId: number, userId: number) => Promise<{ success: boolean; message?: string }>;
+  leaveGroup: (conversationId: number) => Promise<{success: boolean; message?: string }>;
 }
 
 export interface MessageState {

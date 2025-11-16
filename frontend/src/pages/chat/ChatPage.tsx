@@ -10,13 +10,13 @@ import MainContentPanel from "@/components/layout/MainContentPanel";
 
 export default function ChatPage(): React.JSX.Element {
   return (
-    <ConversationProvider>
-      <FriendProvider>
+    <FriendProvider>
+      <ConversationProvider>
         <MessageProvider>
           <ChatPageContent />
         </MessageProvider>
-      </FriendProvider>
-    </ConversationProvider>
+      </ConversationProvider>
+    </FriendProvider>
   );
 }
 

@@ -47,6 +47,7 @@ function ConversationProvider({children}: {children: React.ReactNode}): JSX.Elem
     const [loadingConversations, setLoadingConversations] = useState<boolean>(false);
     const [onlineUsers, setOnlineUsers] = useState<Set<number>>(new Set());
     const [typingByConversation, setTypingByConversation] = useState<Map<number, Map<number, string>>>(new Map());
+    const [systemMessages, setSystemMessages] = useState<Map<number, string>>(new Map());
     // prettier-ignore
     const [error, setError] = useState<string | null>(null);
 
@@ -169,17 +170,19 @@ function ConversationProvider({children}: {children: React.ReactNode}): JSX.Elem
     }
   }
 
-    async function addMember(conversationId: number, userId: number): Promise<void> {
+    async function addMember(conversationId: number, userId: number): Promise<{ success: boolean; message?: string }> {
       setError(null);
       try {
         await addMemberApi(conversationId, userId);
+        return {success: true};
       } catch (error) {
         console.error("Error adding member:", error);
         setError("Failed to add member");
+        return {success: false, message: "Failed to add member"};
       }
     }
 
-    async function leaveGroup(conversationId: number): Promise<void> {
+    async function leaveGroup(conversationId: number): Promise<{success: boolean; message?: string }> {
       setError(null);
       try {
         await leaveGroupApi(conversationId);
@@ -189,9 +192,11 @@ function ConversationProvider({children}: {children: React.ReactNode}): JSX.Elem
         if (activeConversationId === conversationId) {
           setActiveConversationId(null);
         }
+        return {success: true};
       } catch (error) {
         console.error("Error leaving group:", error);
         setError("Failed to leave group");
+        return {success: false, message: "Failed to leave group"};
       }
     }
 
@@ -255,28 +260,50 @@ function ConversationProvider({children}: {children: React.ReactNode}): JSX.Elem
 
     useEffect(() => {
       if (!socket) return;
-      function handleMemberLeft(payload: { conversationId: number; userId: number }) {
-      console.log("Member left conversation:", payload);
-      setConversations((prev) => {
-        return prev.map((c) => {
-          if (c.id === payload.conversationId) {
-            const existingMembers = c.previewMembers || [];
-            const updatedMembers = existingMembers.filter(
-              (m) => m.id !== payload.userId
-            );
-            const updatedCount = Math.max(0, (c.memberCount || 1) - 1); // Decrement count
-            return {
-              ...c,
-              previewMembers: updatedMembers,
-              memberCount: updatedCount,
-            };
-          }
-          return c;
+      function handleMemberLeft(payload: {
+        conversationId: number;
+        userId?: number;
+        user?: User;
+      }) {
+        console.log("Member left conversation:", payload);
+        const leavingUserId = payload.user?.id ?? payload.userId;
+        setConversations((prev) => {
+          return prev.map((c) => {
+            if (c.id === payload.conversationId) {
+              const existingMembers = c.previewMembers || [];
+              const updatedMembers = leavingUserId
+                ? existingMembers.filter((m) => m.id !== leavingUserId)
+                : existingMembers;
+              const updatedCount = Math.max(0, (c.memberCount || 1) - 1); // Decrement count
+              const fallbackUsername = existingMembers.find(
+                (m) => m.id === leavingUserId
+              )?.username;
+              const systemMessage =
+                payload.user?.username ??
+                fallbackUsername ??
+                "A member";
+              setSystemMessages((prev) => {
+                const updated = new Map(prev);
+                updated.set(
+                  payload.conversationId,
+                  `${systemMessage} left the group`
+                );
+                return updated;
+              });
+              return {
+                ...c,
+                previewMembers: updatedMembers,
+                memberCount: updatedCount,
+              };
+            }
+            return c;
+          });
         });
-      });
-    }
-    socket.on("memberLeft", handleMemberLeft);
-    return () => {socket.off("memberLeft", handleMemberLeft)};
+      }
+      socket.on("memberLeft", handleMemberLeft);
+      return () => {
+        socket.off("memberLeft", handleMemberLeft);
+      };
     }, [socket]);
 
 
@@ -287,6 +314,7 @@ function ConversationProvider({children}: {children: React.ReactNode}): JSX.Elem
       error,
       onlineUsers,
       typingByConversation,
+      systemMessages,
       fetchConversations,
       selectConversation,
       createGroup,

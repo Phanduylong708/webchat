@@ -14,8 +14,8 @@ async function getConversations(): Promise<ConversationsResponse[]> {
 
 async function getConversationsDetails(conversationsId: number): Promise<ConversationsDetail> {
     try {
-        const response: ResponseType<ConversationsDetail> = await api.get(`/conversations/${conversationsId}`);
-        const conversation = response.data;
+        const response: ResponseType<{ conversation: ConversationsDetail }> = await api.get(`/conversations/${conversationsId}`);
+        const conversation = response.data.conversation;
         return conversation;
     } catch (error) {
         throw handleApiError(error);

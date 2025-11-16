@@ -171,7 +171,7 @@ Response 200 `{ success: true, message: "Left group conversation successfully" }
 Socket side-effects:
 
 - User’s sockets leave conversation room immediately.
-- `memberLeft` broadcast to remaining members with `{ conversationId, userId }`.
+- `memberLeft` broadcast to remaining members with `{ conversationId, userId, user }` (user profile of the member who left).
 
 Errors: 400 if private conversation, 404 not member.
 

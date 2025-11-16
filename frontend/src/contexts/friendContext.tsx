@@ -1,4 +1,4 @@
-import React, { createContext, useMemo, useState } from "react";
+import React, { createContext, useMemo, useState, useCallback } from "react";
 import type { FriendContextType, Friend } from "@/types/friend.type";
 import {
   getFriends,
@@ -24,11 +24,11 @@ function FriendProvider({
     return friends.find((friend) => friend.id === selectedFriendId) || null;
   }, [friends, selectedFriendId]);
 
-  function selectFriend(id: number | null): void {
+  const selectFriend = useCallback((id: number | null): void => {
     setSelectedFriendId(id);
-  }
+  }, []);
 
-  async function fetchFriends(): Promise<void> {
+  const fetchFriends = useCallback(async (): Promise<void> => {
     try {
       setLoading(true);
       setError(null);
@@ -44,63 +44,65 @@ function FriendProvider({
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
 
-  async function removeFriend(
-    id: number
-  ): Promise<{ success: boolean; message?: string }> {
-    try {
-      setLoading(true);
-      setError(null);
-      await removeFriendById(id);
-      await fetchFriends();
-      if (selectedFriendId === id) {
-        setSelectedFriendId(null);
+  const removeFriend = useCallback(
+    async (id: number): Promise<{ success: boolean; message?: string }> => {
+      try {
+        setLoading(true);
+        setError(null);
+        await removeFriendById(id);
+        await fetchFriends();
+        if (selectedFriendId === id) {
+          setSelectedFriendId(null);
+        }
+        return { success: true };
+      } catch (err) {
+        const caughtError = err as {
+          message?: string;
+        };
+        return {
+          success: false,
+          message:
+            caughtError.message ?? "Failed to remove friend. Please try again.",
+        };
+      } finally {
+        setLoading(false);
       }
-      return { success: true };
-    } catch (err) {
-      const caughtError = err as {
-        message?: string;
-      };
-      return {
-        success: false,
-        message:
-          caughtError.message ?? "Failed to remove friend. Please try again.",
-      };
-    } finally {
-      setLoading(false);
-    }
-  }
+    },
+    [fetchFriends, selectedFriendId]
+  );
 
-  async function addFriend(
-    username: string
-  ): Promise<{ success: boolean; message?: string }> {
-    try {
-      setLoading(true);
-      setError(null);
-      const trimmed = username.trim();
-      if (!trimmed) {
-        setError("Username cannot be empty.");
-        return { success: false };
+  const addFriend = useCallback(
+    async (username: string): Promise<{ success: boolean; message?: string }> => {
+      try {
+        setLoading(true);
+        setError(null);
+        const trimmed = username.trim();
+        if (!trimmed) {
+          setError("Username cannot be empty.");
+          return { success: false };
+        }
+        const user = await searchUserByUsername(trimmed);
+        await addFriendById(user.id);
+        await fetchFriends();
+        setSelectedFriendId(user.id);
+        return { success: true };
+      } catch (err) {
+        const caughtError = err as {
+          message?: string;
+        };
+        return {
+          success: false,
+          message:
+            caughtError.message ?? "Failed to add friend. Please try again.",
+        };
+      } finally {
+        setLoading(false);
       }
-      const user = await searchUserByUsername(trimmed);
-      await addFriendById(user.id);
-      await fetchFriends();
-      setSelectedFriendId(user.id);
-      return { success: true };
-    } catch (err) {
-      const caughtError = err as {
-        message?: string;
-      };
-      return {
-        success: false,
-        message:
-          caughtError.message ?? "Failed to add friend. Please try again.",
-      };
-    } finally {
-      setLoading(false);
-    }
-  }
+    },
+    [fetchFriends]
+  );
 
   const value = {
     //TODO Add useMemo

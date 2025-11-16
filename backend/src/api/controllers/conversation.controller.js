@@ -131,13 +131,14 @@ async function leaveGroupController(req, res, next) {
       throw createHTTPError(500, "Socket server not initialized");
     }
     const currentUserId = req.user.id;
-    await leaveGroup(conversationId, currentUserId);
+    const { user } = await leaveGroup(conversationId, currentUserId);
     io.in(getUserRoom(currentUserId)).socketsLeave(
       getConversationRoom(conversationId)
     );
     io.to(getConversationRoom(conversationId)).emit("memberLeft", {
       conversationId,
       userId: currentUserId,
+      user,
     });
     return sendSuccess(res, {
       statusCode: 200,

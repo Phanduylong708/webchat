@@ -268,7 +268,10 @@ async function leaveGroup(conversationId, userId) {
   const membership = await prisma.conversationMember.findUnique({
     // get membership record include conversation type for validation
     where: { userId_conversationId: { userId, conversationId } },
-    include: { conversation: { select: { type: true } } },
+    include: {
+      conversation: { select: { type: true } },
+      user: { select: { id: true, username: true, avatar: true } },
+    },
   });
 
   if (!membership) {
@@ -284,7 +287,9 @@ async function leaveGroup(conversationId, userId) {
     where: { userId_conversationId: { userId, conversationId } },
   });
 
-  return { message: "Left group conversation successfully" };
+  return {
+    user: membership.user,
+  };
 }
 
 async function findOrCreatePrivateConversation(userId, recipientId) {
