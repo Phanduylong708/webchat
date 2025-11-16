@@ -4,7 +4,7 @@ import formatLastSeen from "@/utils/date.util";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { useFriend } from "@/hooks/useFriend";
+import { useFriend } from "@/hooks/context/useFriend";
 import { MessageCircle, UserMinus } from "lucide-react";
 import RemoveFriendDialog from "./RemoveFriendDialog";
 

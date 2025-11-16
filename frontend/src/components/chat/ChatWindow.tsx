@@ -1,4 +1,4 @@
-import { useConversation } from "@/hooks/useConversation";
+import { useConversation } from "@/hooks/context/useConversation";
 import {
   AlertDialog,
   AlertDialogAction,

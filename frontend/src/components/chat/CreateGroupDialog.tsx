@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { useConversation } from "@/hooks/useConversation";
-import { useFriend } from "@/hooks/useFriend";
+import { useConversation } from "@/hooks/context/useConversation";
+import { useFriend } from "@/hooks/context/useFriend";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {

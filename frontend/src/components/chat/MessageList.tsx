@@ -1,6 +1,6 @@
-import { useMessage } from "@/hooks/useMessage";
-import { useConversation } from "@/hooks/useConversation";
-import { useAuth } from "@/hooks/useAuth";
+import { useMessage } from "@/hooks/context/useMessage";
+import { useConversation } from "@/hooks/context/useConversation";
+import { useAuth } from "@/hooks/context/useAuth";
 import MessageItem from "./MessageItem";
 import TypingIndicator from "./TypingIndicator";
 import InfiniteScroll from "react-infinite-scroll-component";

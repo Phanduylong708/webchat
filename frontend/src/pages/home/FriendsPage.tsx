@@ -4,7 +4,7 @@ import MainContentPanel from "@/components/layout/MainContentPanel";
 import FriendProfile from "@/components/friends/FriendProfile";
 import EmptyState from "@/components/friends/EmptyState";
 import { FriendProvider } from "@/contexts/friendContext";
-import { useFriend } from "@/hooks/useFriend";
+import { useFriend } from "@/hooks/context/useFriend";
 
 export default function FriendPage(): React.JSX.Element {
   return (

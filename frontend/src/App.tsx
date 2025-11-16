@@ -1,6 +1,6 @@
 import { AuthProvider } from "@/contexts/authContext";
 import { SocketProvider } from "./contexts/socketProvider";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/hooks/context/useAuth";
 import { Outlet } from "react-router-dom";
 import React from "react";
 

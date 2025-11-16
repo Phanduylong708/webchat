@@ -2,7 +2,7 @@ import React from "react";
 import { FieldLabel, Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/hooks/context/useAuth";
 import { Link } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
 

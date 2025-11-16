@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useFriend } from "@/hooks/useFriend";
+import { useFriend } from "@/hooks/context/useFriend";
 import type { Friend } from "@/types/friend.type";
 import {
   AlertDialog,

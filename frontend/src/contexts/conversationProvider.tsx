@@ -9,8 +9,8 @@ import {
   addMemberApi,
   leaveGroupApi,
 } from "@/api/conversation.api";
-import useSocket from "@/hooks/useSocket";
-import { useConversationSockets } from "@/hooks/useConversationSockets";
+import useSocket from "@/hooks/context/useSocket";
+import { useConversationSockets } from "@/hooks/sockets/useConversationSockets";
 import { ConversationContext } from "./conversationContext";
 
 // prettier-ignore
@@ -28,16 +28,13 @@ function ConversationProvider({children}: {children: React.ReactNode}): JSX.Elem
     const [error, setError] = useState<string | null>(null);
 
     const {socket} = useSocket();
-    useConversationSockets({
+    useConversationSockets({ 
       socket,
       setConversations,
       setOnlineUsers,
       setTypingByConversation,
       setSystemMessages,
     });
-
-
-
 
    async function fetchConversations(): Promise<void> {
         setLoadingConversations(true);

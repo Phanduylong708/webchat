@@ -5,7 +5,7 @@ import {
   initializeSocket,
   disconnectSocket,
 } from "@/lib/socket.client";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/hooks/context/useAuth";
 import { getToken } from "@/utils/localStorage.util";
 import { SocketContext } from "./socketContext";
 

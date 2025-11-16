@@ -1,52 +1,19 @@
-import { useState, useCallback, type JSX, useMemo, useEffect } from "react";
+import { useState, useCallback, type JSX, useMemo } from "react";
 import type { Messages } from "@/types/chat.type";
 import { getMessages } from "@/api/message.api";
-import useSocket from "@/hooks/useSocket";
-import { useAuth } from "@/hooks/useAuth";
+import useSocket from "@/hooks/context/useSocket";
+import { useAuth } from "@/hooks/context/useAuth";
+import { useMessageSockets } from "@/hooks/sockets/useMessageSockets";
+import {
+  addMessageToMap,
+  removeMessageFromMap,
+  replaceMessageInMap,
+} from "@/utils/message.utils";
 import { MessageContext } from "./messageContext";
 interface SendMessageAck {
   success: boolean;
   message?: Messages;
   error?: string;
-}
-
-// Pure map manipulation helpers
-function addMessageToMap(
-  map: Map<number, Messages[]>,
-  conversationId: number,
-  message: Messages
-): Map<number, Messages[]> {
-  const updated = new Map(map);
-  const existing = updated.get(conversationId) || [];
-  updated.set(conversationId, [...existing, message]);
-  return updated;
-}
-
-function removeMessageFromMap(
-  map: Map<number, Messages[]>,
-  conversationId: number,
-  messageId: string | number
-): Map<number, Messages[]> {
-  const updated = new Map(map);
-  const messages = updated.get(conversationId) || [];
-  updated.set(
-    conversationId,
-    messages.filter((m) => m.id !== messageId)
-  );
-  return updated;
-}
-
-function replaceMessageInMap(
-  map: Map<number, Messages[]>,
-  conversationId: number,
-  oldId: string | number,
-  newMessage: Messages
-): Map<number, Messages[]> {
-  const updated = new Map(map);
-  const messages = updated.get(conversationId) || [];
-  const replaced = messages.map((m) => (m.id === oldId ? newMessage : m));
-  updated.set(conversationId, replaced);
-  return updated;
 }
 
 function MessageProvider({
@@ -68,29 +35,12 @@ function MessageProvider({
 
   const { socket } = useSocket();
   const { user } = useAuth();
-
-  // Listen for incoming messages
-  useEffect(() => {
-    if (!socket) return; // wait for socket to be available
-    function handleNewMessage(message: Messages) {
-      console.log("Received message", message);
-      setMessagesByConversation((prev) => {
-        return addMessageToMap(prev, message.conversationId, message);
-      });
-    }
-    socket.on("newMessage", handleNewMessage);
-    return () => {
-      socket.off("newMessage", handleNewMessage);
-    };
-  }, [socket]);
+  useMessageSockets({ socket, setMessagesByConversation });
 
   // Send a message
   const sendMessage = useCallback(
     async (conversationId: number, content: string): Promise<void> => {
-      console.log(
-        "🔵 sendMessage called - socket.connected:",
-        socket?.connected
-      );
+      console.log("sendMessage called - socket.connected:", socket?.connected);
       if (!socket || !socket.connected) {
         throw new Error("Socket is not connected in MessageProvider");
       }

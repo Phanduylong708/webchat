@@ -23,6 +23,10 @@ interface UseConversationSocketsParams {
   setSystemMessages: SystemMessageSetter;
 }
 
+/**
+ * Centralizes all socket listeners that impact conversation state.
+ * Keeps ConversationProvider lean by encapsulating subscriptions here.
+ */
 export function useConversationSockets({
   socket,
   setConversations,
@@ -30,26 +34,33 @@ export function useConversationSockets({
   setTypingByConversation,
   setSystemMessages,
 }: UseConversationSocketsParams): void {
-  // update list preview (lastMessage + sort) when new message arrives
+  // Update conversation list preview (last message + ordering) when a new message arrives.
   useEffect(() => {
     if (!socket) return;
     function handleConversationPreviewUpdate(message: Messages) {
       setConversations((prev) => {
+        // Only update if this conversation exists in current list.
         const conversation = prev.find(
           (c) => c.id === message.conversationId
         );
         if (!conversation) return prev;
+
+        // Construct a lightweight lastMessage preview for the sidebar.
         const newLastMessage = {
           id: message.id,
           content: message.content,
           createdAt: message.createdAt,
           sender: message.sender,
         };
+
+        // Update matching conversation, keep others untouched.
         const updated = prev.map((c) =>
           c.id === message.conversationId
             ? { ...c, lastMessage: newLastMessage }
             : c
         );
+
+        // Resort so conversation bubbles to top (latest first ordering).
         const sorted = updated.sort((a, b) => {
           const timeA = a.lastMessage?.createdAt || "";
           const timeB = b.lastMessage?.createdAt || "";
@@ -64,7 +75,7 @@ export function useConversationSockets({
     };
   }, [socket, setConversations]);
 
-  // online/offline
+  // Track friend online/offline status to surface presence in UI.
   useEffect(() => {
     if (!socket) return;
     function handleOnline(payload: { userId: number }) {
@@ -91,7 +102,7 @@ export function useConversationSockets({
     };
   }, [socket, setOnlineUsers]);
 
-  // typing events
+  // Maintain typing indicators for each conversation.
   useEffect(() => {
     if (!socket) return;
     function handleTyping(payload: {
@@ -116,7 +127,7 @@ export function useConversationSockets({
     };
   }, [socket, setTypingByConversation]);
 
-  // member added
+  // Keep preview member list + counts in sync when someone is added.
   useEffect(() => {
     if (!socket) return;
     function handleMemberAdded(payload: { conversationId: number; member: User }) {
@@ -124,12 +135,15 @@ export function useConversationSockets({
         return prev.map((c) => {
           if (c.id === payload.conversationId) {
             const existingMembers = c.previewMembers || [];
+
+            // Prevent duplicates if socket event arrives multiple times.
             const alreadyExists = existingMembers.some(
               (member) => member.id === payload.member.id
             );
             if (alreadyExists) {
               return c;
             }
+            // Add newest member to preview badge and increment count.
             const updatedMembers = [...existingMembers, payload.member];
             const updatedCount = (c.memberCount || 0) + 1;
             return {
@@ -148,7 +162,7 @@ export function useConversationSockets({
     };
   }, [socket, setConversations]);
 
-  // added to conversation (new conv added for user)
+  // Add brand-new conversations when backend notifies user was added.
   useEffect(() => {
     if (!socket) return;
     function handleAdded(payload: { conversation: ConversationsDetail }) {
@@ -163,6 +177,7 @@ export function useConversationSockets({
       setConversations((prev) => {
         const exists = prev.some((c) => c.id === newConv.id);
         if (exists) return prev;
+        // Prepend new group/private conversation so it shows up at top of list
         return [newConv, ...prev];
       });
     }
@@ -172,7 +187,7 @@ export function useConversationSockets({
     };
   }, [socket, setConversations]);
 
-  // member left
+  // Remove leaving members and record a system banner for the conversation.
   useEffect(() => {
     if (!socket) return;
     function handleMemberLeft(payload: {

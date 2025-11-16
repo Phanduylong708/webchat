@@ -7,7 +7,7 @@ import { Input } from "../ui/input";
 import { ScrollArea } from "../ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import type { Friend } from "@/types/friend.type";
-import { useFriend } from "@/hooks/useFriend";
+import { useFriend } from "@/hooks/context/useFriend";
 import AddFriendDialog from "../friends/AddFriendDialog";
 import RemoveFriendDialog from "../friends/RemoveFriendDialog";
 function FriendItem({ friend }: { friend: Friend }): React.JSX.Element {

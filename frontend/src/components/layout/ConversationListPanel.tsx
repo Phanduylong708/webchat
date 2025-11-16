@@ -1,4 +1,4 @@
-import { useConversation } from "@/hooks/useConversation";
+import { useConversation } from "@/hooks/context/useConversation";
 import type { ConversationsResponse } from "@/types/chat.type";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { Separator } from "../ui/separator";

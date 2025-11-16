@@ -1,8 +1,8 @@
 import { useRef, useState } from "react";
 import { Textarea } from "../ui/textarea";
 import { Send } from "lucide-react";
-import { useMessage } from "@/hooks/useMessage";
-import useSocket from "@/hooks/useSocket";
+import { useMessage } from "@/hooks/context/useMessage";
+import useSocket from "@/hooks/context/useSocket";
 
 //prettier-ignore
 export default function ChatInput({conversationId}: {conversationId: number;}): React.JSX.Element {
