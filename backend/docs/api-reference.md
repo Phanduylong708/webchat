@@ -130,6 +130,11 @@ Body:
 
 Rules: title required, `memberIds` array with at least two distinct users not including creator. Response 201 with conversation details (same structure as 3.2).
 
+Socket side-effects (immediate after creation):
+
+- All members (creator + invited) have their active sockets join the new `conversation_{id}` room.
+- Each member receives `addedToConversation` with the full conversation payload so UIs update without reloads.
+
 Errors: 400 invalid payload, 404 member not found.
 
 ### 3.4 Add member
@@ -215,6 +220,8 @@ Usage:
 - For infinite scroll: call again with `before = meta.nextCursor` until `hasMore` false.
 
 Errors: 403 if requester not member, 404 conversation not found.
+
+**Note (TODO):** Private conversations are created lazily when a user sends the first direct message. Currently only the `newMessage` socket event fires, so clients still rely on a subsequent fetch to display the new DM in their conversation list. Future work: emit an `addedToConversation`-style event when the private chat is created.
 
 ---
 

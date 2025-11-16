@@ -60,7 +60,7 @@ function ConversationItem({
           {isGroup ? (
             <span
               className={`text-[10px] uppercase ${
-                isActive ? "text-foreground/80" : "text-muted-foreground"
+                isActive ? "text-foreground/80" : "text-primary"
               }`}
             >
               Group
@@ -72,9 +72,11 @@ function ConversationItem({
               }`}
             >
               {/* TODO: online badge */}
-              <span className="text-green-500">
-                {isOnline ? "Online" : "Offline"}
-              </span>
+              {isOnline ? (
+                <span className="text-green-500">Online</span>
+              ) : (
+                <span className="text-red-500">Offline</span>
+              )}
             </span>
           )}
         </div>

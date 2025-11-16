@@ -5,8 +5,8 @@
 This plan is a **guideline, not a bible**. During implementation:
 
 - Be flexible and adaptive
-- If you find a better approach  - take it
-- If something doesn't make sense  - change it
+- If you find a better approach - take it
+- If something doesn't make sense - change it
 - Think "out of the box" - don't be rigidly bound by this plan
 - Iterate based on real challenges and insights you discover
 
@@ -32,7 +32,7 @@ This plan is a **guideline, not a bible**. During implementation:
 
 ## Steps 1-10: Sequential Breakdown
 
-### Step 1: Socket Infrastructure
+### Step 1: Socket Infrastructure (DONE)
 
 **Purpose:** Establish singleton Socket.IO connection with lifecycle management
 
@@ -60,7 +60,7 @@ This plan is a **guideline, not a bible**. During implementation:
 
 ---
 
-### Step 2: Type Definitions (Chat Domain)
+### Step 2: Type Definitions (Chat Domain) (DONE)
 
 **Purpose:** Define all TypeScript interfaces following existing pattern
 
@@ -88,7 +88,7 @@ This plan is a **guideline, not a bible**. During implementation:
 
 ---
 
-### Step 2B: ChatContext Foundation
+### Step 2B: ChatContext Foundation (DONE)
 
 **Purpose:** Set up state management for conversations and messages
 
@@ -126,7 +126,7 @@ This plan is a **guideline, not a bible**. During implementation:
 
 ---
 
-### Step 3: UI Skeleton
+### Step 3: UI Skeleton (DONE)
 
 **Purpose:** Create basic layout and routing for chat
 
@@ -162,44 +162,15 @@ This plan is a **guideline, not a bible**. During implementation:
 
 ---
 
-### Step 3.5: Enable 1-1 Chat Trigger from Friend Profile
-**Purpose:** Enable "Send Message" button on FriendProfile to initiate 1-1 chats
-
-**Key interaction:**
-- In `FriendProfile.tsx`, uncomment/enable "Send Message" button (currently greyed out)
-- On click: navigate to `/chat?recipientId={friendId}` (use query param) or pass recipientId via route state
-- ChatContext should handle lazy private chat creation (backend creates conversation on first sendMessage with recipientId)
-
-**Backend behavior (already implemented):**
-- sendMessage with `recipientId` (no `conversationId`) -> backend creates conversation
-- Response ack includes `message.conversationId` -> use for subsequent sends in same conversation
-
-**Frontend flow:**
-- Store `recipientId` from URL param or route state
-- First sendMessage call uses `recipientId`, receives back `conversationId`
-- Update context: store new conversation, set as active, future sends use `conversationId`
-
-**What to verify:**
-- FriendProfile "Send Message" button visible and clickable
-- Click navigates to `/chat` with recipient info preserved
-- First message sends using recipientId
-- Subsequent messages use created conversationId
-- New 1-1 conversation appears in ConversationListPanel immediately after first send (append from ack payload or fetch), no manual refresh needed
-
-**Files to create/modify:**
-- `components/friends/FriendProfile.tsx` - Enable "Send Message" button + navigation
-- Extend `chatContext.tsx` - Handle lazy creation (recipientId -> conversationId swap)
-- Update routing params/state handling in ChatPage
-
 ---
 
-### Step 4: Basic Message Display
+### Step 4: Basic Message Display (DONE)
 
 **Purpose:** Load and display message history when conversation selected
 
 **Key interactions:**
 
-- Click conversation in list  - fetch that conversation's message history
+- Click conversation in list - fetch that conversation's message history
 - Display messages with sender name, timestamp, content
 - Show loading state while fetching
 - Cache messages in `messagesByConversation`
@@ -211,7 +182,7 @@ This plan is a **guideline, not a bible**. During implementation:
 
 **What to verify:**
 
-- Click a conversation  - messages appear in right panel
+- Click a conversation - messages appear in right panel
 - Messages show correct content, sender, timestamp
 - Loading state appears while fetching
 - Can scroll through loaded messages
@@ -226,7 +197,7 @@ This plan is a **guideline, not a bible**. During implementation:
 
 ---
 
-### Step 5: Send Message
+### Step 5: Send Message (DONE)
 
 **Purpose:** Enable sending messages with optimistic UI updates
 
@@ -248,7 +219,7 @@ This plan is a **guideline, not a bible**. During implementation:
 
 - Message appears immediately when sent
 - DevTools shows socket emit
-- After server ack  - message status updates
+- After server ack - message status updates
 - Error handling works (retry option shown)
 
 **Files to create/modify:**
@@ -259,7 +230,7 @@ This plan is a **guideline, not a bible**. During implementation:
 
 ---
 
-### Step 6: Real-time Updates
+### Step 6: Real-time Updates (DONE)
 
 **Purpose:** Receive messages from other users in real-time
 
@@ -273,7 +244,7 @@ This plan is a **guideline, not a bible**. During implementation:
 **What to verify:**
 
 - Open 2 tabs same app
-- Send from Tab A  - appears optimistic in Tab A
+- Send from Tab A - appears optimistic in Tab A
 - Tab B receives in real-time after server broadcasts
 - Both tabs stay in sync
 
@@ -286,16 +257,16 @@ This plan is a **guideline, not a bible**. During implementation:
 
 ---
 
-### Step 7: Typing Indicators
+### Step 7: Typing Indicators (DONE)
 
 **Purpose:** Show when other users are typing
 
 **Key interactions:**
 
-- User focuses input  - emit `typing:start` immediately
-- While typing  - debounce (don't spam events)
-- After ~2.5s inactivity  - emit `typing:stop`
-- Listen to `userTyping` event  - update `typingByConversation` state
+- User focuses input - emit `typing:start` immediately
+- While typing - debounce (don't spam events)
+- After ~2.5s inactivity - emit `typing:stop`
+- Listen to `userTyping` event - update `typingByConversation` state
 - Display "User1 is typing..." or "User1, User2 are typing..."
 
 **State pattern:**
@@ -305,7 +276,7 @@ This plan is a **guideline, not a bible**. During implementation:
 
 **What to verify:**
 
-- Type in one tab  - other tab shows typing indicator
+- Type in one tab - other tab shows typing indicator
 - Indicator disappears after inactivity
 - Multiple users typing shows correct format
 
@@ -317,7 +288,7 @@ This plan is a **guideline, not a bible**. During implementation:
 
 ---
 
-### Step 8: Pagination (Scroll History)
+### Step 8: Pagination (Scroll History) (DONE)
 
 **Purpose:** Load older messages when scrolling up
 
@@ -325,7 +296,7 @@ This plan is a **guideline, not a bible**. During implementation:
 
 - MessageList detects scroll near top
 - Check `pagination[conversationId].hasMore`
-- If true and not already loading  - call `loadOlderMessages(conversationId)`
+- If true and not already loading - call `loadOlderMessages(conversationId)`
 - REST call with `before=cursor` parameter
 - Prepend returned messages (don't append - they're older)
 - Update cursor + hasMore in pagination state
@@ -350,7 +321,7 @@ This plan is a **guideline, not a bible**. During implementation:
 
 ---
 
-### Step 9: Group Features
+### Step 9: Group Features (IN PROGRESS)
 
 **Purpose:** Handle group conversation management
 
@@ -386,16 +357,52 @@ This plan is a **guideline, not a bible**. During implementation:
 
 ---
 
+### Step 10: Enable 1-1 Chat Trigger from Friend Profile
+
+**Purpose:** Enable "Send Message" button on FriendProfile to initiate 1-1 chats
+
+**Key interaction:**
+
+- In `FriendProfile.tsx`, uncomment/enable "Send Message" button (currently greyed out)
+- On click: navigate to `/chat?recipientId={friendId}` (use query param) or pass recipientId via route state
+- ChatContext should handle lazy private chat creation (backend creates conversation on first sendMessage with recipientId)
+
+**Backend behavior (already implemented):**
+
+- sendMessage with `recipientId` (no `conversationId`) -> backend creates conversation
+- Response ack includes `message.conversationId` -> use for subsequent sends in same conversation
+
+**Frontend flow:**
+
+- Store `recipientId` from URL param or route state
+- First sendMessage call uses `recipientId`, receives back `conversationId`
+- Update context: store new conversation, set as active, future sends use `conversationId`
+- **Limitation (TODO):** Backend currently emits only `newMessage` for the first DM; no `addedToConversation` yet. Until that’s added, frontend must optimistically insert the conversation (from ack/newMessage payload) so users see it without a full fetch.
+
+**What to verify:**
+
+- FriendProfile "Send Message" button visible and clickable
+- Click navigates to `/chat` with recipient info preserved
+- First message sends using recipientId
+- Subsequent messages use created conversationId
+- New 1-1 conversation appears in ConversationListPanel immediately after first send (append from ack payload or fetch), no manual refresh needed
+
+**Files to create/modify:**
+
+- `components/friends/FriendProfile.tsx` - Enable "Send Message" button + navigation
+- Extend `chatContext.tsx` - Handle lazy creation (recipientId -> conversationId swap)
+- Update routing params/state handling in ChatPage
+
 ### Step 10: Polish & Error Handling
 
 **Purpose:** Improve UX and handle edge cases
 
 **Error handling:**
 
-- REST errors  - user-friendly toasts (network, 404, 403, etc.)
-- Socket disconnect  - "Reconnecting..." banner
-- Send failures  - "Failed to send" with retry button
-- 401  - auto-logout
+- REST errors - user-friendly toasts (network, 404, 403, etc.)
+- Socket disconnect - "Reconnecting..." banner
+- Send failures - "Failed to send" with retry button
+- 401 - auto-logout
 
 **Loading states:**
 
@@ -405,9 +412,9 @@ This plan is a **guideline, not a bible**. During implementation:
 
 **Edge cases:**
 
-- Reconnect  - reload conversations + current thread
-- Token expiry  - logout
-- Empty states  - "No conversations", "No messages"
+- Reconnect - reload conversations + current thread
+- Token expiry - logout
+- Empty states - "No conversations", "No messages"
 
 **Performance considerations:**
 
@@ -417,9 +424,9 @@ This plan is a **guideline, not a bible**. During implementation:
 
 **What to verify:**
 
-- Kill network  - reconnection UI works
-- Send with network error  - retry visible
-- Logout  - socket cleanup proper
+- Kill network - reconnection UI works
+- Send with network error - retry visible
+- Logout - socket cleanup proper
 - No stale data after rejoin
 - TypeScript strict mode passes
 
@@ -480,26 +487,13 @@ ChatContextState {
 
 **Socket.IO (real-time, incremental updates):**
 
-- sendMessage  - emit + ack
-- newMessage  - listen (all members)
-- typing:start / typing:stop  - emit
-- userTyping  - listen
-- memberAdded  - listen
-- memberLeft  - listen
-- addedToConversation  - listen (new member)
-- friendOnline / friendOffline  - listen (status)
+- sendMessage - emit + ack
+- newMessage - listen (all members)
+- typing:start / typing:stop - emit
+- userTyping - listen
+- memberAdded - listen
+- memberLeft - listen
+- addedToConversation - listen (new member)
+- friendOnline / friendOffline - listen (status)
 
 ---
-
-## Success Criteria (End of Phase 4B)
-
--  Users can list conversations and select one
--  Users can send messages with optimistic UI
--  Users receive real-time messages from others
--  Typing indicators work and auto-disappear
--  Scroll up loads older message history
--  Group features: add/remove members, leave group
--  Error states + reconnection handled gracefully
--  UI responsive, no janky interactions
--  All TypeScript strict mode passes
--  Works with 2-3 concurrent tabs (demo scale)

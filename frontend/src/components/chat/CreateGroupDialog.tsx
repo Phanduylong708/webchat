@@ -65,7 +65,7 @@ export default function CreateGroupDialog(): React.JSX.Element {
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button size="icon" variant="ghost">
+        <Button size="icon" variant="ghost" className="bg-background">
           <Plus size={20} />
         </Button>
       </DialogTrigger>
@@ -102,16 +102,17 @@ export default function CreateGroupDialog(): React.JSX.Element {
                 friends.map((friend) => (
                   <div
                     key={friend.id}
-                    className="flex items-center space-x-2 p-2"
+                    className="flex items-center space-x-2 p-2 rounded-md hover:bg-accent/50"
                   >
                     <Checkbox
                       id={`friend-${friend.id}`}
                       checked={selectedFriendIds.includes(friend.id)}
                       onCheckedChange={() => toggleFriend(friend.id)}
+                      className="border-foreground/30 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
                     />
                     <label
                       htmlFor={`friend-${friend.id}`}
-                      className="cursor-pointer"
+                      className="cursor-pointer flex-1"
                     >
                       {friend.username}
                     </label>
