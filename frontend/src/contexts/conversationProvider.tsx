@@ -2,8 +2,6 @@ import { useEffect, useState, type JSX } from "react";
 import type {
   ConversationsResponse,
   ConversationContextValue,
-  User,
-  ConversationsDetail,
 } from "@/types/chat.type";
 import {
   getConversations,
@@ -11,31 +9,9 @@ import {
   addMemberApi,
   leaveGroupApi,
 } from "@/api/conversation.api";
-import type { Messages } from "@/types/chat.type";
 import useSocket from "@/hooks/useSocket";
+import { useConversationSockets } from "@/hooks/useConversationSockets";
 import { ConversationContext } from "./conversationContext";
-
-//helper
-function updateTypingMap(
-  map: Map<number, Map<number, string>>,
-  conversationId: number,
-  userId: number,
-  username: string,
-  isTyping: boolean
-): Map<number, Map<number, string>> {
-  const updated = new Map(map); // Clone outer Map
-  const currentInnerMap =
-    updated.get(conversationId) || new Map<number, string>();
-  const newInnerMap = new Map(currentInnerMap); // Clone inner Map
-
-  if (isTyping) {
-    newInnerMap.set(userId, username);
-  } else {
-    newInnerMap.delete(userId);
-  }
-  updated.set(conversationId, newInnerMap);
-  return updated;
-}
 
 // prettier-ignore
 function ConversationProvider({children}: {children: React.ReactNode}): JSX.Element {
@@ -52,81 +28,13 @@ function ConversationProvider({children}: {children: React.ReactNode}): JSX.Elem
     const [error, setError] = useState<string | null>(null);
 
     const {socket} = useSocket();
-    // Listen for new messages to update conversation list
-    useEffect(() => {
-      if (!socket) return;
-      function handleNewMessage(message: Messages) {
-        console.log("New message received in conversation context:", message);
-        setConversations((prev) => {
-          const conversation = prev.find(c => c.id === message.conversationId);
-          const newLastMessage = {
-            id: message.id,
-            content: message.content,
-            createdAt: message.createdAt,
-            sender: message.sender,
-          };
-          if (!conversation) return prev;
-          const updated = prev.map(c => 
-            c.id === message.conversationId ? {...c, lastMessage: newLastMessage} : c
-          );
-            const sorted = updated.sort((a, b) => {
-              const timeA = a.lastMessage?.createdAt || "";
-              const timeB = b.lastMessage?.createdAt || "";
-              return timeB.localeCompare(timeA); // descending
-            });
-          return sorted;
-        });
-      }
-      socket.on("newMessage", handleNewMessage);
-      return () => {
-        socket.off("newMessage", handleNewMessage);
-      };
-    }, [socket]);
-    // Listen for online/offline user events
-    useEffect(() => {
-      if (!socket) return;
-
-      function handleOnlineUsers(payload: { userId: number, username: string }) {
-        console.log("User came online:", payload.userId);
-        setOnlineUsers((prev) => {
-          const updated = new Set(prev);
-          updated.add(payload.userId);
-          return updated;
-        });
-      }
-
-      function handleOfflineUsers(payload: {userId: number, lastSeen: string}) {
-        console.log("User went offline:", payload.userId);
-        setOnlineUsers((prev) => {
-          const updated = new Set(prev);
-          updated.delete(payload.userId);
-          return updated;
-        });
-      }
-      
-      socket.on("friendOnline", handleOnlineUsers);
-      socket.on("friendOffline", handleOfflineUsers);
-
-      return () => {
-        socket.off("friendOnline", handleOnlineUsers);
-        socket.off("friendOffline", handleOfflineUsers);
-      };
-    }, [socket]);
-    // Listen for typing events
-    useEffect(() => {
-      if (!socket) return;
-
-      function handleTypingEvent(payload: { userId: number, username: string, conversationId: number, isTyping: boolean }) {
-        console.log("Typing event received:", payload);
-        setTypingByConversation((prev) => 
-          updateTypingMap(prev, payload.conversationId, payload.userId, payload.username, payload.isTyping)
-        );
-      }
-      socket.on("userTyping", handleTypingEvent);
-      return () => {
-        socket.off("userTyping", handleTypingEvent);
-      };
-    }, [socket]);
+    useConversationSockets({
+      socket,
+      setConversations,
+      setOnlineUsers,
+      setTypingByConversation,
+      setSystemMessages,
+    });
 
 
 
@@ -199,113 +107,6 @@ function ConversationProvider({children}: {children: React.ReactNode}): JSX.Elem
         return {success: false, message: "Failed to leave group"};
       }
     }
-
-    useEffect(() => {
-      if (!socket) return;
-
-      function handleMemberAdded(payload: {
-        conversationId: number;
-        member: User;
-      }) {
-        // Listen for member added events
-        console.log("Member added to conversation:", payload);
-        setConversations((prev) => {
-          // Update the conversation's member list
-          return prev.map((c) => {
-            if (c.id === payload.conversationId) {  
-              const existingMembers = c.previewMembers || [];
-              const memberExists = existingMembers.some(m => m.id === payload.member.id);
-              if (memberExists) return c; // No change if member already exists
-              const updatedMembers = [...existingMembers, payload.member];
-              const updatedCount = (c.memberCount || 0) + 1; // Increment count
-              return {
-                ...c,
-                previewMembers: updatedMembers,
-                memberCount: updatedCount,
-              }; 
-            }
-            return c; 
-          });
-        });
-      }
-      socket.on("memberAdded", handleMemberAdded);
-      return () => {
-        socket.off("memberAdded", handleMemberAdded);
-      };
-    }, [socket]);
-
-    useEffect(() => {
-      if (!socket) return;
-      function handleAddedToConversation(payload: {conversation: ConversationsDetail}) {
-        console.log("Added to new conversation:", payload);
-        const newConv: ConversationsResponse = {
-          id: payload.conversation.id,
-          title: payload.conversation.title,
-          type: payload.conversation.type,
-          memberCount: payload.conversation.members.length,
-          previewMembers: payload.conversation.members.slice(0, 3),
-          lastMessage: null,
-        };
-          setConversations((prev) => {
-            const exists = prev.some((c) => c.id === newConv.id);
-            if (exists) return prev; // Already exists
-            return [newConv, ...prev];
-          });
-      }
-      socket.on("addedToConversation", handleAddedToConversation);
-      return () => {
-        socket.off("addedToConversation", handleAddedToConversation);
-      };
-    }, [socket]);
-
-    useEffect(() => {
-      if (!socket) return;
-      function handleMemberLeft(payload: {
-        conversationId: number;
-        userId?: number;
-        user?: User;
-      }) {
-        console.log("Member left conversation:", payload);
-        const leavingUserId = payload.user?.id ?? payload.userId;
-        setConversations((prev) => {
-          return prev.map((c) => {
-            if (c.id === payload.conversationId) {
-              const existingMembers = c.previewMembers || [];
-              const updatedMembers = leavingUserId
-                ? existingMembers.filter((m) => m.id !== leavingUserId)
-                : existingMembers;
-              const updatedCount = Math.max(0, (c.memberCount || 1) - 1); // Decrement count
-              const fallbackUsername = existingMembers.find(
-                (m) => m.id === leavingUserId
-              )?.username;
-              const systemMessage =
-                payload.user?.username ??
-                fallbackUsername ??
-                "A member";
-              setSystemMessages((prev) => {
-                const updated = new Map(prev);
-                updated.set(
-                  payload.conversationId,
-                  `${systemMessage} left the group`
-                );
-                return updated;
-              });
-              return {
-                ...c,
-                previewMembers: updatedMembers,
-                memberCount: updatedCount,
-              };
-            }
-            return c;
-          });
-        });
-      }
-      socket.on("memberLeft", handleMemberLeft);
-      return () => {
-        socket.off("memberLeft", handleMemberLeft);
-      };
-    }, [socket]);
-
 
     const value: ConversationContextValue = {
       conversations,

@@ -5,7 +5,7 @@ import { Separator } from "../ui/separator";
 import { Input } from "../ui/input";
 import { ScrollArea } from "../ui/scroll-area";
 import { useEffect } from "react";
-import CreateGroupDialog from "./CreateGroupDialog";
+import CreateGroupDialog from "../chat/CreateGroupDialog";
 
 function ConversationItem({
   conversation,

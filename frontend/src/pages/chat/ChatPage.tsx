@@ -4,7 +4,7 @@ import { MessageProvider } from "@/contexts/messageProvider";
 import { useEffect } from "react";
 import { useConversation } from "@/hooks/useConversation";
 import { useMessage } from "@/hooks/useMessage";
-import ConversationListPanel from "@/components/chat/ConversationListPanel";
+import ConversationListPanel from "@/components/layout/ConversationListPanel";
 import ChatWindow from "@/components/chat/ChatWindow";
 import MainContentPanel from "@/components/layout/MainContentPanel";
 

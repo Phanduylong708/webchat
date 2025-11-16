@@ -83,7 +83,7 @@ export default function ChatInput({conversationId}: {conversationId: number;}): 
         <button
           type="submit"
           disabled={!inputValue.trim() || isSending}
-          className="flex-shrink-0 size-10 flex items-center justify-center bg-primary text-primary-foreground rounded-md disabled:opacity-50 hover:bg-primary/90 transition-colors"
+          className="shrink-0 size-10 flex items-center justify-center bg-primary text-primary-foreground rounded-md disabled:opacity-50 hover:bg-primary/90 transition-colors"
         >
           <Send className="size-4" />
         </button>
