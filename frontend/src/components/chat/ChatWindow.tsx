@@ -1,32 +1,17 @@
 import { useConversation } from "@/hooks/context/useConversation";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-import { LogOut } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import MessageList from "./MessageList";
 import ChatInput from "./ChatInput";
 import AddMemberDialog from "./AddMemberDialog";
-import { useState } from "react";
+import LeaveGroupDialog from "./LeaveGroupDialog";
 
 function ChatWindow(): React.JSX.Element {
   const {
     conversations,
     activeConversationId,
     onlineUsers,
-    leaveGroup,
     systemMessages,
   } = useConversation();
-  const [isLeaveDialogOpen, setIsLeaveDialogOpen] = useState(false);
   const activeConversations = conversations.find(
     (c) => c.id === activeConversationId
   );
@@ -44,15 +29,6 @@ function ChatWindow(): React.JSX.Element {
     : "Offline";
 
   const showGroupButtons = isGroup;
-
-  async function handleLeaveGroup() {
-    const { success, message } = await leaveGroup(activeConversationId!);
-    if (success) {
-      setIsLeaveDialogOpen(false);
-    } else {
-      alert(message || "Failed to leave group");
-    }
-  }
 
   if (!activeConversations) {
     return (
@@ -87,38 +63,9 @@ function ChatWindow(): React.JSX.Element {
           {showGroupButtons && (
             <div className="shrink-0 ml-4 flex items-center gap-2">
               <AddMemberDialog conversationId={activeConversations.id} />
-              <AlertDialog
-                open={isLeaveDialogOpen}
-                onOpenChange={setIsLeaveDialogOpen}
-              >
-                <AlertDialogTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="border-destructive/20 text-destructive hover:bg-destructive/10"
-                  >
-                    <LogOut className="h-4 w-4 mr-2 " />
-                    Leave
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Leave Group?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Are you sure you want to leave this group?
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction
-                      onClick={handleLeaveGroup}
-                      className="bg-destructive hover:bg-destructive/90"
-                    >
-                      Leave
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
+              <LeaveGroupDialog
+                conversationId={activeConversations.id}
+              />
             </div>
           )}
         </div>

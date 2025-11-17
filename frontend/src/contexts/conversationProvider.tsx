@@ -13,6 +13,16 @@ import useSocket from "@/hooks/context/useSocket";
 import { useConversationSockets } from "@/hooks/sockets/useConversationSockets";
 import { ConversationContext } from "./conversationContext";
 
+function getErrorMessage(error: unknown, fallback: string): string {
+  if (error && typeof error === "object" && "message" in error) {
+    const message = (error as { message?: string }).message;
+    if (message) {
+      return message;
+    }
+  }
+  return fallback;
+}
+
 // prettier-ignore
 function ConversationProvider({children}: {children: React.ReactNode}): JSX.Element {
     // prettier-ignore
@@ -44,7 +54,7 @@ function ConversationProvider({children}: {children: React.ReactNode}): JSX.Elem
             setConversations(data);
         } catch (error) {
             console.error("Error fetching conversations:", error);
-            setError("Failed to fetch conversations");
+            setError(getErrorMessage(error, "Failed to fetch conversations"));
         } finally {
             setLoadingConversations(false);
         }
@@ -69,7 +79,7 @@ function ConversationProvider({children}: {children: React.ReactNode}): JSX.Elem
       return { success: true };
     } catch (error) {
       console.error("Error creating group:", error);
-      const message = "Failed to create group";
+      const message = getErrorMessage(error, "Failed to create group");
       setError(message);
       return { success: false, message };
     }
@@ -82,8 +92,9 @@ function ConversationProvider({children}: {children: React.ReactNode}): JSX.Elem
         return {success: true};
       } catch (error) {
         console.error("Error adding member:", error);
-        setError("Failed to add member");
-        return {success: false, message: "Failed to add member"};
+        const message = getErrorMessage(error, "Failed to add member");
+        setError(message);
+        return {success: false, message};
       }
     }
 
@@ -100,8 +111,9 @@ function ConversationProvider({children}: {children: React.ReactNode}): JSX.Elem
         return {success: true};
       } catch (error) {
         console.error("Error leaving group:", error);
-        setError("Failed to leave group");
-        return {success: false, message: "Failed to leave group"};
+        const message = getErrorMessage(error, "Failed to leave group");
+        setError(message);
+        return {success: false, message};
       }
     }
 

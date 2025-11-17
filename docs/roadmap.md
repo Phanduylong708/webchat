@@ -2,10 +2,10 @@
 
 ## Current Status
 
-**Phase:** Phase 4: Chat System (IN PROGRESS)
-**Focus:** Real-time messaging with Socket.IO - Backend completed, frontend integration pending
-**Started:** 2025-10-20
-**Status:** Phase 4A (Backend) COMPLETED - Phase 4B (Frontend) next
+**Phase:** Phase 5: Video Calling (NOT STARTED)
+**Focus:** Prepare for 1-1 WebRTC/PeerJS integration now that chat system is complete
+**Started:** 2025-10-20 (Phase 4 completed on 2025-11-17)
+**Status:** Phase 4 (Chat System) COMPLETED — moving to Phase 5 planning
 
 ---
 
@@ -38,7 +38,7 @@
 - Protected routes middleware
 - Password hashing (bcryptjs)
 
-**Frontend Deliverables (✅ COMPLETED):**
+**Frontend Deliverables (COMPLETED):**
 
 - Auth pages (LoginPage, SignUpPage with ShadCN UI)
 - Auth state management (React Context + useAuth hook)
@@ -51,10 +51,10 @@
 
 ## Phase 3: Friend System
 
-**Status:** ✅ COMPLETED
+**Status:** COMPLETED
 **Focus:** Friend management functionality
 
-**Backend Deliverables (✅ COMPLETED):**
+**Backend Deliverables (COMPLETED):**
 
 - Add friend API (POST /api/friends - auto-accept)
 - Get friends list API (GET /api/friends)
@@ -64,7 +64,7 @@
 - Friendship model with normalized IDs (userId1 < userId2)
 - All endpoints protected with JWT authentication
 
-**Frontend Deliverables (✅ COMPLETED):**
+**Frontend Deliverables (COMPLETED):**
 
 - Nested routing architecture (HomePage wrapper + FriendsPage child route)
 - Three-column layout (SideBar, FriendListPanel, MainContentPanel)
@@ -80,18 +80,20 @@
 
 ## Phase 4: Chat System
 
-**Status:** IN PROGRESS
+**Status:** COMPLETED
 **Focus:** Real-time messaging (1-1 and group chat)
 
 **Phase 4A - Backend (COMPLETED):**
 
 **Socket.IO Infrastructure:**
+
 - Socket.IO server integration with Express
 - JWT authentication at WebSocket handshake
 - Connection/disconnection handling with multi-tab support
 - Room-based architecture (user rooms + conversation rooms)
 
 **REST API Endpoints:**
+
 - GET /api/conversations - List user's conversations with last message preview
 - GET /api/conversations/:id - Get conversation details with members
 - POST /api/conversations/group - Create group (minimum 3 members)
@@ -100,43 +102,46 @@
 - GET /api/messages/:conversationId - Cursor-based message history pagination
 
 **Socket.IO Events:**
+
 - Status tracking: friendOnline, friendOffline (with multi-device handling)
 - Messaging: sendMessage (with lazy 1-1 creation), newMessage broadcast
 - Typing indicators: typing:start, typing:stop, userTyping
 - Group management: memberAdded, addedToConversation, memberLeft
 
 **Key Features:**
+
 - Lazy-create 1-1 conversations on first message
 - Cursor-based pagination for message history (efficient for large datasets)
 - Multi-tab support (online status only when all tabs closed)
 - Real-time socket room management (auto-join on add, auto-leave on removal)
 
 **Documentation:**
+
 - OpenAPI 3.0 specification (openapi.yaml) for all REST endpoints
 - Frontend integration guide (pending completion)
 
-**Phase 4B - Frontend (PENDING):**
+**Phase 4B - Frontend (COMPLETED):**
 
-- Chat UI components (message list, input box, conversation panel)
-- Socket.IO client integration (socket.io-client library)
-- Real-time message rendering and optimistic updates
-- Typing indicator UI
-- Conversation list with unread badges
-- Message history infinite scroll with cursor pagination
-- Group management UI (add/remove members)
-- Online status indicators synced with Socket.IO events
+- Conversation layout (sidebar + conversation list panel moved under layout components)
+- ChatWindow header with online badge, system banner, AddMemberDialog, LeaveGroupDialog
+- Message list with optimistic send & cursor pagination (InfiniteScroll)
+- Socket hooks (`useConversationSockets`, `useMessageSockets`) to keep context providers lean
+- Typing indicators + online status synced via Socket.IO
+- Group management UI: create group dialog, add-member dialog with filtering, leave-group workflow
+- Loading/error states standardized across panels
+- Documentation updates for API side-effects and known limitations
 
 ---
 
 ## Phase 5: Video Calling
 
-**Status:** ⏳ Not Started  
+**Status:** Not Started  
 **Focus:** WebRTC-based 1-1 video calling
 
 **Deliverables:**
 
-- WebRTC/PeerJS learning and prototyping
-- PeerJS server setup
+- WebRTC learning and prototyping
+- WebRtc server setup
 - Call signaling with Socket.IO
 - Initiate call functionality
 - Accept/reject call functionality
@@ -148,7 +153,7 @@
 
 ## Phase 6: Media Upload & Polish
 
-**Status:** ⏳ Not Started  
+**Status:** Not Started  
 **Focus:** Media sharing and final improvements
 
 **Deliverables:**
@@ -166,7 +171,7 @@
 
 ## Phase 7: Deployment & Final
 
-**Status:** ⏳ Not Started  
+**Status:** Not Started  
 **Focus:** Deploy and finalize project
 
 **Deliverables:**
@@ -186,8 +191,3 @@
 - Each phase builds upon the previous one
 - Update "Current Status" section when moving between phases
 - Detailed tasks for each phase will be tracked separately
-
-
-
-
-

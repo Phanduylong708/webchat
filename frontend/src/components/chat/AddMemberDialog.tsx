@@ -29,16 +29,13 @@ export default function AddMemberDialog({
   const [currentMembers, setCurrentMembers] = useState<User[]>([]); // Members trong group
   const [isLoadingMembers, setIsLoadingMembers] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const { addMember } = useConversation();
   const { friends, fetchFriends } = useFriend();
 
   useEffect(() => {
     if (isOpen) {
       // Fetch friends list
-      void fetchFriends();
-
-      // Fetch conversation details để lấy current members
+      fetchFriends();
       async function loadMembers() {
         setIsLoadingMembers(true);
         setLocalError(null);
@@ -71,23 +68,19 @@ export default function AddMemberDialog({
     e.preventDefault();
     if (!selectedFriendId) return;
     setLocalError(null);
-    setIsSubmitting(true);
-    try {
-      const { success, message } = await addMember(
-        conversationId,
-        selectedFriendId
-      );
 
-      if (success) {
-        // Success: close dialog, reset
-        setIsOpen(false);
-        setSelectedFriendId(null);
-      } else {
-        // Error: show message
-        setLocalError(message || "Failed to add member");
-      }
-    } finally {
-      setIsSubmitting(false);
+    const { success, message } = await addMember(
+      conversationId,
+      selectedFriendId
+    );
+
+    if (success) {
+      // Success: close dialog, reset
+      setIsOpen(false);
+      setSelectedFriendId(null);
+    } else {
+      // Error: show message
+      setLocalError(message || "Failed to add member");
     }
   }
   return (
@@ -102,8 +95,8 @@ export default function AddMemberDialog({
       }}
     >
       <DialogTrigger asChild>
-        <Button size="icon" variant="ghost">
-          <UserPlus size={18} />
+        <Button size="icon" variant="outline">
+          <UserPlus />
         </Button>
       </DialogTrigger>
       <DialogContent>
@@ -158,8 +151,8 @@ export default function AddMemberDialog({
           )}
 
           <DialogFooter>
-            <Button type="submit" disabled={!selectedFriendId || isSubmitting}>
-              {isSubmitting ? "Adding..." : "Add member"}
+            <Button type="submit" disabled={!selectedFriendId}>
+              Add member
             </Button>
           </DialogFooter>
         </form>

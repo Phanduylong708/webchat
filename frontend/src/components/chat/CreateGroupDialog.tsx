@@ -66,7 +66,7 @@ export default function CreateGroupDialog(): React.JSX.Element {
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
         <Button size="icon" variant="ghost" className="bg-background">
-          <Plus size={20} />
+          <Plus />
         </Button>
       </DialogTrigger>
 
