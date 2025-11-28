@@ -31,9 +31,15 @@ function getUserRoom(userId) {
 function getConversationRoom(conversationId) {
   return `conversation_${conversationId}`;
 }
+
+function getCallRoom(callId) {
+  // dedicated room for an active call session
+  return `call_${callId}`;
+}
 export {
   joinUserConversations,
   verifyMembership,
   getUserRoom,
   getConversationRoom,
+  getCallRoom,
 };

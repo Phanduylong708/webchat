@@ -136,17 +136,17 @@
 ## Phase 5: Video Calling
 
 **Status:** Not Started  
-**Focus:** WebRTC-based 1-1 video calling
+**Focus:** WebRTC-based video calling with Mesh
 
 **Deliverables:**
 
-- WebRTC learning and prototyping
 - WebRtc server setup
 - Call signaling with Socket.IO
 - Initiate call functionality
 - Accept/reject call functionality
 - Video and audio streaming
-- Call controls (mute, camera toggle, end call)
+- Screenshare function
+- Call controls (device toggle (mic, cam, output, etc), screen share (on, off) etc)
 - Call UI components
 
 ---
