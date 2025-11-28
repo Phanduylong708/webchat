@@ -1,0 +1,336 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Call Signaling Tester</title>
+    <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 1.5rem;
+        line-height: 1.4;
+      }
+      fieldset {
+        margin-bottom: 1rem;
+        padding: 1rem;
+      }
+      label {
+        display: block;
+        margin: 0.25rem 0;
+      }
+      input[type="text"],
+      input[type="number"],
+      input[type="password"],
+      textarea {
+        width: 100%;
+        box-sizing: border-box;
+      }
+      button {
+        margin-right: 0.5rem;
+        margin-top: 0.25rem;
+      }
+      #logs {
+        white-space: pre-wrap;
+        background: #111;
+        color: #0f0;
+        padding: 1rem;
+        height: 250px;
+        overflow: auto;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Call Signaling Tester</h1>
+    <p>Status: <span id="status">Idle</span></p>
+
+    <fieldset>
+      <legend>Server & Auth</legend>
+      <label>
+        Server URL
+        <input id="server-url" type="text" value="http://localhost:5000" />
+      </label>
+      <label>
+        Identifier (email/username)
+        <input id="identifier" type="text" placeholder="your email/username" />
+      </label>
+      <label>
+        Password
+        <input id="password" type="password" placeholder="password" />
+      </label>
+      <button id="login-btn">Login & fetch token</button>
+      <label>
+        JWT Token
+        <textarea id="token" rows="2" placeholder="paste token here"></textarea>
+      </label>
+      <button id="connect-btn">Connect Socket</button>
+      <button id="disconnect-btn">Disconnect</button>
+    </fieldset>
+
+    <fieldset>
+      <legend>Call Controls</legend>
+      <label>
+        Conversation ID
+        <input id="conversation-id" type="number" placeholder="e.g. 1" />
+      </label>
+      <label>
+        Call ID (leave blank to auto-generate)
+        <input id="call-id" type="text" />
+      </label>
+      <label>
+        <input id="auto-join" type="checkbox" checked />
+        Auto-join when receiving call:initiate
+      </label>
+      <div>
+        <button id="initiate-btn">Emit call:initiate</button>
+        <button id="join-btn">Emit call:join</button>
+        <button id="offer-btn">Send dummy call:offer</button>
+        <button id="answer-btn">Send dummy call:answer</button>
+        <button id="candidate-btn">Send dummy call:candidate</button>
+        <button id="end-btn">Emit call:end</button>
+      </div>
+      <label>
+        End reason
+        <input id="end-reason" type="text" value="hangup" />
+      </label>
+    </fieldset>
+
+    <fieldset>
+      <legend>Logs</legend>
+      <pre id="logs"></pre>
+    </fieldset>
+
+    <script>
+      const statusEl = document.getElementById("status");
+      const logsEl = document.getElementById("logs");
+
+      let socket = null;
+      let currentUser = null;
+
+      function log(label, data) {
+        const time = new Date().toISOString();
+        const line =
+          `[${time}] ${label}: ` +
+          (data !== undefined ? JSON.stringify(data, null, 2) : "");
+        logsEl.textContent += line + "\n";
+        logsEl.scrollTop = logsEl.scrollHeight;
+        console.log(label, data);
+      }
+
+      function setStatus(text) {
+        statusEl.textContent = text;
+      }
+
+      function getCallId() {
+        const val = document.getElementById("call-id").value.trim();
+        if (val) return val;
+        if (crypto.randomUUID) {
+          const id = crypto.randomUUID();
+          document.getElementById("call-id").value = id;
+          return id;
+        }
+        const fallback = "call_" + Math.random().toString(36).slice(2, 10);
+        document.getElementById("call-id").value = fallback;
+        return fallback;
+      }
+
+      async function login() {
+        const identifier = document.getElementById("identifier").value.trim();
+        const password = document.getElementById("password").value.trim();
+        const baseUrl = document.getElementById("server-url").value.trim();
+        if (!identifier || !password) {
+          log("loginError", "Identifier & password required");
+          return;
+        }
+        try {
+          const res = await fetch(`${baseUrl}/api/auth/login`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ identifier, password }),
+          });
+          const data = await res.json();
+          if (!res.ok || !data?.data?.token) {
+            log("loginError", { status: res.status, data });
+            return;
+          }
+          document.getElementById("token").value = data.data.token;
+          currentUser = data.data.user;
+          log("loginSuccess", { user: currentUser });
+        } catch (err) {
+          log("loginError", err.message);
+        }
+      }
+
+      function connectSocket() {
+        const baseUrl = document.getElementById("server-url").value.trim();
+        const token = document.getElementById("token").value.trim();
+        if (!token) {
+          log("connectError", "Token is required");
+          return;
+        }
+        if (socket) {
+          socket.disconnect();
+        }
+        socket = io(baseUrl, { auth: { token } });
+
+        socket.on("connect", () => {
+          setStatus(`Connected (${socket.id}) recovered=${socket.recovered}`);
+          log("connected", { id: socket.id, recovered: socket.recovered });
+        });
+        socket.on("disconnect", (reason) => {
+          setStatus(`Disconnected (${reason})`);
+          log("disconnect", { reason });
+        });
+        socket.on("connect_error", (err) => {
+          setStatus("Connect error");
+          log("connect_error", { message: err.message, data: err.data });
+        });
+
+        const logEvents = [
+          "call:initiate",
+          "call:join",
+          "call:offer",
+          "call:answer",
+          "call:candidate",
+          "call:end",
+        ];
+        logEvents.forEach((evt) => {
+          socket.on(evt, (payload) => {
+            log(evt, payload);
+            if (evt === "call:initiate") {
+              if (payload?.callId) {
+                document.getElementById("call-id").value = payload.callId;
+              }
+              if (document.getElementById("auto-join").checked) {
+                joinCall();
+              }
+            }
+          });
+        });
+      }
+
+      function disconnectSocket() {
+        if (socket) {
+          socket.disconnect();
+          socket = null;
+        }
+      }
+
+      function emitInitiate() {
+        if (!socket?.connected) return log("warn", "Socket not connected");
+        const conversationId = Number(
+          document.getElementById("conversation-id").value
+        );
+        if (!conversationId) return log("warn", "conversationId required");
+        const callId = getCallId();
+        socket.emit(
+          "call:initiate",
+          { conversationId, callId },
+          (ack) => log("call:initiate ack", ack)
+        );
+      }
+
+      function joinCall() {
+        if (!socket?.connected) return log("warn", "Socket not connected");
+        const callId = getCallId();
+        socket.emit("call:join", { callId }, (ack) => log("call:join ack", ack));
+      }
+
+      function sendOffer() {
+        if (!socket?.connected) return log("warn", "Socket not connected");
+        const callId = getCallId();
+        socket.emit("call:offer", {
+          callId,
+          from: socket.id,
+          sdp: { type: "offer", sdp: "dummy-offer" },
+        });
+        log("sent call:offer", { callId });
+      }
+
+      function sendAnswer() {
+        if (!socket?.connected) return log("warn", "Socket not connected");
+        const callId = getCallId();
+        socket.emit("call:answer", {
+          callId,
+          from: socket.id,
+          sdp: { type: "answer", sdp: "dummy-answer" },
+        });
+        log("sent call:answer", { callId });
+      }
+
+      function sendCandidate() {
+        if (!socket?.connected) return log("warn", "Socket not connected");
+        const callId = getCallId();
+        socket.emit("call:candidate", {
+          callId,
+          from: socket.id,
+          candidate: { candidate: "candidate:1 1 udp 12345 0.0.0.0 9 typ host" },
+        });
+        log("sent call:candidate", { callId });
+      }
+
+      function endCall() {
+        if (!socket?.connected) return log("warn", "Socket not connected");
+        const callId = getCallId();
+        const reason = document.getElementById("end-reason").value || "hangup";
+        socket.emit("call:end", { callId, reason }, (ack) =>
+          log("call:end ack", ack)
+        );
+      }
+
+      document
+        .getElementById("login-btn")
+        .addEventListener("click", (e) => {
+          e.preventDefault();
+          login();
+        });
+      document
+        .getElementById("connect-btn")
+        .addEventListener("click", (e) => {
+          e.preventDefault();
+          connectSocket();
+        });
+      document
+        .getElementById("disconnect-btn")
+        .addEventListener("click", (e) => {
+          e.preventDefault();
+          disconnectSocket();
+        });
+      document
+        .getElementById("initiate-btn")
+        .addEventListener("click", (e) => {
+          e.preventDefault();
+          emitInitiate();
+        });
+      document
+        .getElementById("join-btn")
+        .addEventListener("click", (e) => {
+          e.preventDefault();
+          joinCall();
+        });
+      document
+        .getElementById("offer-btn")
+        .addEventListener("click", (e) => {
+          e.preventDefault();
+          sendOffer();
+        });
+      document
+        .getElementById("answer-btn")
+        .addEventListener("click", (e) => {
+          e.preventDefault();
+          sendAnswer();
+        });
+      document
+        .getElementById("candidate-btn")
+        .addEventListener("click", (e) => {
+          e.preventDefault();
+          sendCandidate();
+        });
+      document
+        .getElementById("end-btn")
+        .addEventListener("click", (e) => {
+          e.preventDefault();
+          endCall();
+        });
+    </script>
+  </body>
+</html>
