@@ -14,7 +14,7 @@ async function socketAuthMiddleware(socket, next) {
     const userId = payload.sub;
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { id: true, email: true, username: true },
+      select: { id: true, email: true, username: true, avatar: true },
     });
     if (!user) {
       return next(makeError("Unauthorized Socket", "AUTH_USER_NOT_FOUND"));

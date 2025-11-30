@@ -36,10 +36,21 @@ function getCallRoom(callId) {
   // dedicated room for an active call session
   return `call_${callId}`;
 }
+
+async function getConversationMemberIds(conversationId) {
+  // Get all user IDs in a conversation
+  const members = await prisma.conversationMember.findMany({
+    where: { conversationId },
+    select: { userId: true },
+  });
+  return members.map((m) => m.userId);
+}
+
 export {
   joinUserConversations,
   verifyMembership,
   getUserRoom,
   getConversationRoom,
   getCallRoom,
+  getConversationMemberIds,
 };
