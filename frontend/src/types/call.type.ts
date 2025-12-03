@@ -1,0 +1,100 @@
+import type { User } from "./chat.type";
+
+export type CallStatus = "ringing" | "connecting" | "active" | "ended";
+
+export type CallEndReason =
+  | "ended" // User manually ended
+  | "timeout" // No one answered within timeout
+  | "all_declined" // All callees declined
+  | "insufficient_participants" // Less than 2 participants remaining
+  | "leave" // User left the call
+  | "disconnect"; // User disconnected
+
+// Call Participant (reuse User from chat.type)
+export type CallParticipant = User;
+// Socket Event Payloads (from server)
+
+export interface CallInitiatePayload {
+  callId: string;
+  conversationId: number;
+  caller: CallParticipant;
+  timeoutMs: number;
+}
+
+/** Payload received when someone joins a call */
+export interface CallJoinPayload {
+  callId: string;
+  user: CallParticipant;
+}
+
+/** Payload received when someone leaves a call */
+export interface CallLeavePayload {
+  callId: string;
+  conversationId: number;
+  user: CallParticipant;
+  reason: "leave" | "disconnect";
+}
+
+/** Payload received when a call ends */
+export interface CallEndPayload {
+  callId: string;
+  conversationId: number;
+  reason: CallEndReason;
+}
+
+/** ACK response from call:initiate */
+export type CallInitiateAck =
+  | { success: true; callId: string }
+  | { success: false; error: string };
+
+/** ACK response from call:join */
+export type CallJoinAck =
+  | {
+      success: true;
+      conversationId: number;
+      isInitiator: boolean;
+      participants: CallParticipant[];
+    }
+  | { success: false; error: string };
+
+export interface IncomingCall {
+  callId: string;
+  conversationId: number;
+  caller: CallParticipant;
+}
+
+export interface CallState {
+  status: CallStatus;
+  callId: string | null;
+  conversationId: number | null;
+  isInitiator: boolean;
+  participants: CallParticipant[];
+  incomingCall: IncomingCall | null;
+  endReason: CallEndReason | null;
+}
+
+export interface CallContextValue extends CallState {
+  /** Initiate a call for a conversation (caller) */
+  initiateCall: (conversationId: number) => Promise<void>;
+  /** Accept incoming call (callee) - opens call page */
+  acceptCall: () => void;
+  /** Decline incoming call (callee) - emits call:decline */
+  declineCall: () => void;
+  /** Join a call by callId (used by CallPage on mount) */
+  joinCall: (callId: string) => Promise<boolean>;
+  /** Leave the current call */
+  leaveCall: () => void;
+  /** End the call for everyone */
+  endCall: () => void;
+  /** Reset call state to idle */
+  resetCall: () => void;
+}
+
+export const callEndReasonMessages: Record<CallEndReason, string> = {
+  ended: "Call ended",
+  timeout: "No answer",
+  all_declined: "Everyone declined the call",
+  insufficient_participants: "Call ended",
+  leave: "Call ended",
+  disconnect: "Call ended",
+};

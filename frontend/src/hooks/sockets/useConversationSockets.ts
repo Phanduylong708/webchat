@@ -6,13 +6,14 @@ import type {
   User,
 } from "@/types/chat.type";
 import type { Messages } from "@/types/chat.type";
-import { updateTypingMap, resolveLeavingUsername } from "@/utils/conversation.utils";
+import {
+  updateTypingMap,
+  resolveLeavingUsername,
+} from "@/utils/conversation.utils";
 
 type ConversationSetter = Dispatch<SetStateAction<ConversationsResponse[]>>;
 type OnlineUsersSetter = Dispatch<SetStateAction<Set<number>>>;
-type TypingSetter = Dispatch<
-  SetStateAction<Map<number, Map<number, string>>>
->;
+type TypingSetter = Dispatch<SetStateAction<Map<number, Map<number, string>>>>;
 type SystemMessageSetter = Dispatch<SetStateAction<Map<number, string>>>;
 
 interface UseConversationSocketsParams {
@@ -40,9 +41,7 @@ export function useConversationSockets({
     function handleConversationPreviewUpdate(message: Messages) {
       setConversations((prev) => {
         // Only update if this conversation exists in current list.
-        const conversation = prev.find(
-          (c) => c.id === message.conversationId
-        );
+        const conversation = prev.find((c) => c.id === message.conversationId);
         if (!conversation) return prev;
 
         // Construct a lightweight lastMessage preview for the sidebar.
@@ -130,7 +129,10 @@ export function useConversationSockets({
   // Keep preview member list + counts in sync when someone is added.
   useEffect(() => {
     if (!socket) return;
-    function handleMemberAdded(payload: { conversationId: number; member: User }) {
+    function handleMemberAdded(payload: {
+      conversationId: number;
+      member: User;
+    }) {
       setConversations((prev) => {
         return prev.map((c) => {
           if (c.id === payload.conversationId) {
@@ -163,6 +165,7 @@ export function useConversationSockets({
   }, [socket, setConversations]);
 
   // Add brand-new conversations when backend notifies user was added.
+
   useEffect(() => {
     if (!socket) return;
     function handleAdded(payload: { conversation: ConversationsDetail }) {
@@ -173,6 +176,7 @@ export function useConversationSockets({
         memberCount: payload.conversation.members.length,
         previewMembers: payload.conversation.members.slice(0, 3),
         lastMessage: null,
+        //TODO: add otherUser if need to display member list
       };
       setConversations((prev) => {
         const exists = prev.some((c) => c.id === newConv.id);

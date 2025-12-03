@@ -62,10 +62,9 @@ function handleCall(io, socket) {
         caller: socket.data.user,
         timeoutMs: CALL_TIMEOUT_MS,
       };
-      io.to(getConversationRoom(parsedConversationId)).emit(
-        "call:initiate",
-        ringPayload
-      );
+      socket
+        .to(getConversationRoom(parsedConversationId))
+        .emit("call:initiate", ringPayload);
       return maybeAck(callback, { success: true, callId: effectiveCallId });
     } catch (err) {
       console.error("call:initiate error", err);
@@ -235,7 +234,7 @@ function handleUserLeave(io, socket, callId, reason) {
     session.participants.delete(userId);
 
     // Notify others (include conversationId so UI can update the right chat)
-    io.to(getCallRoom(callId)).emit("call:leave", {
+    socket.to(getCallRoom(callId)).emit("call:leave", {
       callId,
       conversationId: session.conversationId,
       user: socket.data.user,
