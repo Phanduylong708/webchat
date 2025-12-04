@@ -64,7 +64,7 @@ Implement video call UI with signaling flow. Focus on UI/UX first, WebRTC/MediaS
 
 ## Implementation Steps
 
-### Step 0: Update Backend `call:join`
+### Step 0: Update Backend `call:join` (Completed)
 
 Modify `backend/src/sockets/handlers/call.handler.js`:
 
@@ -75,7 +75,7 @@ Modify `backend/src/sockets/handlers/call.handler.js`:
 - Track participants as `Map<userId, userObject>` using `socket.data.user` snapshot; build ACK from this map.
 - Add `call:decline` handler: callee emits; server only ends immediately if all callees have declined (reason `all_declined`), otherwise waits for others/timeout; no per-user decline event.
 
-### Step 1: Create Types
+### Step 1: Create Types (Completed)
 
 Create `types/call.type.ts` with:
 
@@ -86,7 +86,7 @@ Create `types/call.type.ts` with:
 - `CallState`: current call state
 - `CallContextValue`: context value with state + actions
 
-### Step 2: Create Socket Hook
+### Step 2: Create Socket Hook (Completed)
 
 Create `hooks/sockets/useCallSockets.ts`:
 
@@ -94,7 +94,7 @@ Create `hooks/sockets/useCallSockets.ts`:
 - Listen for: `call:initiate`, `call:join`, `call:leave`, `call:end`
 - Update call state via setters
 
-### Step 3: Create Call Context & Provider
+### Step 3: Create Call Context & Provider (Completed)
 
 Create `contexts/callContext.ts` + `contexts/callProvider.tsx`:
 
@@ -103,10 +103,11 @@ Create `contexts/callContext.ts` + `contexts/callProvider.tsx`:
 - Expose actions:
   - `initiateCall(conversationId)` - emit `call:initiate`, open new tab `/call/:callId`
   - `acceptCall()` - open new tab `/call/:callId`, close dialog
-  - `declineCall()` - emit `call:decline` (server may end with `all_declined` if applicable), close dialog
-  - `joinCall(callId)` - emit `call:join` with ACK, update state from response
-  - `leaveCall()` - emit `call:leave`
-  - `endCall()` - emit `call:end`
+  - `declineCall()` - emit `call:decline` then reset local state
+  - `joinCall(callId)` - emit `call:join` with ACK, set status `connecting` → `ringing/active` based on participants
+  - `leaveCall()` - emit `call:leave`, set status/endReason `ended/leave`, keep metadata for UI
+  - `endCall()` - initiator-only guard, emit `call:end`, set status/endReason `ended`
+  - `resetCall()` - clear metadata, set status `ended`
 
 ### Step 4: Create IncomingCallDialog
 
