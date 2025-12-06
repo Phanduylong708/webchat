@@ -14,6 +14,8 @@ export type CallEndReason =
 export type CallParticipant = User;
 // Socket Event Payloads (from server)
 
+export type ConversationType = "PRIVATE" | "GROUP";
+
 export interface CallInitiatePayload {
   callId: string;
   conversationId: number;
@@ -25,6 +27,7 @@ export interface CallInitiatePayload {
 export interface CallJoinPayload {
   callId: string;
   user: CallParticipant;
+  status: CallStatus;
 }
 
 /** Payload received when someone leaves a call */
@@ -42,16 +45,12 @@ export interface CallEndPayload {
   reason: CallEndReason;
 }
 
-/** ACK response from call:initiate */
-export type CallInitiateAck =
-  | { success: true; callId: string }
-  | { success: false; error: string };
-
 /** ACK response from call:join */
 export type CallJoinAck =
   | {
       success: true;
       conversationId: number;
+      conversationType: ConversationType;
       isInitiator: boolean;
       participants: CallParticipant[];
     }
@@ -81,7 +80,7 @@ export interface CallContextValue extends CallState {
   /** Decline incoming call (callee) - emits call:decline */
   declineCall: () => void;
   /** Join a call by callId (used by CallPage on mount) */
-  joinCall: (callId: string) => Promise<boolean>;
+  joinCall: (callId: string) => Promise<CallJoinAck>;
   /** Leave the current call */
   leaveCall: () => void;
   /** End the call for everyone */

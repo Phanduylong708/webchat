@@ -101,12 +101,12 @@ Create `contexts/callContext.ts` + `contexts/callProvider.tsx`:
 - Manage call state (status, callId, conversationId, participants, incomingCall)
 - Integrate `useCallSockets` hook
 - Expose actions:
-  - `initiateCall(conversationId)` - emit `call:initiate`, open new tab `/call/:callId`
-  - `acceptCall()` - open new tab `/call/:callId`, close dialog
-  - `declineCall()` - emit `call:decline` then reset local state
-  - `joinCall(callId)` - emit `call:join` with ACK, set status `connecting` → `ringing/active` based on participants
-  - `leaveCall()` - emit `call:leave`, set status/endReason `ended/leave`, keep metadata for UI
-  - `endCall()` - initiator-only guard, emit `call:end`, set status/endReason `ended`
+  - `initiateCall(conversationId)` - emit `call:initiate`, open new tab `/call/:callId` (for caller)
+  - `acceptCall()` - open new tab `/call/:callId`, close dialog (for callee)
+  - `declineCall()` - emit `call:decline` then reset local state (need dedicated rejoin feature), close dialog
+  - `joinCall(callId)` - emit `call:join` with ACK, set status `connecting` → `ringing/active` based on participants. Can join as long as user know the callId (no guard, no need to be in same chat room). Future use case: dedicated join feature like google meet.
+  - `leaveCall()` - emit `call:leave`, set status/endReason `ended/leave`, keep metadata for UI (use case: meta data for quick rejoin bubble like google meet)
+  - `endCall()` - initiator-only guard, emit `call:end`, set status/endReason `ended` (use case: cancel while ringing, panic button to end call for everyone)
   - `resetCall()` - clear metadata, set status `ended`
 
 ### Step 4: Create IncomingCallDialog

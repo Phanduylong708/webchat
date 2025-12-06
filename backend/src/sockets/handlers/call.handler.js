@@ -3,6 +3,7 @@ import {
   getCallRoom,
   verifyMembership,
   getConversationMemberIds,
+  getConversationType,
 } from "../helpers/helpers.js";
 import { randomUUID } from "crypto";
 
@@ -34,6 +35,15 @@ function handleCall(io, socket) {
         });
       }
 
+      // Fetch conversation type once per session to reuse in call:join ACK
+      const conversationType = await getConversationType(parsedConversationId);
+      if (!conversationType) {
+        return maybeAck(callback, {
+          success: false,
+          error: "Conversation not found",
+        });
+      }
+
       const effectiveCallId = callId || randomUUID();
       if (!callSessions.has(effectiveCallId)) {
         // Get all members of conversation to determine callees
@@ -47,6 +57,7 @@ function handleCall(io, socket) {
 
         callSessions.set(effectiveCallId, {
           conversationId: parsedConversationId,
+          conversationType,
           initiatorId: userId,
           status: "ringing",
           callees: new Set(calleeIds),
@@ -130,16 +141,19 @@ function handleCall(io, socket) {
       io.to(getCallRoom(callId)).emit("call:join", {
         callId,
         user: socket.data.user,
+        status: session.status,
       });
 
       // Return ACK with call context
       return maybeAck(callback, {
         success: true,
         conversationId: session.conversationId,
+        conversationType: session.conversationType,
         isInitiator: userId === session.initiatorId,
         participants: Array.from(session.participants.values()).map(
           (p) => p.user
         ),
+        status: session.status,
       });
     } catch (err) {
       console.error("call:join error", err);
@@ -170,10 +184,11 @@ function handleCall(io, socket) {
     // Track this callee has responded
     session.responded.add(userId);
 
-    // Check if all callees have responded and no one joined
+    // Check if all callees have now declined and no callee ever joined.
+    // The only participant allowed at this point is the initiator.
     if (
       session.responded.size === session.callees.size &&
-      session.participants.size === 0
+      session.participants.size <= 1
     ) {
       // All declined, no one in call - end immediately
       endCallForAll(io, callId, "all_declined");

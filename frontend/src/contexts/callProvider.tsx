@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState, type JSX } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { CallContext } from "./callContext";
 import type {
   CallContextValue,
@@ -20,7 +20,7 @@ export function CallProvider({
   children,
 }: {
   children: React.ReactNode;
-}): JSX.Element {
+}): React.JSX.Element {
   const { socket } = useSocket();
   const [status, setStatus] = useState<CallStatus>(getInitialStatus());
   const [callId, setCallId] = useState<string | null>(null);
@@ -143,24 +143,24 @@ export function CallProvider({
 
   // Join an existing call by callId (used by CallPage on mount).
   const joinCall = useCallback(
-    async (targetCallId: string): Promise<boolean> => {
+    async (targetCallId: string): Promise<CallJoinAck> => {
       if (!socket || !socket.connected) {
         console.error("Socket is not connected; aborting joinCall.");
-        return false;
+        return { success: false, error: "Socket not connected" };
       }
 
       setEndReason(null);
       setStatus("connecting");
 
-      return new Promise<boolean>((resolve) => {
+      return new Promise<CallJoinAck>((resolve) => {
         socket.emit(
           "call:join",
           { callId: targetCallId },
           (ack: CallJoinAck) => {
             if (!ack || !ack.success) {
-              console.error("Failed to join call:", ack.error);
+              console.error("Failed to join call:", ack?.error);
               resetCall();
-              resolve(false);
+              resolve(ack || { success: false, error: "Unknown error" });
               return;
             }
 
@@ -176,7 +176,7 @@ export function CallProvider({
             setParticipants(ack.participants);
             setStatus(nextStatus);
             setIncomingCall(null);
-            resolve(true);
+            resolve(ack);
           }
         );
       });

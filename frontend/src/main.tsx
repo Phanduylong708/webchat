@@ -10,6 +10,7 @@ import HomePage from "./pages/home/HomePage.tsx";
 import ProtectedRoute from "./components/ProtectedRoute.tsx";
 import FriendsPage from "./pages/home/FriendsPage.tsx";
 import ChatPage from "./pages/chat/ChatPage.tsx";
+import CallPage from "./pages/call/CallPage.tsx";
 
 const router = createBrowserRouter([
   {
@@ -34,6 +35,14 @@ const router = createBrowserRouter([
           },
           { path: "chat", element: <ChatPage /> },
         ],
+      },
+      {
+        path: "call/:callId",
+        element: (
+          <ProtectedRoute>
+            <CallPage />
+          </ProtectedRoute>
+        ),
       },
       { path: "login", element: <LoginPage /> },
       { path: "signup", element: <SignUp /> },

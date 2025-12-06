@@ -75,11 +75,13 @@ export function useCallSockets({
     if (!socket) return;
 
     function handleJoin(payload: CallJoinPayload) {
+      setStatus(payload.status);
       setParticipants((prev) => {
         const exists = prev.some((p) => p.id === payload.user.id);
         if (exists) return prev;
         return [...prev, payload.user]; //
       });
+      console.log("handleJoin", payload);
     }
 
     socket.on("call:join", handleJoin);
@@ -109,6 +111,7 @@ export function useCallSockets({
     function handleEnd(payload: CallEndPayload) {
       setEndReason(payload.reason);
       setStatus("ended");
+      setIncomingCall(null);
       // Keep participants so UI can still show who was in the call.
       // Provider is responsible for when to fully reset call state.
     }
@@ -117,5 +120,5 @@ export function useCallSockets({
     return () => {
       socket.off("call:end", handleEnd);
     };
-  }, [socket, setEndReason, setStatus]);
+  }, [socket, setEndReason, setStatus, setIncomingCall]);
 }

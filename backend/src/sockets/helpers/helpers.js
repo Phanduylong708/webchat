@@ -46,6 +46,14 @@ async function getConversationMemberIds(conversationId) {
   return members.map((m) => m.userId);
 }
 
+async function getConversationType(conversationId) {
+  const conversation = await prisma.conversation.findUnique({
+    where: { id: conversationId },
+    select: { type: true },
+  });
+  return conversation?.type || null;
+}
+
 export {
   joinUserConversations,
   verifyMembership,
@@ -53,4 +61,5 @@ export {
   getConversationRoom,
   getCallRoom,
   getConversationMemberIds,
+  getConversationType,
 };

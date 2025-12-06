@@ -1,5 +1,7 @@
 import { AuthProvider } from "@/contexts/authContext";
 import { SocketProvider } from "./contexts/socketProvider";
+import { CallProvider } from "@/contexts/callProvider";
+import { IncomingCallDialog } from "@/components/call/IncomingCallDialog";
 import { useAuth } from "@/hooks/context/useAuth";
 import { Outlet } from "react-router-dom";
 import React from "react";
@@ -18,7 +20,10 @@ export default function App() {
   return (
     <AuthProvider>
       <SocketProvider>
+        <CallProvider>
+          <IncomingCallDialog />
         <AppContent />
+        </CallProvider>
       </SocketProvider>
     </AuthProvider>
   );
