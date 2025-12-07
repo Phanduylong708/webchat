@@ -8,6 +8,8 @@ permalink: webchat-phase{number}-{side}-{step}-{feature}
 
 ## Plan Overview
 
+**Refer to user for full details on the plan and additional context**
+
 [Provide a brief overview of what this phase/step aims to accomplish. Include the main objectives and the overall approach being taken. This should give readers a quick understanding of the scope and goals of this development session.]
 
 [Optional: Include the development approach (e.g., "Visual-first bottom-up", "API-first", "Test-driven", etc.) and explain why this approach was chosen.]
@@ -97,3 +99,7 @@ IF Integration work:
 4. Do not include code snippets - only describe implementation
 5. Do not include testing results - only document issues and solutions
 6. THIS SECTION IS WRITTEN BY HUMAN, AI MODELS MUST ABSOLUTELY NOT EDIT IT THEMSELVES
+
+### EVEN MORE IMPORTANT NOTE FOR AI (ALWAYS COPY-PASTE THIS SECTION TO THE END OF THIS FILE)
+
+- DO NOT TREAT THIS FILE AS A PLAN, OR A SINGLE SOURCE OF TRUTH. IT IS A HIGH LEVEL SUMMARY OF THE WORK DONE IN A SESSION, INFORMATION CAN BE DIFFERENT OR OUTDATED WITH THE REAL PROJECT. IT IS ADVISED TO ASK USER FOR FULL DETAILS OR READ THE SOURCE CODE LINK MENTIONED IN THE FILE TO GET THE MOST UP TO DATE INFORMATION.

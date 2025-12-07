@@ -55,16 +55,6 @@ export default function CallPage(): React.JSX.Element {
     handleJoin();
   }, [callId, joinCall, navigate, isConnected]);
 
-  // Auto-redirect when call ends (optional UX enhancement)
-  useEffect(() => {
-    if (status === "ended" && endReason) {
-      const timer = setTimeout(() => {
-        navigate("/");
-      }, 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [status, endReason, navigate]);
-
   // Conditional rendering based on state
   if (isLoading) {
     return (
@@ -97,9 +87,6 @@ export default function CallPage(): React.JSX.Element {
       <div className="flex h-screen items-center justify-center">
         <div className="text-center space-y-4">
           <p className="text-lg font-semibold">{message}</p>
-          <p className="text-sm text-muted-foreground">
-            Redirecting to home in 3 seconds...
-          </p>
           <Button onClick={() => navigate("/")} variant="outline">
             Back to home
           </Button>

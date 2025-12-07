@@ -54,6 +54,19 @@ async function getConversationType(conversationId) {
   return conversation?.type || null;
 }
 
+// Filters user IDs to only include those currently online (have active socket connections)
+function getOnlineUserIds(io, userIds) {
+  const onlineUserIds = [];
+  for (const userId of userIds) {
+    const targetUserRoom = getUserRoom(userId);
+    const targetUserRoomObject = io.sockets.adapter.rooms.get(targetUserRoom);
+    if (targetUserRoomObject && targetUserRoomObject.size > 0) {
+      onlineUserIds.push(userId);
+    }
+  }
+  return onlineUserIds;
+}
+
 export {
   joinUserConversations,
   verifyMembership,
@@ -62,4 +75,5 @@ export {
   getCallRoom,
   getConversationMemberIds,
   getConversationType,
+  getOnlineUserIds,
 };

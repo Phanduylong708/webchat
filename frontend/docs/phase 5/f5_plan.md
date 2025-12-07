@@ -17,17 +17,19 @@ Implement video call UI with signaling flow. Focus on UI/UX first, WebRTC/MediaS
 | UI language          | **English**                 | Consistency with codebase                                         |
 | Reload behavior      | **Redirect on fail**        | Emit `call:join`, redirect to `/` if ACK fails                    |
 | Participants in ACK  | **Full user objects**       | CallPage needs username/avatar without extra API calls            |
+| Conversation type    | **From ACK**                | Backend returns `conversationType` in `call:join` ACK             |
 | Decline handling     | **No per-user decline evt** | Callee decline only affects server-side all-declined check        |
 
 ---
 
 ## Backend Changes Required
 
-### Modify `call:join` handler
+### Modify `call:join` handler (Completed)
 
 - ACK response with call context (snapshot users from socket), participants as user objects (id/username/avatar).
 - Track participants as `Map<userId, { user, socketIds: Set }>` for multi-tab.
 - Add `call:decline` handler: callee emits; server only ends immediately if all callees have declined (reason `all_declined`); no per-user decline event.
+- Add `conversationType` into session and return it in `call:join` ACK.
 
 ---
 
@@ -46,12 +48,11 @@ Implement video call UI with signaling flow. Focus on UI/UX first, WebRTC/MediaS
 
 ## Files to Modify
 
-| File                                          | Changes                                                                   |
-| --------------------------------------------- | ------------------------------------------------------------------------- |
-| `backend/.../call.handler.js`                 | Add ACK to `call:join` with conversationId, isInitiator, participants     |
-| `frontend/src/App.tsx`                        | Add `CallProvider`, route `/call/:callId`, render `IncomingCallDialog`    |
-| `frontend/src/components/chat/ChatWindow.tsx` | Add `CallButton` to header                                                |
-| `backend/.../call.handler.js`                 | Add `call:decline` event (callee emits; server ends only if all declined) |
+| File                                          | Changes                                                                                                                  |
+| --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `backend/.../call.handler.js`                 | ACK `call:join` with conversationId, conversationType, isInitiator, participants; call:decline ends only if all declined |
+| `frontend/src/App.tsx`                        | Add `CallProvider`, render `IncomingCallDialog` globally                                                                 |
+| `frontend/src/components/chat/ChatWindow.tsx` | Add `CallButton` to header                                                                                               |
 
 ## Files to Review (Later - WebRTC Phase)
 
@@ -69,10 +70,9 @@ Implement video call UI with signaling flow. Focus on UI/UX first, WebRTC/MediaS
 Modify `backend/src/sockets/handlers/call.handler.js`:
 
 - Add callback parameter to `call:join` handler
-- Return ACK with `{ success, conversationId, isInitiator, participants }`
+- Return ACK with `{ success, conversationId, conversationType, isInitiator, participants }`
 - Handle error cases with `{ success: false, error: "..." }`
-- Update tests for new ACK behavior
-- Track participants as `Map<userId, userObject>` using `socket.data.user` snapshot; build ACK from this map.
+- Track participants as `Map<userId, { user, socketIds }>` using `socket.data.user` snapshot; build ACK from this map.
 - Add `call:decline` handler: callee emits; server only ends immediately if all callees have declined (reason `all_declined`), otherwise waits for others/timeout; no per-user decline event.
 
 ### Step 1: Create Types (Completed)
@@ -104,12 +104,12 @@ Create `contexts/callContext.ts` + `contexts/callProvider.tsx`:
   - `initiateCall(conversationId)` - emit `call:initiate`, open new tab `/call/:callId` (for caller)
   - `acceptCall()` - open new tab `/call/:callId`, close dialog (for callee)
   - `declineCall()` - emit `call:decline` then reset local state (need dedicated rejoin feature), close dialog
-  - `joinCall(callId)` - emit `call:join` with ACK, set status `connecting` → `ringing/active` based on participants. Can join as long as user know the callId (no guard, no need to be in same chat room). Future use case: dedicated join feature like google meet.
+  - `joinCall(callId)` - emit `call:join` with ACK (includes `conversationType`), set status `connecting` → `ringing/active` based on participants. Can join as long as user know the callId (no guard).
   - `leaveCall()` - emit `call:leave`, set status/endReason `ended/leave`, keep metadata for UI (use case: meta data for quick rejoin bubble like google meet)
   - `endCall()` - initiator-only guard, emit `call:end`, set status/endReason `ended` (use case: cancel while ringing, panic button to end call for everyone)
   - `resetCall()` - clear metadata, set status `ended`
 
-### Step 4: Create IncomingCallDialog
+### Step 4: Create IncomingCallDialog (Completed)
 
 Create `components/call/IncomingCallDialog.tsx`:
 
@@ -118,47 +118,52 @@ Create `components/call/IncomingCallDialog.tsx`:
 - "Decline" and "Accept" buttons
 - Controlled by `incomingCall` state from context
 
-### Step 5: Create CallButton
+### Step 5: Create CallButton (Completed)
 
 Create `components/call/CallButton.tsx`:
 
 - Video call icon button
 - On click: call `initiateCall(conversationId)`
 
-### Step 6: Create CallControls
+### Step 6: Create CallPage Container (Completed)
 
-Create `components/call/CallControls.tsx`:
-
-- Toggle camera button (placeholder state)
-- Toggle mic button (placeholder state)
-- Add participant button (placeholder)
-- Hangup button - calls `leaveCall()` or `endCall()`
-
-### Step 7: Create CallPage
-
+Decision: Container wrapper for OneOnOne/Group layout.
 Create `pages/call/CallPage.tsx`:
 
 - Route: `/call/:callId`
 - On mount:
   1. Extract `callId` from URL params
-  2. Call `joinCall(callId)`
-  3. If ACK fails → redirect to `/`
-  4. If ACK success → update state with conversationId, isInitiator, participants
+  2. Wait for socket connection
+  3. Call `joinCall(callId)`
+  4. If ACK fails → redirect to `/`
+  5. If ACK success → set conversationType from ACK (layout TBD) and stop loading
 - UI States:
   - **Connecting**: Show spinner while waiting for ACK
-  - **Ringing** (isInitiator): Show callee avatar + "Calling..."
-  - **Active**: Show video grid placeholder + participants
+  - **Ringing/Active**: Placeholder text for now; DM/Group layout dispatch pending
   - **Ended**: Show "Call ended" message, auto-close or redirect
-- Include `CallControls` at bottom
-
-### Step 8: Wire Everything
-
 - Update `App.tsx`:
   - Wrap with `CallProvider` inside `SocketProvider`
-  - Add route `/call/:callId` → `CallPage`
   - Render `IncomingCallDialog` globally (outside routes, inside providers)
-- Update `ChatWindow.tsx`:
-  - Add `CallButton` to header
+
+### Step 7: Create CallControls (In progress)
+
+Create `components/call/CallControls.tsx`:
+
+- Toggle camera button (on/off) (placeholder state)
+- Toggle mic button (mute/unmute) (placeholder state)
+- Hangup button - calls `leaveCall()` or `endCall()`
+- Add participant list (group only) (placeholder state)
+- Small video tab to see user's video (placeholder state)
+- Screen share button (group only) (placeholder state)
+- Chat input (group only) (placeholder state)
+
+### Step 8: Create CallLayout (OneOnOne/Group)
+
+-Layout component for OneOnOne/Group call (also wire for testing).
+
+### Step 9: Webrtc implementation (WebRTC phase)
+
+- WebRTC related implementation for video calling.
 
 ---
 

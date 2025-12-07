@@ -4,6 +4,7 @@ import {
   verifyMembership,
   getConversationMemberIds,
   getConversationType,
+  getOnlineUserIds,
 } from "../helpers/helpers.js";
 import { randomUUID } from "crypto";
 
@@ -46,10 +47,12 @@ function handleCall(io, socket) {
 
       const effectiveCallId = callId || randomUUID();
       if (!callSessions.has(effectiveCallId)) {
-        // Get all members of conversation to determine callees
+        // Get all members of conversation
         const memberIds = await getConversationMemberIds(parsedConversationId);
-        // Callees = all members except the initiator
-        const calleeIds = memberIds.filter((id) => id !== userId);
+        // Filter to only online members (offline users can't respond to calls)
+        const onlineMemberIds = getOnlineUserIds(io, memberIds);
+        // Callees = online members except the initiator
+        const calleeIds = onlineMemberIds.filter((id) => id !== userId);
 
         const timeoutHandle = setTimeout(() => {
           handleCallTimeout(io, effectiveCallId);
