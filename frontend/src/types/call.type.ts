@@ -53,6 +53,7 @@ export type CallJoinAck =
       conversationType: ConversationType;
       isInitiator: boolean;
       participants: CallParticipant[];
+      status: CallStatus;
     }
   | { success: false; error: string };
 
@@ -66,6 +67,7 @@ export interface CallState {
   status: CallStatus;
   callId: string | null;
   conversationId: number | null;
+  conversationType: ConversationType | null;
   isInitiator: boolean;
   participants: CallParticipant[];
   incomingCall: IncomingCall | null;

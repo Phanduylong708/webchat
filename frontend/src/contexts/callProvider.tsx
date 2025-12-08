@@ -5,6 +5,7 @@ import type {
   CallParticipant,
   CallStatus,
   CallJoinAck,
+  ConversationType,
 } from "@/types/call.type";
 import useSocket from "@/hooks/context/useSocket";
 import { useCallSockets } from "@/hooks/sockets/useCallSockets";
@@ -25,6 +26,8 @@ export function CallProvider({
   const [status, setStatus] = useState<CallStatus>(getInitialStatus());
   const [callId, setCallId] = useState<string | null>(null);
   const [conversationId, setConversationId] = useState<number | null>(null);
+  const [conversationType, setConversationType] =
+    useState<ConversationType | null>(null);
   const [isInitiator, setIsInitiator] = useState<boolean>(false);
   const [participants, setParticipants] = useState<CallParticipant[]>([]);
   const [incomingCall, setIncomingCall] =
@@ -37,6 +40,7 @@ export function CallProvider({
     // Clear identifiers and participants so a new call starts clean.
     setCallId(null);
     setConversationId(null);
+    setConversationType(null);
     setParticipants([]);
     setIncomingCall(null);
     setEndReason(null);
@@ -164,17 +168,13 @@ export function CallProvider({
               return;
             }
 
-            // Derive status based on number of participants:
-            // - 1 participant: initiator waiting → ringing
-            // - >=2 participants: active call
-            const nextStatus: CallStatus =
-              ack.participants.length >= 2 ? "active" : "ringing";
-
+            // Use backend status as single source of truth
             setCallId(targetCallId);
             setConversationId(ack.conversationId);
+            setConversationType(ack.conversationType);
             setIsInitiator(ack.isInitiator);
             setParticipants(ack.participants);
-            setStatus(nextStatus);
+            setStatus(ack.status);
             setIncomingCall(null);
             resolve(ack);
           }
@@ -204,6 +204,7 @@ export function CallProvider({
     // offer a rejoin affordance while the server-side call may still exist.
     setEndReason("leave");
     setStatus("ended");
+    setConversationType(null);
   }, [callId, socket]);
 
   // Initiator ends the call for everyone (used e.g. cancel while ringing).
@@ -230,6 +231,7 @@ export function CallProvider({
     // Keep metadata so UI can show a \"Call ended\" screen/toast and then decide when to call resetCall
     setEndReason("ended");
     setStatus("ended");
+    setConversationType(null);
   }, [callId, isInitiator, socket]);
 
   const value = useMemo<CallContextValue>(
@@ -237,6 +239,7 @@ export function CallProvider({
       status,
       callId,
       conversationId,
+      conversationType,
       isInitiator,
       participants,
       incomingCall,
@@ -253,6 +256,7 @@ export function CallProvider({
       status,
       callId,
       conversationId,
+      conversationType,
       isInitiator,
       participants,
       incomingCall,

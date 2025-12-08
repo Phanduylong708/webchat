@@ -145,13 +145,13 @@ Create `pages/call/CallPage.tsx`:
   - Wrap with `CallProvider` inside `SocketProvider`
   - Render `IncomingCallDialog` globally (outside routes, inside providers)
 
-### Step 7: Create CallControls (In progress)
+### Step 7: Create CallControls (Completed)
 
 Create `components/call/CallControls.tsx`:
 
 - Toggle camera button (on/off) (placeholder state)
 - Toggle mic button (mute/unmute) (placeholder state)
-- Hangup button - calls `leaveCall()` or `endCall()`
+- Hangup button - calls `leaveCall()`
 - Add participant list (group only) (placeholder state)
 - Small video tab to see user's video (placeholder state)
 - Screen share button (group only) (placeholder state)
@@ -163,7 +163,11 @@ Create `components/call/CallControls.tsx`:
 
 ### Step 9: Webrtc implementation (WebRTC phase)
 
-- WebRTC related implementation for video calling.
+`frontend/src/lib/videocall/mediaStreamManager.ts` c
+`frontend/src/lib/videocall/webrtcManager.ts`
+
+- Create WebRTC layer (provider/hook CallPage)
+- CreateMediaStream layer (provider/hook CallPage)
 
 ---
 

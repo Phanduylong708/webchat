@@ -3,10 +3,8 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useCall } from "@/hooks/context/useCall";
 import useSocket from "@/hooks/context/useSocket";
 import { Button } from "@/components/ui/button";
-import {
-  callEndReasonMessages,
-  type ConversationType,
-} from "@/types/call.type";
+import { callEndReasonMessages } from "@/types/call.type";
+import { CallControls } from "@/components/call/CallControls";
 
 /**
  * Container component for the call page.
@@ -15,14 +13,12 @@ import {
 export default function CallPage(): React.JSX.Element {
   const { callId } = useParams<{ callId: string }>();
   const navigate = useNavigate();
-  const { joinCall, status, endReason } = useCall();
+  const { joinCall, status, endReason, conversationType } = useCall();
   const { isConnected } = useSocket();
 
   // Local state for page-level UI control
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [conversationType, setConversationType] =
-    useState<ConversationType | null>(null);
 
   // Join call on mount (only after socket is connected)
   useEffect(() => {
@@ -47,8 +43,7 @@ export default function CallPage(): React.JSX.Element {
         return;
       }
 
-      // Success: set conversationType from ACK
-      setConversationType(ack.conversationType);
+      // Success: conversationType is set in context via joinCall
       setIsLoading(false);
     }
 
@@ -97,18 +92,34 @@ export default function CallPage(): React.JSX.Element {
 
   // Active call states (ringing/connecting/active) - placeholder for now
   return (
-    <div className="flex h-screen items-center justify-center">
-      <div className="text-center space-y-2">
-        <p className="text-muted-foreground">
-          CallPage - Active Call (Status: {status})
-        </p>
-        <p className="text-sm text-muted-foreground">
-          Type: {conversationType || "Unknown"}
-        </p>
-        <p className="text-xs text-muted-foreground">
-          Layout placeholder - will dispatch to OneOnOne/Group layout
-        </p>
+    <div className="relative h-screen w-full">
+      {/* Placeholder content */}
+      <div className="flex h-full items-center justify-center">
+        <div className="text-center space-y-2">
+          <p className="text-muted-foreground">
+            CallPage - Active Call (Status: {status})
+          </p>
+          <p className="text-sm text-muted-foreground">
+            Type: {conversationType || "Unknown"}
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Layout placeholder - will dispatch to OneOnOne/Group layout
+          </p>
+        </div>
       </div>
+
+      {/* PiP (Picture-in-Picture) - 1-1 calls only */}
+      {conversationType === "PRIVATE" && (
+        <div className="fixed top-4 right-4 w-32 h-40 sm:w-48 sm:h-64 bg-zinc-900 rounded-xl border border-white/10 shadow-2xl overflow-hidden z-40">
+          {/* Placeholder for Local Video */}
+          <div className="w-full h-full flex items-center justify-center bg-black/50">
+            <p className="text-xs text-zinc-400">You</p>
+          </div>
+        </div>
+      )}
+
+      {/* CallControls - floating controls bar */}
+      <CallControls />
     </div>
   );
 }
