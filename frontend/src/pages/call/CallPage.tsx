@@ -9,6 +9,7 @@ import { CallControls } from "@/components/call/CallControls";
 import { Loader2, AlertCircle, Home } from "lucide-react";
 import { getConversationsDetails } from "@/api/conversation.api";
 import { PrivateCallLayout } from "./Private";
+import { GroupCallLayout } from "./Group";
 import type { User } from "@/types/chat.type";
 
 export default function CallPage(): React.JSX.Element {
@@ -22,6 +23,7 @@ export default function CallPage(): React.JSX.Element {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [remoteUser, setRemoteUser] = useState<User | null>(null);
+  const [showParticipants, setShowParticipants] = useState(false);
 
   useEffect(() => {
     if (!callId) {
@@ -102,6 +104,7 @@ export default function CallPage(): React.JSX.Element {
   }
 
   // 4. ACTIVE CALL (The "Sandwich" Layout)
+
   return (
     // Force bg-zinc-950 to ensure it's always dark/black regardless of theme
     <div className="relative h-screen w-full bg-zinc-950 overflow-hidden text-white">
@@ -115,9 +118,13 @@ export default function CallPage(): React.JSX.Element {
             status={status}
           />
         ) : (
-          <div className="flex h-full items-center justify-center">
-            Group Placeholder
-          </div>
+          <GroupCallLayout
+            participants={participants}
+            currentUserId={user?.id ?? null}
+            status={status}
+            participantsOpen={showParticipants}
+            onCloseParticipants={() => setShowParticipants(false)}
+          />
         )}
       </div>
 
@@ -131,7 +138,9 @@ export default function CallPage(): React.JSX.Element {
       )}
 
       {/* LAYER 3: Controls - Bottom Center */}
-      <CallControls />
+      <CallControls
+        onToggleParticipants={() => setShowParticipants((v) => !v)}
+      />
     </div>
   );
 }

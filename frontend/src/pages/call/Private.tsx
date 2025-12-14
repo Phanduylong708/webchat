@@ -17,7 +17,7 @@ export function PrivateCallLayout({
   status,
 }: PrivateCallLayoutProps): React.JSX.Element {
   // Placeholder for remote camera state - will be replaced with real state from media layer
-  const isRemoteCamOn = true; // Mocking this for now
+  const isRemoteCamOn = false; // Mocking this for now
 
   // Determine the remote participant from the live participants list
   const remoteParticipant = participants.find((p) => p.id !== currentUserId);

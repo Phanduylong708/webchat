@@ -13,7 +13,11 @@ import {
   PhoneOff,
 } from "lucide-react";
 
-export function CallControls(): React.JSX.Element {
+interface CallControlsProps {
+  onToggleParticipants?: () => void;
+}
+
+export function CallControls({ onToggleParticipants }: CallControlsProps = {}): React.JSX.Element {
   const { conversationType, status, leaveCall } = useCall();
   const [isCameraOn, setIsCameraOn] = useState<boolean>(true);
   const [isMicOn, setIsMicOn] = useState<boolean>(true);
@@ -70,6 +74,7 @@ export function CallControls(): React.JSX.Element {
                 size="icon"
                 variant="ghost"
                 className="text-white hover:bg-white/20 rounded-full"
+                onClick={() => onToggleParticipants?.()}
               >
                 <Users className="size-5" />
               </Button>
