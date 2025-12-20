@@ -1,17 +1,8 @@
-import { useState } from "react";
 import { useCall } from "@/hooks/context/useCall";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils"; // Nhớ import cn nếu dùng shadcn
-import {
-  Mic,
-  MicOff,
-  Video,
-  VideoOff,
-  Users,
-  Monitor,
-  MessageSquare,
-  PhoneOff,
-} from "lucide-react";
+import { useMedia } from "@/hooks/context/useMedia";
+import { Mic, MicOff, Video, VideoOff, Users, Monitor, MessageSquare, PhoneOff } from "lucide-react";
 
 interface CallControlsProps {
   onToggleParticipants?: () => void;
@@ -19,10 +10,12 @@ interface CallControlsProps {
 
 export function CallControls({ onToggleParticipants }: CallControlsProps = {}): React.JSX.Element {
   const { conversationType, status, leaveCall } = useCall();
-  const [isCameraOn, setIsCameraOn] = useState<boolean>(true);
-  const [isMicOn, setIsMicOn] = useState<boolean>(true);
+  const { isAudioMuted, isVideoMuted, isStartingUserMedia, toggleAudio, toggleVideo } = useMedia();
 
   if (status === "ended") return <></>;
+
+  const micOn = !isAudioMuted;
+  const camOn = !isVideoMuted;
 
   const getMediaButtonClass = (isOn: boolean) =>
     cn(
@@ -41,27 +34,21 @@ export function CallControls({ onToggleParticipants }: CallControlsProps = {}): 
           <Button
             size="icon"
             variant="ghost"
-            onClick={() => setIsMicOn(!isMicOn)}
-            className={getMediaButtonClass(isMicOn)}
+            disabled={isStartingUserMedia}
+            onClick={() => void toggleAudio()}
+            className={cn(getMediaButtonClass(micOn), isStartingUserMedia && "opacity-50 cursor-not-allowed")}
           >
-            {isMicOn ? (
-              <Mic className="size-5" />
-            ) : (
-              <MicOff className="size-5" />
-            )}
+            {micOn ? <Mic className="size-5" /> : <MicOff className="size-5" />}
           </Button>
 
           <Button
             size="icon"
             variant="ghost"
-            onClick={() => setIsCameraOn(!isCameraOn)}
-            className={getMediaButtonClass(isCameraOn)}
+            disabled={isStartingUserMedia}
+            onClick={() => void toggleVideo()}
+            className={cn(getMediaButtonClass(camOn), isStartingUserMedia && "opacity-50 cursor-not-allowed")}
           >
-            {isCameraOn ? (
-              <Video className="size-5" />
-            ) : (
-              <VideoOff className="size-5" />
-            )}
+            {camOn ? <Video className="size-5" /> : <VideoOff className="size-5" />}
           </Button>
 
           {/* 2. Group Utilities */}
@@ -85,11 +72,7 @@ export function CallControls({ onToggleParticipants }: CallControlsProps = {}): 
               >
                 <Monitor className="size-5" />
               </Button>
-              <Button
-                size="icon"
-                variant="ghost"
-                className="text-white hover:bg-white/20 rounded-full"
-              >
+              <Button size="icon" variant="ghost" className="text-white hover:bg-white/20 rounded-full">
                 <MessageSquare className="size-5" />
               </Button>
             </>

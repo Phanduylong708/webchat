@@ -4,6 +4,8 @@ import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import type { CallParticipant, CallStatus } from "@/types/call.type";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { useMedia } from "@/hooks/context/useMedia";
+import MediaVideo from "@/components/call/MediaVideo";
 
 interface GroupCallLayoutProps {
   participants: CallParticipant[];
@@ -58,16 +60,11 @@ export function GroupCallLayout({
       {/* Participants side panel */}
       {participantsOpen && (
         <div className="fixed inset-0 z-40">
-          <div
-            className="absolute inset-0 bg-black/40"
-            onClick={onCloseParticipants}
-          />
+          <div className="absolute inset-0 bg-black/40" onClick={onCloseParticipants} />
           <div className="absolute right-0 top-0 h-full w-[320px] sm:w-[360px] bg-zinc-900 border-l border-white/10 shadow-2xl flex flex-col">
             <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
               <div className="flex items-center gap-2">
-                <span className="text-sm font-semibold text-white">
-                  Participants
-                </span>
+                <span className="text-sm font-semibold text-white">Participants</span>
                 <span className="text-xs text-zinc-400">{ordered.length}</span>
               </div>
               <Button
@@ -81,10 +78,7 @@ export function GroupCallLayout({
             </div>
             <div className="flex-1 overflow-y-auto p-2 custom-scrollbar">
               {ordered.map((p) => (
-                <div
-                  key={p.id}
-                  className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/5"
-                >
+                <div key={p.id} className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/5">
                   <Avatar className="h-8 w-8">
                     <AvatarImage src={p.avatar ?? undefined} />
                     <AvatarFallback className="bg-zinc-700 text-zinc-300 text-xs">
@@ -130,10 +124,7 @@ function PaginatedGridLayout({
     }
   }, [currentPage, totalPages, setCurrentPage]);
 
-  const visibleParticipants = participants.slice(
-    currentPage * pageSize,
-    (currentPage + 1) * pageSize
-  );
+  const visibleParticipants = participants.slice(currentPage * pageSize, (currentPage + 1) * pageSize);
 
   const count = visibleParticipants.length;
   const gridClass = cn(
@@ -157,11 +148,7 @@ function PaginatedGridLayout({
       <div className="flex-1 min-h-0 flex items-center justify-center">
         <div className={cn("w-full h-auto", gridClass)}>
           {visibleParticipants.map((p: CallParticipant) => (
-            <ParticipantTile
-              key={p.id}
-              participant={p}
-              isMe={p.id === currentUserId}
-            />
+            <ParticipantTile key={p.id} participant={p} isMe={p.id === currentUserId} />
           ))}
         </div>
       </div>
@@ -188,9 +175,7 @@ function PaginatedGridLayout({
               "pointer-events-auto h-12 w-12 rounded-full shadow-2xl bg-white",
               currentPage === totalPages - 1 && "opacity-0 pointer-events-none"
             )}
-            onClick={() =>
-              setCurrentPage((p: number) => Math.min(totalPages - 1, p + 1))
-            }
+            onClick={() => setCurrentPage((p: number) => Math.min(totalPages - 1, p + 1))}
           >
             <ChevronRight className="h-6 w-6" />
           </Button>
@@ -224,8 +209,10 @@ function ParticipantTile({
   isMe: boolean;
   compact?: boolean;
 }) {
-  // No real media flags yet
-  const isCamOn = false;
+  const { userStream, isVideoMuted } = useMedia();
+
+  // Determine if we should show local self video
+  const showSelfVideo = isMe && !!userStream && !isVideoMuted;
 
   return (
     <div
@@ -235,16 +222,11 @@ function ParticipantTile({
         "border-white/5"
       )}
     >
-      {isCamOn ? (
-        <div className="w-full h-full bg-zinc-800 flex items-center justify-center relative" />
+      {showSelfVideo ? (
+        <MediaVideo stream={userStream ?? null} muted playsInline className="w-full h-full object-cover" />
       ) : (
         <div className="w-full h-full flex flex-col items-center justify-center bg-zinc-850">
-          <Avatar
-            className={cn(
-              "border-4 border-zinc-800 shadow-sm",
-              compact ? "h-12 w-12" : "h-20 w-20"
-            )}
-          >
+          <Avatar className={cn("border-4 border-zinc-800 shadow-sm", compact ? "h-12 w-12" : "h-20 w-20")}>
             <AvatarImage src={participant.avatar ?? undefined} />
             <AvatarFallback className="bg-zinc-700 text-zinc-400">
               {participant.username.charAt(0).toUpperCase()}

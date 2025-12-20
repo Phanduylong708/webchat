@@ -26,6 +26,11 @@ export interface MediaContextValue {
   initError: string | null;
 
   /**
+   * Indicates that the underlying MediaStreamManager has been created and is ready for actions.
+   */
+  isManagerReady: boolean;
+
+  /**
    * Getter to access the underlying MediaStreamManager instance.
    * May return null when not initialized yet or when `initError` is present.
    */
@@ -59,9 +64,7 @@ export interface MediaContextValue {
   switchCamera: (deviceId: string) => Promise<void>;
   switchMicrophone: (deviceId: string) => Promise<void>;
 
-  enumerateDevices: (
-    requestPermissions?: boolean
-  ) => Promise<EnumeratedDevices>;
+  enumerateDevices: (requestPermissions?: boolean) => Promise<EnumeratedDevices>;
 
   startScreenShare: (options?: StartScreenShareOptions) => Promise<void>;
   stopScreenShare: () => void;
