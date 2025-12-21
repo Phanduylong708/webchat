@@ -4,8 +4,7 @@ import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import type { CallParticipant, CallStatus } from "@/types/call.type";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { useMedia } from "@/hooks/context/useMedia";
-import MediaVideo from "@/components/call/MediaVideo";
+import { ParticipantTile } from "@/components/call/ParticipantTile";
 
 interface GroupCallLayoutProps {
   participants: CallParticipant[];
@@ -13,6 +12,8 @@ interface GroupCallLayoutProps {
   status: CallStatus;
   participantsOpen?: boolean;
   onCloseParticipants?: () => void;
+  showSelfVideo: boolean;
+  selfStream: MediaStream | null;
 }
 
 export function GroupCallLayout({
@@ -21,6 +22,8 @@ export function GroupCallLayout({
   status,
   participantsOpen = false,
   onCloseParticipants,
+  showSelfVideo,
+  selfStream,
 }: GroupCallLayoutProps): React.JSX.Element {
   // Pagination state (MVP)
   const [currentPage, setCurrentPage] = useState(0);
@@ -55,6 +58,8 @@ export function GroupCallLayout({
         setCurrentPage={setCurrentPage}
         pageSize={PAGE_SIZE}
         currentUserId={currentUserId}
+        showSelfVideo={showSelfVideo}
+        selfStream={selfStream}
       />
 
       {/* Participants side panel */}
@@ -106,6 +111,8 @@ interface PaginatedGridLayoutProps {
   setCurrentPage: React.Dispatch<React.SetStateAction<number>>;
   pageSize: number;
   currentUserId: number | null;
+  showSelfVideo: boolean;
+  selfStream: MediaStream | null;
 }
 
 function PaginatedGridLayout({
@@ -114,6 +121,8 @@ function PaginatedGridLayout({
   setCurrentPage,
   pageSize,
   currentUserId,
+  showSelfVideo,
+  selfStream,
 }: PaginatedGridLayoutProps) {
   const totalPages = Math.max(1, Math.ceil(participants.length / pageSize));
 
@@ -148,7 +157,13 @@ function PaginatedGridLayout({
       <div className="flex-1 min-h-0 flex items-center justify-center">
         <div className={cn("w-full h-auto", gridClass)}>
           {visibleParticipants.map((p: CallParticipant) => (
-            <ParticipantTile key={p.id} participant={p} isMe={p.id === currentUserId} />
+            <ParticipantTile
+              key={p.id}
+              participant={p}
+              isMe={p.id === currentUserId}
+              showSelfVideo={showSelfVideo}
+              selfStream={selfStream}
+            />
           ))}
         </div>
       </div>
@@ -196,57 +211,6 @@ function PaginatedGridLayout({
           ))}
         </div>
       )}
-    </div>
-  );
-}
-
-function ParticipantTile({
-  participant,
-  isMe,
-  compact = false,
-}: {
-  participant: CallParticipant;
-  isMe: boolean;
-  compact?: boolean;
-}) {
-  const { userStream, isVideoMuted } = useMedia();
-
-  // Determine if we should show local self video
-  const showSelfVideo = isMe && !!userStream && !isVideoMuted;
-
-  return (
-    <div
-      className={cn(
-        "relative w-full h-full bg-zinc-900 rounded-xl border overflow-hidden shadow-md group transition-all duration-300",
-        compact ? "min-h-[120px]" : "min-h-40",
-        "border-white/5"
-      )}
-    >
-      {showSelfVideo ? (
-        <MediaVideo stream={userStream ?? null} muted playsInline className="w-full h-full object-cover" />
-      ) : (
-        <div className="w-full h-full flex flex-col items-center justify-center bg-zinc-850">
-          <Avatar className={cn("border-4 border-zinc-800 shadow-sm", compact ? "h-12 w-12" : "h-20 w-20")}>
-            <AvatarImage src={participant.avatar ?? undefined} />
-            <AvatarFallback className="bg-zinc-700 text-zinc-400">
-              {participant.username.charAt(0).toUpperCase()}
-            </AvatarFallback>
-          </Avatar>
-        </div>
-      )}
-
-      <div
-        className={cn(
-          "absolute flex items-center justify-between",
-          compact ? "bottom-2 left-2 right-2" : "bottom-3 left-3 right-3"
-        )}
-      >
-        <div className="px-2 py-1 rounded bg-black/60 backdrop-blur-md border border-white/5 flex items-center gap-2 max-w-[85%]">
-          <span className="text-xs font-medium text-white truncate">
-            {isMe ? "You" : participant.username}
-          </span>
-        </div>
-      </div>
     </div>
   );
 }

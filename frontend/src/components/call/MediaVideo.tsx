@@ -9,13 +9,7 @@ interface MediaVideoProps {
   playsInline?: boolean;
   className?: string;
 }
-/**
- * MediaVideo
- * A tiny reusable component that safely attaches a MediaStream to a <video> element.
- * - Handles autoplay policies by ignoring play() rejections.
- * - Cleans up srcObject and pauses the element on unmount or when the stream changes.
- * - Stays DOM-only; does not manage stream lifecycle (start/stop) – callers own the stream.
- */
+
 export function MediaVideo({
   stream = null,
   muted = true,

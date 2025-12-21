@@ -53,6 +53,13 @@ node_modules
 */generated/prisma
 draft.md
 .claude
-.cursor/
+.cursor/rules/*
 .private
 *.png
+docs/*
+frontend/docs/*
+
+# Whitelisted files
+!LLM_HANDOFF.md
+!cursorrule.mdc
+!session_handoff.xml

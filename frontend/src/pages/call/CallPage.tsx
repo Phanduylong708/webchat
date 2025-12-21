@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useCall } from "@/hooks/context/useCall";
 import { useAuth } from "@/hooks/context/useAuth";
@@ -11,6 +11,7 @@ import { getConversationsDetails } from "@/api/conversation.api";
 import { PrivateCallLayout } from "./Private";
 import { GroupCallLayout } from "./Group";
 import type { User } from "@/types/chat.type";
+import type { ConversationType, CallParticipant, CallStatus } from "@/types/call.type";
 import { MediaProvider } from "@/contexts/mediaProvider";
 import { useMedia } from "@/hooks/context/useMedia";
 import MediaVideo from "@/components/call/MediaVideo";
@@ -131,11 +132,48 @@ export default function CallPage(): React.JSX.Element {
     );
   }
 
-  // 4. ACTIVE CALL (The "Sandwich" Layout)
-
   return (
     <MediaProvider>
-      <AutoStartMedia enabled={!isLoading && !error} />
+      <ActiveCallContent
+        conversationType={conversationType}
+        participants={participants}
+        currentUserId={user?.id ?? null}
+        status={status}
+        remoteUser={remoteUser}
+        showParticipants={showParticipants}
+        setShowParticipants={setShowParticipants}
+      />
+    </MediaProvider>
+  );
+}
+
+interface ActiveCallContentProps {
+  conversationType: ConversationType | null;
+  participants: CallParticipant[];
+  currentUserId: number | null;
+  status: CallStatus;
+  remoteUser: User | null;
+  showParticipants: boolean;
+  setShowParticipants: React.Dispatch<React.SetStateAction<boolean>>;
+}
+
+function ActiveCallContent({
+  conversationType,
+  participants,
+  currentUserId,
+  status,
+  remoteUser,
+  showParticipants,
+  setShowParticipants,
+}: ActiveCallContentProps): React.JSX.Element {
+  const { userStream, isVideoMuted } = useMedia();
+
+  // Compute self video state for Group layout (only for "You" tile)
+  const showSelfVideo = useMemo(() => !!userStream && !isVideoMuted, [userStream, isVideoMuted]);
+
+  return (
+    <>
+      <AutoStartMedia enabled={true} />
       {/* Force bg-zinc-950 to ensure it's always dark/black regardless of theme */}
       <div className="relative h-screen w-full bg-zinc-950 overflow-hidden text-white">
         {/* LAYER 1: Main Content */}
@@ -144,16 +182,18 @@ export default function CallPage(): React.JSX.Element {
             <PrivateCallLayout
               remoteUser={remoteUser}
               participants={participants}
-              currentUserId={user?.id ?? null}
+              currentUserId={currentUserId}
               status={status}
             />
           ) : (
             <GroupCallLayout
               participants={participants}
-              currentUserId={user?.id ?? null}
+              currentUserId={currentUserId}
               status={status}
               participantsOpen={showParticipants}
               onCloseParticipants={() => setShowParticipants(false)}
+              showSelfVideo={showSelfVideo}
+              selfStream={userStream}
             />
           )}
         </div>
@@ -164,6 +204,6 @@ export default function CallPage(): React.JSX.Element {
         {/* LAYER 3: Controls - Bottom Center */}
         <CallControls onToggleParticipants={() => setShowParticipants((v) => !v)} />
       </div>
-    </MediaProvider>
+    </>
   );
 }
