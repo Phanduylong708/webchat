@@ -1,4 +1,4 @@
-import { useMemo, useState, useCallback } from "react";
+import { useMemo, useState, useCallback, useEffect } from "react";
 import { RTCContext } from "@/contexts/rtcContext";
 import type {
   RTCContextValue,
@@ -7,6 +7,7 @@ import type {
   ErrorStatesMap,
 } from "@/types/rtc.type";
 import { useMeshManager } from "@/hooks/rtc/useMeshManager";
+import { useMedia } from "@/hooks/context/useMedia";
 
 /**
  * Provides WebRTC state and actions for a call session.
@@ -18,6 +19,9 @@ interface RTCProviderProps {
 }
 
 export function RTCProvider({ children, callId }: RTCProviderProps): React.JSX.Element {
+  // Get userStream from MediaProvider for sync
+  const { userStream } = useMedia();
+
   // State for remote streams and connection statuses must be defined before callbacks
   const [remoteStreams] = useState<RemoteStreamsMap>(() => new Map());
   const [connectionStates] = useState<ConnectionStatesMap>(() => new Map());
@@ -84,6 +88,12 @@ export function RTCProvider({ children, callId }: RTCProviderProps): React.JSX.E
     handleIceConnectionStateChange,
     handlePeerRemoved
   );
+
+  // Sync userStream from MediaProvider to MeshRTCManager (manual sync, not autoSyncMesh)
+  useEffect(() => {
+    if (!manager.current) return;
+    void manager.current.setLocalStream(userStream);
+  }, [userStream, manager]);
 
   // Stable helper to get a remote stream for a specific user
   const getRemoteStream = useCallback(
