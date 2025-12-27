@@ -1,277 +1,313 @@
-# Phase 5: Video Call UI Implementation
+# WebRTC Integration Plan - Mesh Topology
 
-## Overview
+## Tổng hợp Quyết định Kiến trúc
 
-Implement video call UI with signaling flow. Focus on UI/UX first, WebRTC/MediaStream rendering will be handled later.
+### Core Decisions
 
-### Key Design Decisions
+1. **RTCProvider init**: Khi join call thành công (call:join ACK success)
+2. **Signaling flow**: Peer mới tạo offer cho tất cả existing peers (full mesh)
+3. **Reconnection**: Bỏ qua (xử lý sau)
+4. **Cleanup**: removePeer() ngay + clear reference (browser tự cleanup MediaStream)
+5. **Multi-tab**: Master-tab per callId (BroadcastChannel/localStorage lock)
+6. **Local stream sync**: Manual sync (autoSyncMesh = false)
+7. **Peer ID format**: `"${callId}_${userId}"` (ví dụ: "4e688ed4-bef9-4c01-9fdc-399d70334c71_123")
+8. **ICE servers**: Hardcode cho dev (STUN server public)
+9. **Signaling integration**: Hook riêng `useRTCSignaling.ts`
+10. **Remote streams storage**: `Map<userId, MediaStream | null>`
+11. **Error handling**: Hiển thị error state trong UI
+12. **UI feedback**: Không loading state (chỉ avatar placeholder)
 
-| Decision             | Choice                      | Rationale                                                         |
-| -------------------- | --------------------------- | ----------------------------------------------------------------- |
-| Call page vs overlay | **Page** (`/call/:callId`)  | Like Google Meet, separate from chat                              |
-| Tab behavior         | **New tab**                 | Caller opens new tab immediately, callee opens after accept       |
-| Incoming call UI     | **Dialog overlay**          | Simple modal on chat tab with accept/reject                       |
-| Countdown timer      | **No**                      | Auto-close when server emits `call:end`                           |
-| Pass conversationId  | **From ACK**                | Server returns in `call:join` ACK, URL only needs `/call/:callId` |
-| Socket client        | **Shared singleton**        | Each tab creates own connection, server handles multi-tab         |
-| UI language          | **English**                 | Consistency with codebase                                         |
-| Reload behavior      | **Redirect on fail**        | Emit `call:join`, redirect to `/` if ACK fails                    |
-| Participants in ACK  | **Full user objects**       | CallPage needs username/avatar without extra API calls            |
-| Conversation type    | **From ACK**                | Backend returns `conversationType` in `call:join` ACK             |
-| Decline handling     | **No per-user decline evt** | Callee decline only affects server-side all-declined check        |
+## Kiến trúc Tổng quan
 
----
+```
+CallPage
+  ├── MediaProvider (local stream + toggle)
+  ├── RTCProvider (peer connections + remote streams)
+  │   └── MeshRTCManager instance (chỉ khởi ở master-tab)
+  └── ActiveCallContent
+      ├── useRTCSignaling (signaling handlers)
+      └── GroupCallLayout
+          └── ParticipantTile (nhận remoteStream từ RTCProvider)
+```
 
-## Backend Changes Required
+## Luồng Dữ Liệu
 
-### Modify `call:join` handler (Completed)
+### 1. Join Call Flow
 
-- ACK response with call context (snapshot users from socket), participants as user objects (id/username/avatar).
-- Track participants as `Map<userId, { user, socketIds: Set }>` for multi-tab.
-- Add `call:decline` handler: callee emits; server only ends immediately if all callees have declined (reason `all_declined`); no per-user decline event.
-- Add `conversationType` into session and return it in `call:join` ACK.
+```
+User join call
+  → call:join ACK success (có participants list)
+  → **Yêu cầu:** local `userStream` phải sẵn sàng (AutoStartMedia đã gọi getUserMedia, user cấp quyền). Nếu chưa có, UI sẽ hiển thị prompt và **chưa** khởi tạo WebRTC cho tới khi stream có.
+  → RTCProvider init MeshRTCManager (sau khi userStream ≠ null)
+  → Bind MediaProvider (manual sync)
+  → Peer mới: Loop qua participants → ensurePeer() → createOffer() cho mỗi existing peer
+  → Emit "call:offer" events cho tất cả existing peers
+```
 
----
+### 2. Signaling Flow (Peer mới join)
 
-## Files to Create
+```
+Peer mới (sau join ACK success):
+  → Loop qua participants list (filter self)
+  → Với mỗi existing peer:
+      → ensurePeer(peerId) → tạo RTCPeerConnection
+      → createOffer() → emit "call:offer"
 
-| Category    | File                                     | Description                                                   |
-| ----------- | ---------------------------------------- | ------------------------------------------------------------- |
-| Types       | `types/call.type.ts`                     | Call state, participant, socket event payload types           |
-| Socket Hook | `hooks/sockets/useCallSockets.ts`        | Handle `call:initiate`, `call:join`, `call:leave`, `call:end` |
-| Context     | `contexts/callContext.ts`                | Call context type definition                                  |
-| Context     | `contexts/callProvider.tsx`              | Call state management and actions                             |
-| Component   | `components/call/CallButton.tsx`         | Call button for ChatWindow header                             |
-| Component   | `components/call/IncomingCallDialog.tsx` | Dialog showing caller info with accept/reject buttons         |
-| Component   | `components/call/CallControls.tsx`       | Mute, camera toggle, hangup buttons                           |
-| Page        | `pages/call/CallPage.tsx`                | Full-screen call page with ringing/active states              |
+Existing peers nhận "call:join" event:
+  → ensurePeer(newPeerId) sớm (Option A - để chống rơi ICE candidates)
+  → KHÔNG createOffer() (peer mới sẽ tạo)
+  → Đợi "call:offer" event
 
-## Files to Modify
+Existing peers nhận "call:offer":
+  → handleRemoteOffer(peerId, offer)
+  → Tạo answer
+  → Emit "call:answer"
 
-| File                                          | Changes                                                                                                                  |
-| --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| `backend/.../call.handler.js`                 | ACK `call:join` with conversationId, conversationType, isInitiator, participants; call:decline ends only if all declined |
-| `frontend/src/App.tsx`                        | Add `CallProvider`, render `IncomingCallDialog` globally                                                                 |
-| `frontend/src/components/chat/ChatWindow.tsx` | Add `CallButton` to header                                                                                               |
+Peer mới nhận "call:answer":
+  → handleRemoteAnswer(peerId, answer)
+```
 
-## Files to Review (Later - WebRTC Phase)
+### 3. Remote Stream Flow
 
-| File                                  | Purpose                                 |
-| ------------------------------------- | --------------------------------------- |
-| `lib/videocall/webrtcManager.ts`      | WebRTC peer connection management       |
-| `lib/videocall/mediaStreamManager.ts` | Camera/Mic access and stream management |
+```
+MeshRTCManager.onTrack(peerId, stream)
+  → Parse peerId để lấy userId: const [callIdPart, userIdPart] = peerId.split('_'); const userId = parseInt(userIdPart, 10);
+  → Update remoteStreamsMap.set(userId, stream)
+  → UI re-render → ParticipantTile nhận remoteStream
+```
 
----
+### 4. Leave Call Flow
+
+```
+Participant leave
+  → "call:leave" event
+  → removePeer(peerId)
+  → Clear remoteStreamsMap.delete(userId)
+  → UI filter participant khỏi list
+```
 
 ## Implementation Steps
 
-### Step 0: Update Backend `call:join` (Completed)
+### Step 1: Tạo RTCProvider và Context
 
-Modify `backend/src/sockets/handlers/call.handler.js`:
+**File mới: `frontend/src/contexts/rtcContext.ts`**
 
-- Add callback parameter to `call:join` handler
-- Return ACK with `{ success, conversationId, conversationType, isInitiator, participants }`
-- Handle error cases with `{ success: false, error: "..." }`
-- Track participants as `Map<userId, { user, socketIds }>` using `socket.data.user` snapshot; build ACK from this map.
-- Add `call:decline` handler: callee emits; server only ends immediately if all callees have declined (reason `all_declined`), otherwise waits for others/timeout; no per-user decline event.
+- Định nghĩa RTCContextValue interface:
+  - `remoteStreams: Map<number, MediaStream | null>`
+  - `connectionStates: Map<number, RTCPeerConnectionState>`
+  - `errorStates: Map<number, string | null>`
+  - `getManager(): MeshRTCManager | null`
+  - `getRemoteStream(userId: number): MediaStream | null`
 
-### Step 1: Create Types (Completed)
+**File mới: `frontend/src/contexts/rtcProvider.tsx`**
 
-Create `types/call.type.ts` with:
+- Quản lý MeshRTCManager lifecycle:
+  - Init khi callId thay đổi (từ null → có giá trị)
+  - Cleanup khi callId = null hoặc unmount
+- State management:
+  - `remoteStreamsMap: Map<number, MediaStream | null>`
+  - `connectionStatesMap: Map<number, RTCPeerConnectionState>`
+  - `errorStatesMap: Map<number, string | null>`
+- Sync với MediaProvider:
+  - Bind MeshRTCManager (không bật autoSyncMesh)
+  - Manual sync khi userStream thay đổi (start/stop, không sync khi toggle mute)
 
-- `CallStatus`: `'ringing' | 'connecting' | 'active' | 'ended'`
-- `CallParticipant`: `{ id, username, avatar }`
-- `IncomingCall`: incoming call payload from server
-- `CallJoinAck`: ACK response type
-- `CallState`: current call state
-- `CallContextValue`: context value with state + actions
+**File mới: `frontend/src/hooks/context/useRTC.tsx`**
 
-### Step 2: Create Socket Hook (Completed)
+- Hook để consume RTCContext
+- Throw error nếu dùng ngoài RTCProvider
 
-Create `hooks/sockets/useCallSockets.ts`:
+### Step 2: Tạo useRTCSignaling Hook
 
-- Follow pattern from `useConversationSockets.ts`
-- Listen for: `call:initiate`, `call:join`, `call:leave`, `call:end`
-- Update call state via setters
+**File mới: `frontend/src/hooks/sockets/useRTCSignaling.ts`**
 
-### Step 3: Create Call Context & Provider (Completed)
+- Listen socket events:
+  - `call:offer`: handleRemoteOffer → create answer → emit `call:answer`
+  - `call:answer`: handleRemoteAnswer
+  - `call:candidate`: addIceCandidate
+- Emit events khi MeshRTCManager callbacks:
+  - `onIceCandidate`: emit `call:candidate`
+  - **`onNegotiationNeeded`: KHÔNG đăng ký (hoặc đăng ký nhưng ignore)**
+    - Lý do: createPeer() attach tracks và có thể trigger negotiationneeded
+    - Nếu auto-offer trong callback → existing peers sẽ tạo offer → phá rule "peer mới offer"
+    - Peer mới sẽ manual createOffer() sau khi ensurePeer()
+    - Note: Có thể implement perfect negotiation sau (v2)
+- Peer ID mapping:
+  - Format: `"${callId}_${userId}"`
+  - Parse peerId để extract userId: `const [callIdPart, userIdPart] = peerId.split('_'); const userId = parseInt(userIdPart, 10);`
 
-Create `contexts/callContext.ts` + `contexts/callProvider.tsx`:
+**Note về ICE Candidates Queue:**
 
-- Manage call state (status, callId, conversationId, participants, incomingCall)
-- Integrate `useCallSockets` hook
-- Expose actions:
-  - `initiateCall(conversationId)` - emit `call:initiate`, open new tab `/call/:callId` (for caller)
-  - `acceptCall()` - open new tab `/call/:callId`, close dialog (for callee)
-  - `declineCall()` - emit `call:decline` then reset local state (need dedicated rejoin feature), close dialog
-  - `joinCall(callId)` - emit `call:join` with ACK (includes `conversationType`), set status `connecting` → `ringing/active` based on participants. Can join as long as user know the callId (no guard).
-  - `leaveCall()` - emit `call:leave`, set status/endReason `ended/leave`, keep metadata for UI (use case: meta data for quick rejoin bubble like google meet)
-  - `endCall()` - initiator-only guard, emit `call:end`, set status/endReason `ended` (use case: cancel while ringing, panic button to end call for everyone)
-  - `resetCall()` - clear metadata, set status `ended`
+- MeshRTCManager đã tự động queue ICE candidates nếu peer tồn tại nhưng chưa có remoteDescription
+- `addIceCandidate()` tự động push vào `pendingCandidates` nếu remoteDescription chưa set
+- `handleRemoteOffer()` và `handleRemoteAnswer()` đều gọi `flushPendingCandidates()` sau khi setRemoteDescription
+- **Không cần implement queue logic trong useRTCSignaling** - chỉ cần gọi `addIceCandidate()` bình thường, manager sẽ tự xử lý
 
-### Step 4: Create IncomingCallDialog (Completed)
+### Step 3: Tích hợp vào CallPage
 
-Create `components/call/IncomingCallDialog.tsx`:
+**Sửa: `frontend/src/pages/call/CallPage.tsx`**
 
-- Use `AlertDialog` component from `components/ui/alert-dialog.tsx`
-- Display caller avatar, username, "is calling..."
-- "Decline" and "Accept" buttons
-- Controlled by `incomingCall` state from context
+- Wrap ActiveCallContent với RTCProvider
+- RTCProvider props:
+  - `callId`: từ useCall()
+  - `currentUserId`: từ useAuth()
+- Call useRTCSignaling trong ActiveCallContent
 
-### Step 5: Create CallButton (Completed)
+### Step 4: Implement Peer Connection Lifecycle
 
-Create `components/call/CallButton.tsx`:
+**Trong RTCProvider:**
 
-- Video call icon button
-- On click: call `initiateCall(conversationId)`
+**Peer mới (sau join ACK success):**
 
-### Step 6: Create CallPage Container (Completed)
+- Nếu đã có `userStream` từ MediaProvider ⇒ **gọi `meshManager.setLocalStream(userStream)` trước**
+- Loop qua participants list (filter self)
+- Với mỗi existing peer:
+  - Parse peerId: `"${callId}_${existingUserId}"`
+  - ensurePeer(peerId) → tạo RTCPeerConnection (có thể trigger negotiationneeded, nhưng ignore)
+  - **Manual createOffer()** → emit `call:offer` với { callId, fromUserId, toUserId, offer }
+  - Note: Không dựa vào onNegotiationNeeded callback (tạm thời ignore trong v1)
 
-Decision: Container wrapper for OneOnOne/Group layout.
-Create `pages/call/CallPage.tsx`:
+**Existing peers (nhận call:join event):**
 
-- Route: `/call/:callId`
-- On mount:
-  1. Extract `callId` from URL params
-  2. Wait for socket connection
-  3. Call `joinCall(callId)`
-  4. If ACK fails → redirect to `/`
-  5. If ACK success → set conversationType from ACK (layout TBD) and stop loading
-- UI States:
-  - **Connecting**: Show spinner while waiting for ACK
-  - **Ringing/Active**: Placeholder text for now; DM/Group layout dispatch pending
-  - **Ended**: Show "Call ended" message, auto-close or redirect
-- Update `App.tsx`:
-  - Wrap with `CallProvider` inside `SocketProvider`
-  - Render `IncomingCallDialog` globally (outside routes, inside providers)
+- Parse peerId: `"${callId}_${newUserId}"`
+- **Option A (khuyến nghị)**: ensurePeer(peerId) sớm để chống rơi ICE candidates
+  - Tạo RTCPeerConnection nhưng chưa có tracks
+  - Đợi offer từ peer mới
+- **KHÔNG** createOffer() khi nhận call:join (peer mới sẽ tạo)
+- Chỉ handleRemoteOffer() khi nhận `call:offer` event
 
-### Step 7: Create CallControls (Completed)
+**Khi participant leave (call:leave event):**
 
-Create `components/call/CallControls.tsx`:
+- Parse peerId từ userId: `"${callId}_${userId}"`
+  - removePeer(peerId)
+  - Clear remoteStreamsMap.delete(userId)
+  - Clear connectionStatesMap.delete(userId)
+  - Clear errorStatesMap.delete(userId)
 
-- Toggle camera button (on/off) (placeholder state)
-- Toggle mic button (mute/unmute) (placeholder state)
-- Hangup button - calls `leaveCall()`
-- Add participant list (group only) (placeholder state)
-- Small video tab to see user's video (placeholder state)
-- Screen share button (group only) (placeholder state)
-- Chat input (group only) (placeholder state)
+### Step 5: Cập nhật GroupCallLayout
 
-### Step 8: Create CallLayout (OneOnOne/Group)
+**Sửa: `frontend/src/pages/call/Group.tsx`**
 
--Layout component for OneOnOne/Group call (also wire for testing).
+- Sử dụng useRTC() để lấy:
+  - `remoteStreamsMap`
+  - `connectionStatesMap` (cho error handling)
+  - `errorStatesMap`
+- Map participants → remoteStream theo userId
+- Truyền remoteStream vào ParticipantTile
 
-### Step 9: Webrtc implementation (WebRTC phase)
+### Step 6: Cập nhật ParticipantTile
 
-`frontend/src/lib/videocall/mediaStreamManager.ts` c
-`frontend/src/lib/videocall/webrtcManager.ts`
+**Sửa: `frontend/src/components/call/ParticipantTile.tsx`**
 
-- Create WebRTC layer (provider/hook CallPage)
-- CreateMediaStream layer (provider/hook CallPage)
+- Nhận props:
+  - `remoteStream?: MediaStream | null`
+  - `connectionState?: RTCPeerConnectionState`
+  - `errorState?: string | null`
+- Logic hiển thị:
+  - `isMe && showSelfVideo` → MediaVideo với selfStream
+  - `!isMe && remoteStream` → MediaVideo với remoteStream
+  - `!isMe && errorState` → Hiển thị error icon/message
+  - Else → Avatar placeholder (không loading state)
 
----
+### Step 7: Manual Sync Local Stream
 
-## UI Flow
+**Trong RTCProvider:**
 
-### Caller Flow
+- Listen userStream changes từ MediaProvider
+- Khi userStream thay đổi (start/stop):
+  - Gọi `meshManager.setLocalStream(userStream)`
+- Không sync khi toggle mute (stream không đổi)
 
-```
-1. User clicks CallButton in ChatWindow (Chat Tab)
-2. initiateCall(conversationId) called
-3. Socket emits call:initiate → receives ACK with callId
-4. window.open('/call/:callId') opens new tab
-5. CallPage mounts → emits call:join → receives ACK
-6. CallPage shows "Calling..." with callee info (from conversation)
-7. When call:join event received (callee joined) → update participants
-8. When call:end received → show "Call ended", close tab
-```
+### Step 8: Error Handling
 
-### Callee Flow
+**Trong RTCProvider:**
 
-```
-1. Socket receives call:initiate event (Chat Tab)
-2. IncomingCallDialog appears showing caller info
-3. User clicks "Accept"
-4. acceptCall() → window.open('/call/:callId') opens new tab
-5. Dialog closes
-6. CallPage mounts → emits call:join → receives ACK
-7. CallPage shows active call with participants
-8. When call:end received → show "Call ended", close tab
-```
+- Listen MeshRTCManager callbacks:
+  - `onPeerConnectionStateChange`: Update connectionStatesMap
+  - `onIceConnectionStateChange`: Nếu "failed" → set errorState
+  - `onError`: Set errorState cho peer
 
-### Reload Flow
+**Trong ParticipantTile:**
 
-```
-1. User refreshes CallPage
-2. CallPage mounts → emits call:join with callId from URL
-3. If ACK success → restore state (conversationId, isInitiator, participants)
-4. If ACK fails (call ended/not found) → redirect to /
-```
+- Hiển thị error icon nếu errorState có giá trị
+- Tooltip/message: "Connection failed" hoặc error message
 
----
+## Multi-Tab Master Election (per callId)
 
-## ACK Response Structures
+- Cơ chế: BroadcastChannel (fallback localStorage) khóa `call_<callId>_master`.
+- Tab đầu tiên set khóa ⇒ trở thành **master-tab** và init RTCProvider.
+- Tab mới nếu thấy khóa đã tồn tại ⇒ **không** init RTC, chỉ hiển thị UI read-only.
+- Khi master unload/crash: dùng `beforeunload` + heartbeat (5 s) để giải phóng khóa; tab khác giành quyền và init RTC.
+- **Không** dùng Page Visibility cho việc pause WebRTC. Call-tab vẫn gửi/nhận media dù user chuyển qua Gmail/tab khác.
 
-### `call:initiate` ACK (existing)
+## Technical Details
+
+### Peer ID Format
+
+- **Format**: `"${callId}_${userId}"`
+  - `callId`: UUID string (ví dụ: "4e688ed4-bef9-4c01-9fdc-399d70334c71")
+  - `userId`: Integer (ví dụ: 123)
+- **Example**: `"4e688ed4-bef9-4c01-9fdc-399d70334c71_123"`
+- **Parse**:
+  ```typescript
+  const [callIdPart, userIdPart] = peerId.split("_");
+  const userId = parseInt(userIdPart, 10); // userIdPart là string "123"
+  ```
+- **Lưu ý**: KHÔNG có prefix "user-" trong format. Chỉ là `${callId}_${userId}` trực tiếp.
+
+### ICE Servers (Hardcode cho dev)
 
 ```typescript
-{ success: true, callId: string }
-{ success: false, error: string }
+const rtcConfig: RTCConfiguration = {
+  iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
+};
 ```
 
-### `call:join` ACK (new)
+### onNegotiationNeeded Handling (v1)
 
-```typescript
-{
-  success: true,
-  conversationId: number,
-  isInitiator: boolean,
-  participants: Array<{ id: number, username: string, avatar: string | null }>
-}
-{ success: false, error: string }
-```
+**Quyết định: Tạm thời không dùng onNegotiationNeeded callback**
 
----
+- **Lý do**:
+  - `createPeer()` → `attachLocalTracks()` → `addTrack()` → trigger `negotiationneeded`
+  - Nếu existing peers gọi `ensurePeer()` sớm (Option A) → trigger `negotiationneeded`
+  - Nếu auto-createOffer trong callback → existing peers sẽ tạo offer → phá rule "peer mới offer"
+- **Implementation**:
+  - Không đăng ký `onNegotiationNeeded` callback trong RTCProvider config
+  - Hoặc đăng ký nhưng ignore (không xử lý)
+  - Peer mới sẽ **manual createOffer()** sau khi `ensurePeer()`
+- **Future (v2)**: Có thể implement perfect negotiation pattern sau
 
-## UI Messages
+## Files to Create/Modify
 
-| State/Event                                    | Message                      |
-| ---------------------------------------------- | ---------------------------- |
-| Ringing (caller)                               | "Calling..."                 |
-| Incoming call                                  | "{username} is calling..."   |
-| Accept button                                  | "Accept"                     |
-| Decline button                                 | "Decline"                    |
-| Call ended (reason: ended)                     | "Call ended"                 |
-| Call ended (reason: timeout)                   | "No answer"                  |
-| Call ended (reason: all_declined)              | "Everyone declined the call" |
-| Call ended (reason: insufficient_participants) | "Call ended"                 |
+### New Files
 
----
+1. `frontend/src/contexts/rtcContext.ts`
+2. `frontend/src/contexts/rtcProvider.tsx`
+3. `frontend/src/hooks/context/useRTC.tsx`
+4. `frontend/src/hooks/sockets/useRTCSignaling.ts`
+5. `frontend/src/types/rtc.type.ts`
 
-## Component Structure
+### Modified Files
 
-```
-frontend/src/
-├── types/
-│   └── call.type.ts
-├── hooks/
-│   └── sockets/
-│       └── useCallSockets.ts
-├── contexts/
-│   ├── callContext.ts
-│   └── callProvider.tsx
-├── components/
-│   └── call/
-│       ├── CallButton.tsx
-│       ├── IncomingCallDialog.tsx
-│       └── CallControls.tsx
-├── pages/
-│   └── call/
-│       └── CallPage.tsx
-└── App.tsx (modified)
+1. `frontend/src/pages/call/CallPage.tsx` - Wrap RTCProvider, call useRTCSignaling
+2. `frontend/src/pages/call/Group.tsx` - Consume remoteStreamsMap
+3. `frontend/src/components/call/ParticipantTile.tsx` - Nhận remoteStream prop, error handling
 
-backend/src/
-└── sockets/
-    └── handlers/
-        └── call.handler.js (modified)
-```
+## Testing Strategy
+
+1. **Unit Tests**: RTCProvider logic, useRTCSignaling handlers
+2. **Integration Tests**: Full signaling flow (offer → answer → candidate)
+3. **E2E Tests**: 2 users join call → see each other's video
+4. **Edge Cases**:
+
+   - Tab switch (active/inactive)
+   - Participant leave mid-negotiation
+   - Network failure scenarios
+
+## Future Enhancements
+
+1. Reconnection handling (ICE restart)
+2. ICE servers từ env/API
+3. Connection quality monitoring (RTCStatsReport)
+4. Adaptive bitrate
+5. SFU migration (nếu mesh không scale)

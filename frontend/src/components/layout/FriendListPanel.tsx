@@ -1,5 +1,5 @@
 import React, { useEffect } from "react";
-import formatLastSeen from "@/utils/date.util";
+import formatLastSeen from "@/utils/helper.util";
 import { Button } from "../ui/button";
 import { Separator } from "../ui/separator";
 import { Trash2 } from "lucide-react";
@@ -64,9 +64,7 @@ export default function FriendListPanel(): React.JSX.Element {
   //helper component to render friend list
   function renderFriendList(): React.JSX.Element {
     if (loading) {
-      return (
-        <div className="text-center text-muted-foreground py-8">Loading...</div>
-      );
+      return <div className="text-center text-muted-foreground py-8">Loading...</div>;
     }
 
     if (error && friends.length === 0) {
@@ -78,11 +76,7 @@ export default function FriendListPanel(): React.JSX.Element {
     }
 
     if (friends.length === 0) {
-      return (
-        <div className="text-center text-muted-foreground py-8">
-          No friends yet. Add some!
-        </div>
-      );
+      return <div className="text-center text-muted-foreground py-8">No friends yet. Add some!</div>;
     }
 
     return (

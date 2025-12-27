@@ -13,6 +13,7 @@ import { GroupCallLayout } from "./Group";
 import type { User } from "@/types/chat.type";
 import type { ConversationType, CallParticipant, CallStatus } from "@/types/call.type";
 import { MediaProvider } from "@/contexts/mediaProvider";
+import { RTCProvider } from "@/contexts/rtcProvider";
 import { useMedia } from "@/hooks/context/useMedia";
 import MediaVideo from "@/components/call/MediaVideo";
 
@@ -134,15 +135,17 @@ export default function CallPage(): React.JSX.Element {
 
   return (
     <MediaProvider>
-      <ActiveCallContent
-        conversationType={conversationType}
-        participants={participants}
-        currentUserId={user?.id ?? null}
-        status={status}
-        remoteUser={remoteUser}
-        showParticipants={showParticipants}
-        setShowParticipants={setShowParticipants}
-      />
+      <RTCProvider callId={callId ?? null}>
+        <ActiveCallContent
+          conversationType={conversationType}
+          participants={participants}
+          currentUserId={user?.id ?? null}
+          status={status}
+          remoteUser={remoteUser}
+          showParticipants={showParticipants}
+          setShowParticipants={setShowParticipants}
+        />
+      </RTCProvider>
     </MediaProvider>
   );
 }
