@@ -27,9 +27,17 @@ export function RTCProvider({ children, callId }: RTCProviderProps): React.JSX.E
   const [connectionStates] = useState<ConnectionStatesMap>(() => new Map());
   const [errorStates] = useState<ErrorStatesMap>(() => new Map());
 
+  // Track manager ready state to trigger re-render for dependent effects
+  const [isManagerReady, setIsManagerReady] = useState(false);
+
   // Version counter for force re-render when Maps are mutated
   const [version, setVersion] = useState(0);
   const invalidate = useCallback(() => setVersion((v) => v + 1), []);
+
+  // Stable callback for manager ready state changes
+  const handleManagerReady = useCallback((ready: boolean) => {
+    setIsManagerReady(ready);
+  }, []);
 
   // Callback handlers for MeshRTCManager events (defined before passing to hook)
   const handleTrackUpdate = useCallback(
@@ -86,7 +94,8 @@ export function RTCProvider({ children, callId }: RTCProviderProps): React.JSX.E
     handleTrackUpdate,
     handleConnectionStateChange,
     handleIceConnectionStateChange,
-    handlePeerRemoved
+    handlePeerRemoved,
+    handleManagerReady
   );
 
   // Sync userStream from MediaProvider to MeshRTCManager (manual sync, not autoSyncMesh)
@@ -125,6 +134,7 @@ export function RTCProvider({ children, callId }: RTCProviderProps): React.JSX.E
       remoteStreams,
       connectionStates,
       errorStates,
+      isManagerReady,
       getManager: () => manager.current,
       getRemoteStream,
       getConnectionState,
@@ -136,6 +146,7 @@ export function RTCProvider({ children, callId }: RTCProviderProps): React.JSX.E
       remoteStreams,
       connectionStates,
       errorStates,
+      isManagerReady,
       getRemoteStream,
       getConnectionState,
       getErrorState,

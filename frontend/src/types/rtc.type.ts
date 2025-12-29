@@ -12,6 +12,7 @@ export interface RTCContextValue {
   remoteStreams: RemoteStreamsMap; // remote streams per user
   connectionStates: ConnectionStatesMap; // connection state per user
   errorStates: ErrorStatesMap; // error message per user
+  isManagerReady: boolean; // true when MeshRTCManager is initialized
   getManager(): MeshRTCManager | null; // underlying MeshRTCManager (null if not ready)
   getRemoteStream(userId: number): MediaStream | null; // helper to get remote stream
   getConnectionState(userId: number): RTCPeerConnectionState | null; // helper to get state

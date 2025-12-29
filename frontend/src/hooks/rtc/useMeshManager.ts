@@ -11,6 +11,7 @@ import { parsePeerId } from "@/utils/helper.util";
  * @param onConnectionStateChange - Callback when peer connection state changes (userId, state)
  * @param onIceConnectionStateChange - Callback when ICE connection state changes (userId, state)
  * @param onPeerRemoved - Callback when peer is removed (userId)
+ * @param onReady - Callback when manager ready state changes (true = ready, false = not ready)
  * @returns Ref to the MeshRTCManager instance (null when not initialized)
  */
 export function useMeshManager(
@@ -18,13 +19,15 @@ export function useMeshManager(
   onTrackUpdate: (userId: number, stream: MediaStream | null) => void,
   onConnectionStateChange: (userId: number, state: RTCPeerConnectionState) => void,
   onIceConnectionStateChange: (userId: number, state: RTCIceConnectionState) => void,
-  onPeerRemoved: (userId: number) => void
+  onPeerRemoved: (userId: number) => void,
+  onReady?: (ready: boolean) => void
 ) {
   const managerRef = useRef<MeshRTCManager | null>(null);
 
   useEffect(() => {
-    // Guard: no callId means no active call, skip initialization
+    // Guard: no callId means no active call, signal not ready and skip initialization
     if (!callId) {
+      onReady?.(false);
       return;
     }
 
@@ -82,6 +85,9 @@ export function useMeshManager(
     });
     console.log("[useMeshManager] Manager initialized for callId:", callId, managerRef.current);
 
+    // Signal manager is ready
+    onReady?.(true);
+
     // Cleanup: disconnect all peers and clear manager reference
     return () => {
       if (managerRef.current) {
@@ -89,8 +95,9 @@ export function useMeshManager(
         console.log("[useMeshManager] Manager disposed for callId:", callId);
         managerRef.current = null;
       }
+      onReady?.(false);
     };
-  }, [callId, onTrackUpdate, onConnectionStateChange, onIceConnectionStateChange, onPeerRemoved]);
+  }, [callId, onTrackUpdate, onConnectionStateChange, onIceConnectionStateChange, onPeerRemoved, onReady]);
 
   return managerRef;
 }

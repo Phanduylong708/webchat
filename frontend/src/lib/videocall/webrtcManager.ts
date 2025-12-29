@@ -436,6 +436,16 @@ export class MeshRTCManager {
   }
 
   /**
+   * Sets or clears the onIceCandidate callback dynamically.
+   * Useful for hooks that need to register signaling after construction.
+   */
+  setOnIceCandidate(
+    callback: ((peerId: string, candidate: RTCIceCandidate) => void) | undefined
+  ): void {
+    this.callbacks.onIceCandidate = callback;
+  }
+
+  /**
    * Creates a new RTCPeerConnection for a peer and initializes it.
    */
   private createPeer(peerId: string): RTCPeerConnection {
