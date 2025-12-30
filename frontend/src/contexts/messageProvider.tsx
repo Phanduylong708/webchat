@@ -40,7 +40,6 @@ function MessageProvider({
   // Send a message
   const sendMessage = useCallback(
     async (conversationId: number, content: string): Promise<void> => {
-      console.log("sendMessage called - socket.connected:", socket?.connected);
       if (!socket || !socket.connected) {
         throw new Error("Socket is not connected in MessageProvider");
       }

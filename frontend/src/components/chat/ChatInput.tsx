@@ -47,7 +47,6 @@ export default function ChatInput({conversationId}: {conversationId: number;}): 
     setIsSending(true);
     try {
       await sendMessage(conversationId, trimmed);
-      console.log("Send:", trimmed); // Placeholder
       socket?.emit("typing:stop", { conversationId }); // Stop typing on send
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current);

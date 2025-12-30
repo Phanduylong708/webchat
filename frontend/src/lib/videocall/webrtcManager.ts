@@ -275,7 +275,6 @@ export class MeshRTCManager {
 
     // Create the SDP offer
     const offer = await connection.createOffer(options);
-
     // Set it as our local description (starts ICE gathering)
     await connection.setLocalDescription(offer);
 

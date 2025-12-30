@@ -38,21 +38,18 @@ function SocketProvider({
     // Check if already connected (missed event)
     if (socketInstance.connected) {
       setIsConnected(true);
-      console.log("Socket already connected");
     }
 
     // Handle connection established
     const handleConnect = () => {
       setIsConnected(true);
       setError(null);
-      console.log("Socket connected");
     };
     socketInstance.on("connect", handleConnect);
     // Handle disconnection
     const handleDisconnect = () => {
       setIsConnected(false);
       setError(null);
-      console.log("Socket disconnected");
     };
     socketInstance.on("disconnect", handleDisconnect);
     // Handle connection errors

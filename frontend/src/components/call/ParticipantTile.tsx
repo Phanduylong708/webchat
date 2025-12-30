@@ -11,6 +11,10 @@ interface ParticipantTileProps {
   // Props for self video (only used when isMe === true)
   showSelfVideo?: boolean;
   selfStream?: MediaStream | null;
+  // Props for remote video (only used when isMe === false)
+  remoteStream?: MediaStream | null;
+  connectionState?: RTCPeerConnectionState | null;
+  errorState?: string | null;
 }
 
 function ParticipantTileComponent({
@@ -19,20 +23,37 @@ function ParticipantTileComponent({
   compact = false,
   showSelfVideo = false,
   selfStream = null,
+  remoteStream = null,
+  errorState = null,
 }: ParticipantTileProps): React.JSX.Element {
-  // Only show video for self tile when showSelfVideo is true
-  const shouldShowVideo = isMe && showSelfVideo;
+  // Determine what to show:
+  // - Self: show video if showSelfVideo is true
+  // - Remote: show video if remoteStream exists
+  const shouldShowSelfVideo = isMe && showSelfVideo;
+  const shouldShowRemoteVideo = !isMe && remoteStream !== null;
+  const shouldShowVideo = shouldShowSelfVideo || shouldShowRemoteVideo;
+
+  // Determine the stream to display
+  const displayStream = isMe ? selfStream : remoteStream;
+
+  // Show error indicator for remote participants with connection issues
+  const hasError = !isMe && errorState !== null;
 
   return (
     <div
       className={cn(
         "relative w-full h-full bg-zinc-900 rounded-xl border overflow-hidden shadow-md group transition-all duration-300",
         compact ? "min-h-[120px]" : "min-h-40",
-        "border-white/5"
+        hasError ? "border-red-500/50" : "border-white/5"
       )}
     >
-      {shouldShowVideo ? (
-        <MediaVideo stream={selfStream ?? null} muted playsInline className="w-full h-full object-cover" />
+      {shouldShowVideo && displayStream ? (
+        <MediaVideo
+          stream={displayStream}
+          muted={isMe}
+          playsInline
+          className="w-full h-full object-cover"
+        />
       ) : (
         <div className="w-full h-full flex flex-col items-center justify-center bg-zinc-850">
           <Avatar className={cn("border-4 border-zinc-800 shadow-sm", compact ? "h-12 w-12" : "h-20 w-20")}>
@@ -41,6 +62,9 @@ function ParticipantTileComponent({
               {participant.username.charAt(0).toUpperCase()}
             </AvatarFallback>
           </Avatar>
+          {hasError && (
+            <span className="mt-2 text-xs text-red-400">{errorState}</span>
+          )}
         </div>
       )}
 

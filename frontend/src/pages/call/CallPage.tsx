@@ -15,6 +15,9 @@ import type { ConversationType, CallParticipant, CallStatus } from "@/types/call
 import { MediaProvider } from "@/contexts/mediaProvider";
 import { RTCProvider } from "@/contexts/rtcProvider";
 import { useMedia } from "@/hooks/context/useMedia";
+import { useRTC } from "@/hooks/context/useRTC";
+import { useRTCSignaling } from "@/hooks/sockets/useRTCSignaling";
+import { useRTCPeerLifecycle } from "@/hooks/rtc/useRTCPeerLifecycle";
 import MediaVideo from "@/components/call/MediaVideo";
 
 function AutoStartMedia({ enabled }: { enabled: boolean }): React.JSX.Element | null {
@@ -135,8 +138,9 @@ export default function CallPage(): React.JSX.Element {
 
   return (
     <MediaProvider>
-      <RTCProvider callId={callId ?? null}>
+      <RTCProvider callId={callId ?? null} currentUserId={user?.id ?? null}>
         <ActiveCallContent
+          callId={callId ?? null}
           conversationType={conversationType}
           participants={participants}
           currentUserId={user?.id ?? null}
@@ -151,6 +155,7 @@ export default function CallPage(): React.JSX.Element {
 }
 
 interface ActiveCallContentProps {
+  callId: string | null;
   conversationType: ConversationType | null;
   participants: CallParticipant[];
   currentUserId: number | null;
@@ -161,6 +166,7 @@ interface ActiveCallContentProps {
 }
 
 function ActiveCallContent({
+  callId,
   conversationType,
   participants,
   currentUserId,
@@ -170,6 +176,28 @@ function ActiveCallContent({
   setShowParticipants,
 }: ActiveCallContentProps): React.JSX.Element {
   const { userStream, isVideoMuted } = useMedia();
+  const { socket } = useSocket();
+  const { getManager, isManagerReady, isLocalStreamSynced } = useRTC();
+
+  // Initialize WebRTC signaling (offer/answer/ICE candidates)
+  useRTCSignaling({
+    socket,
+    callId,
+    currentUserId,
+    getManager,
+    isManagerReady,
+  });
+
+  // Manage peer connection lifecycle (create/remove peers based on participants)
+  useRTCPeerLifecycle({
+    socket,
+    callId,
+    currentUserId,
+    participants,
+    getManager,
+    isManagerReady,
+    isLocalStreamSynced,
+  });
 
   // Compute self video state for Group layout (only for "You" tile)
   const showSelfVideo = useMemo(() => !!userStream && !isVideoMuted, [userStream, isVideoMuted]);

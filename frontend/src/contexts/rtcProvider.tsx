@@ -1,13 +1,15 @@
-import { useMemo, useState, useCallback, useEffect } from "react";
+import { useMemo, useState, useCallback, useEffect, useRef } from "react";
 import { RTCContext } from "@/contexts/rtcContext";
 import type {
   RTCContextValue,
   RemoteStreamsMap,
   ConnectionStatesMap,
   ErrorStatesMap,
+  CallCandidatePayload,
 } from "@/types/rtc.type";
 import { useMeshManager } from "@/hooks/rtc/useMeshManager";
 import { useMedia } from "@/hooks/context/useMedia";
+import useSocket from "@/hooks/context/useSocket";
 
 /**
  * Provides WebRTC state and actions for a call session.
@@ -16,11 +18,22 @@ import { useMedia } from "@/hooks/context/useMedia";
 interface RTCProviderProps {
   children: React.ReactNode;
   callId: string | null;
+  currentUserId: number | null;
 }
 
-export function RTCProvider({ children, callId }: RTCProviderProps): React.JSX.Element {
+export function RTCProvider({ children, callId, currentUserId }: RTCProviderProps): React.JSX.Element {
   // Get userStream from MediaProvider for sync
   const { userStream } = useMedia();
+  // Get socket for emitting ICE candidates
+  const { socket } = useSocket();
+
+  // Use refs for socket and callId to avoid recreating manager on every change
+  const socketRef = useRef(socket);
+  const callIdRef = useRef(callId);
+  const currentUserIdRef = useRef(currentUserId);
+  socketRef.current = socket;
+  callIdRef.current = callId;
+  currentUserIdRef.current = currentUserId;
 
   // State for remote streams and connection statuses must be defined before callbacks
   const [remoteStreams] = useState<RemoteStreamsMap>(() => new Map());
@@ -29,6 +42,9 @@ export function RTCProvider({ children, callId }: RTCProviderProps): React.JSX.E
 
   // Track manager ready state to trigger re-render for dependent effects
   const [isManagerReady, setIsManagerReady] = useState(false);
+  
+  // Track when local stream has been synced to manager (required before creating offers)
+  const [isLocalStreamSynced, setIsLocalStreamSynced] = useState(false);
 
   // Version counter for force re-render when Maps are mutated
   const [version, setVersion] = useState(0);
@@ -83,25 +99,63 @@ export function RTCProvider({ children, callId }: RTCProviderProps): React.JSX.E
       connectionStates.delete(userId);
       errorStates.delete(userId);
       invalidate();
-      console.log("[RTCProvider] Peer removed, cleaned up state for userId:", userId);
     },
     [remoteStreams, connectionStates, errorStates, invalidate]
   );
 
-  // Manager lifecycle with callbacks
-  const manager = useMeshManager(
-    callId,
-    handleTrackUpdate,
-    handleConnectionStateChange,
-    handleIceConnectionStateChange,
-    handlePeerRemoved,
-    handleManagerReady
+  // Handle ICE candidate: emit to signaling server
+  // Uses refs to avoid recreating callback when socket/callId/currentUserId change
+  const handleIceCandidate = useCallback(
+    (peerId: string, candidate: RTCIceCandidate) => {
+      const currentSocket = socketRef.current;
+      const currentCallId = callIdRef.current;
+      const userId = currentUserIdRef.current;
+
+      if (!currentSocket || !currentCallId || userId === null) {
+        console.warn("[RTCProvider] Cannot emit ICE candidate: socket/callId/userId not ready");
+        return;
+      }
+
+      // Parse toUserId from peerId (format: "callId_userId")
+      const parts = peerId.split("_");
+      const toUserId = parseInt(parts[1], 10);
+
+      const payload: CallCandidatePayload = {
+        callId: currentCallId,
+        fromUserId: userId,
+        toUserId,
+        candidate: candidate.toJSON(),
+      };
+      currentSocket.emit("call:candidate", payload);
+    },
+    []
   );
 
+  // Manager lifecycle with callbacks
+  const manager = useMeshManager({
+    callId,
+    onTrackUpdate: handleTrackUpdate,
+    onConnectionStateChange: handleConnectionStateChange,
+    onIceConnectionStateChange: handleIceConnectionStateChange,
+    onPeerRemoved: handlePeerRemoved,
+    onIceCandidate: handleIceCandidate,
+    onReady: handleManagerReady,
+  });
+
   // Sync userStream from MediaProvider to MeshRTCManager (manual sync, not autoSyncMesh)
+  // Set isLocalStreamSynced flag after sync to gate offer creation
   useEffect(() => {
-    if (!manager.current) return;
-    void manager.current.setLocalStream(userStream);
+    if (!manager.current) {
+      setIsLocalStreamSynced(false);
+      return;
+    }
+    
+    // Sync the stream and mark as synced when done
+    void manager.current.setLocalStream(userStream).then(() => {
+      // Only mark as synced if we have a stream (tracks attached)
+      // This ensures offers are only created after tracks are ready
+      setIsLocalStreamSynced(userStream !== null);
+    });
   }, [userStream, manager]);
 
   // Stable helper to get a remote stream for a specific user
@@ -135,6 +189,7 @@ export function RTCProvider({ children, callId }: RTCProviderProps): React.JSX.E
       connectionStates,
       errorStates,
       isManagerReady,
+      isLocalStreamSynced,
       getManager: () => manager.current,
       getRemoteStream,
       getConnectionState,
@@ -147,6 +202,7 @@ export function RTCProvider({ children, callId }: RTCProviderProps): React.JSX.E
       connectionStates,
       errorStates,
       isManagerReady,
+      isLocalStreamSynced,
       getRemoteStream,
       getConnectionState,
       getErrorState,

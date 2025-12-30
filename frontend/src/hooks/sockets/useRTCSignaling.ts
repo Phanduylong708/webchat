@@ -57,8 +57,6 @@ export function useRTCSignaling({
       userId: number
     ) => {
       const peerId = buildPeerId(payload.fromUserId);
-      console.log("[useRTCSignaling] Processing offer from:", peerId);
-
       try {
         const answer = await manager.handleRemoteOffer(peerId, payload.offer);
         const answerPayload: CallAnswerPayload = {
@@ -68,7 +66,6 @@ export function useRTCSignaling({
           answer: answer,
         };
         emitSocket.emit("call:answer", answerPayload);
-        console.log("[useRTCSignaling] Sent answer to:", peerId);
       } catch (err) {
         console.error("[useRTCSignaling] Failed to process offer:", err);
       }
@@ -80,11 +77,8 @@ export function useRTCSignaling({
   const processAnswer = useCallback(
     async (payload: CallAnswerPayload, manager: MeshRTCManager) => {
       const peerId = buildPeerId(payload.fromUserId);
-      console.log("[useRTCSignaling] Processing answer from:", peerId);
-
       try {
         await manager.handleRemoteAnswer(peerId, payload.answer);
-        console.log("[useRTCSignaling] Applied answer from:", peerId);
       } catch (err) {
         console.error("[useRTCSignaling] Failed to process answer:", err);
       }
@@ -119,7 +113,6 @@ export function useRTCSignaling({
     // Flush offer queue
     const offers = offerQueueRef.current.splice(0);
     if (offers.length > 0) {
-      console.log("[useRTCSignaling] Flushing", offers.length, "queued offers");
       for (const offer of offers) {
         void processOffer(offer, manager, currentSocket, userId);
       }
@@ -128,7 +121,6 @@ export function useRTCSignaling({
     // Flush answer queue
     const answers = answerQueueRef.current.splice(0);
     if (answers.length > 0) {
-      console.log("[useRTCSignaling] Flushing", answers.length, "queued answers");
       for (const answer of answers) {
         void processAnswer(answer, manager);
       }
@@ -137,7 +129,6 @@ export function useRTCSignaling({
     // Flush candidate queue
     const candidates = candidateQueueRef.current.splice(0);
     if (candidates.length > 0) {
-      console.log("[useRTCSignaling] Flushing", candidates.length, "queued candidates");
       for (const candidate of candidates) {
         void processCandidate(candidate, manager);
       }
@@ -160,7 +151,6 @@ export function useRTCSignaling({
       const manager = getManagerRef.current();
       if (!manager) {
         // Queue offer for later processing
-        console.log("[useRTCSignaling] Queueing offer (manager not ready):", payload.fromUserId);
         offerQueueRef.current.push(payload);
         return;
       }
@@ -189,7 +179,6 @@ export function useRTCSignaling({
       const manager = getManagerRef.current();
       if (!manager) {
         // Queue answer for later processing
-        console.log("[useRTCSignaling] Queueing answer (manager not ready):", payload.fromUserId);
         answerQueueRef.current.push(payload);
         return;
       }
@@ -231,39 +220,9 @@ export function useRTCSignaling({
     };
   }, [socket, callId, currentUserId, processCandidate]);
 
-  // Register onIceCandidate callback on manager to emit candidates
-  // Re-run when isManagerReady changes (manager becomes available)
-  useEffect(() => {
-    if (!socket || !callId || currentUserId === null || !isManagerReady) return;
-
-    const manager = getManagerRef.current();
-    if (!manager) return;
-
-    const currentSocket = socket;
-    const userId = currentUserId;
-
-    function emitIceCandidate(peerId: string, candidate: RTCIceCandidate) {
-      // Parse userId from peerId (format: "callId_userId")
-      const parts = peerId.split("_");
-      const toUserId = parseInt(parts[1], 10);
-
-      const payload: CallCandidatePayload = {
-        callId: callId!,
-        fromUserId: userId,
-        toUserId,
-        candidate: candidate.toJSON(),
-      };
-      currentSocket.emit("call:candidate", payload);
-    }
-
-    // Register callback - MeshRTCManager allows setting callbacks after construction
-    manager.setOnIceCandidate(emitIceCandidate);
-
-    return () => {
-      // Clear the callback on cleanup
-      manager.setOnIceCandidate(undefined);
-    };
-  }, [socket, callId, currentUserId, isManagerReady]);
+  // NOTE: onIceCandidate callback is now registered at manager construction time
+  // in RTCProvider/useMeshManager to ensure it's set before ICE gathering starts.
+  // This hook only handles incoming signaling events (offer, answer, candidate).
 
   // Clear queues when callId changes (new call or leave call)
   useEffect(() => {

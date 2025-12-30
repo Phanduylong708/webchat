@@ -5,6 +5,7 @@ import type { CallParticipant, CallStatus } from "@/types/call.type";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { ParticipantTile } from "@/components/call/ParticipantTile";
+import { useRTC } from "@/hooks/context/useRTC";
 
 interface GroupCallLayoutProps {
   participants: CallParticipant[];
@@ -25,6 +26,9 @@ export function GroupCallLayout({
   showSelfVideo,
   selfStream,
 }: GroupCallLayoutProps): React.JSX.Element {
+  // Get RTC context for remote streams
+  const { getRemoteStream, getConnectionState, getErrorState } = useRTC();
+
   // Pagination state (MVP)
   const [currentPage, setCurrentPage] = useState(0);
   const PAGE_SIZE = 16; // Desktop default; can be made responsive later
@@ -60,6 +64,9 @@ export function GroupCallLayout({
         currentUserId={currentUserId}
         showSelfVideo={showSelfVideo}
         selfStream={selfStream}
+        getRemoteStream={getRemoteStream}
+        getConnectionState={getConnectionState}
+        getErrorState={getErrorState}
       />
 
       {/* Participants side panel */}
@@ -113,6 +120,9 @@ interface PaginatedGridLayoutProps {
   currentUserId: number | null;
   showSelfVideo: boolean;
   selfStream: MediaStream | null;
+  getRemoteStream: (userId: number) => MediaStream | null;
+  getConnectionState: (userId: number) => RTCPeerConnectionState | null;
+  getErrorState: (userId: number) => string | null;
 }
 
 function PaginatedGridLayout({
@@ -123,6 +133,9 @@ function PaginatedGridLayout({
   currentUserId,
   showSelfVideo,
   selfStream,
+  getRemoteStream,
+  getConnectionState,
+  getErrorState,
 }: PaginatedGridLayoutProps) {
   const totalPages = Math.max(1, Math.ceil(participants.length / pageSize));
 
@@ -156,15 +169,21 @@ function PaginatedGridLayout({
       {/* GRID CONTAINER */}
       <div className="flex-1 min-h-0 flex items-center justify-center">
         <div className={cn("w-full h-auto", gridClass)}>
-          {visibleParticipants.map((p: CallParticipant) => (
-            <ParticipantTile
-              key={p.id}
-              participant={p}
-              isMe={p.id === currentUserId}
-              showSelfVideo={showSelfVideo}
-              selfStream={selfStream}
-            />
-          ))}
+          {visibleParticipants.map((p: CallParticipant) => {
+            const isMe = p.id === currentUserId;
+            return (
+              <ParticipantTile
+                key={p.id}
+                participant={p}
+                isMe={isMe}
+                showSelfVideo={showSelfVideo}
+                selfStream={selfStream}
+                remoteStream={!isMe && p.id ? getRemoteStream(p.id) : null}
+                connectionState={!isMe && p.id ? getConnectionState(p.id) : null}
+                errorState={!isMe && p.id ? getErrorState(p.id) : null}
+              />
+            );
+          })}
         </div>
       </div>
 

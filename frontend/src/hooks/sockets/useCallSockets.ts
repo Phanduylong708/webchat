@@ -81,7 +81,6 @@ export function useCallSockets({
         if (exists) return prev;
         return [...prev, payload.user]; //
       });
-      console.log("handleJoin", payload);
     }
 
     socket.on("call:join", handleJoin);
