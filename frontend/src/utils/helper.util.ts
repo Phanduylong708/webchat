@@ -23,6 +23,6 @@ export default function formatLastSeen(date: string | null): string {
  * @returns The userId as a number
  */
 export function parsePeerId(peerId: string): number {
-  const parts = peerId.split("_");
-  return parseInt(parts[1], 10);
+  const parts = peerId.split("_").pop();
+  return parseInt(parts ?? "", 10);
 }

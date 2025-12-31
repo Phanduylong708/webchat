@@ -1,16 +1,7 @@
 import { useEffect, useRef } from "react";
 import { MeshRTCManager } from "@/lib/videocall/webrtcManager";
 import { parsePeerId } from "@/utils/helper.util";
-
-interface UseMeshManagerParams {
-  callId: string | null;
-  onTrackUpdate: (userId: number, stream: MediaStream | null) => void;
-  onConnectionStateChange: (userId: number, state: RTCPeerConnectionState) => void;
-  onIceConnectionStateChange: (userId: number, state: RTCIceConnectionState) => void;
-  onPeerRemoved: (userId: number) => void;
-  onIceCandidate: (peerId: string, candidate: RTCIceCandidate) => void;
-  onReady?: (ready: boolean) => void;
-}
+import type { UseMeshManagerParams } from "@/types/rtc.type";
 
 /**
  * Custom hook to manage MeshRTCManager lifecycle.

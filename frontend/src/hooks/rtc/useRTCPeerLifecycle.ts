@@ -1,18 +1,7 @@
 import { useEffect, useRef, useCallback } from "react";
 import type { Socket } from "socket.io-client";
 import type { MeshRTCManager } from "@/lib/videocall/webrtcManager";
-import type { CallParticipant } from "@/types/call.type";
-import type { CallOfferPayload } from "@/types/rtc.type";
-
-interface UseRTCPeerLifecycleParams {
-  socket: Socket | null;
-  callId: string | null;
-  currentUserId: number | null;
-  participants: CallParticipant[];
-  getManager: () => MeshRTCManager | null;
-  isManagerReady: boolean;
-  isLocalStreamSynced: boolean;
-}
+import type { CallOfferPayload, UseRTCPeerLifecycleParams } from "@/types/rtc.type";
 
 /**
  * Manages WebRTC peer connection lifecycle based on participants changes.

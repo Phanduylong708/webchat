@@ -5,15 +5,8 @@ import type {
   CallOfferPayload,
   CallAnswerPayload,
   CallCandidatePayload,
+  UseRTCSignalingParams,
 } from "@/types/rtc.type";
-
-interface UseRTCSignalingParams {
-  socket: Socket | null;
-  callId: string | null;
-  currentUserId: number | null;
-  getManager: () => MeshRTCManager | null;
-  isManagerReady: boolean;
-}
 
 /**
  * Handles WebRTC signaling over socket.io.
@@ -50,12 +43,7 @@ export function useRTCSignaling({
 
   // Process a single offer (used by both live handler and queue flush)
   const processOffer = useCallback(
-    async (
-      payload: CallOfferPayload,
-      manager: MeshRTCManager,
-      emitSocket: Socket,
-      userId: number
-    ) => {
+    async (payload: CallOfferPayload, manager: MeshRTCManager, emitSocket: Socket, userId: number) => {
       const peerId = buildPeerId(payload.fromUserId);
       try {
         const answer = await manager.handleRemoteOffer(peerId, payload.offer);
