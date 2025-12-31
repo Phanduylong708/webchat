@@ -76,9 +76,7 @@ function handleCall(io, socket) {
         caller: socket.data.user,
         timeoutMs: CALL_TIMEOUT_MS,
       };
-      socket
-        .to(getConversationRoom(parsedConversationId))
-        .emit("call:initiate", ringPayload);
+      socket.to(getConversationRoom(parsedConversationId)).emit("call:initiate", ringPayload);
       return maybeAck(callback, { success: true, callId: effectiveCallId });
     } catch (err) {
       console.error("call:initiate error", err);
@@ -131,11 +129,7 @@ function handleCall(io, socket) {
       }
 
       // Cancel timeout when first non-initiator joins (call becomes active)
-      if (
-        userId !== session.initiatorId &&
-        session.status === "ringing" &&
-        session.timeoutHandle
-      ) {
+      if (userId !== session.initiatorId && session.status === "ringing" && session.timeoutHandle) {
         clearTimeout(session.timeoutHandle);
         session.timeoutHandle = null;
         session.status = "active";
@@ -153,9 +147,7 @@ function handleCall(io, socket) {
         conversationId: session.conversationId,
         conversationType: session.conversationType,
         isInitiator: userId === session.initiatorId,
-        participants: Array.from(session.participants.values()).map(
-          (p) => p.user
-        ),
+        participants: Array.from(session.participants.values()).map((p) => p.user),
         status: session.status,
       });
     } catch (err) {
@@ -189,10 +181,7 @@ function handleCall(io, socket) {
 
     // Check if all callees have now declined and no callee ever joined.
     // The only participant allowed at this point is the initiator.
-    if (
-      session.responded.size === session.callees.size &&
-      session.participants.size <= 1
-    ) {
+    if (session.responded.size === session.callees.size && session.participants.size <= 1) {
       // All declined, no one in call - end immediately
       endCallForAll(io, callId, "all_declined");
     }
