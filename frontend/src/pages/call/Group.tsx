@@ -15,6 +15,8 @@ interface GroupCallLayoutProps {
   onCloseParticipants?: () => void;
   showSelfVideo: boolean;
   selfStream: MediaStream | null;
+  selfAudioMuted: boolean;
+  selfVideoMuted: boolean;
 }
 
 export function GroupCallLayout({
@@ -25,6 +27,8 @@ export function GroupCallLayout({
   onCloseParticipants,
   showSelfVideo,
   selfStream,
+  selfAudioMuted,
+  selfVideoMuted,
 }: GroupCallLayoutProps): React.JSX.Element {
   // Get RTC context for remote streams
   const { getRemoteStream, getConnectionState, getErrorState } = useRTC();
@@ -64,6 +68,8 @@ export function GroupCallLayout({
         currentUserId={currentUserId}
         showSelfVideo={showSelfVideo}
         selfStream={selfStream}
+        selfAudioMuted={selfAudioMuted}
+        selfVideoMuted={selfVideoMuted}
         getRemoteStream={getRemoteStream}
         getConnectionState={getConnectionState}
         getErrorState={getErrorState}
@@ -120,6 +126,8 @@ interface PaginatedGridLayoutProps {
   currentUserId: number | null;
   showSelfVideo: boolean;
   selfStream: MediaStream | null;
+  selfAudioMuted: boolean;
+  selfVideoMuted: boolean;
   getRemoteStream: (userId: number) => MediaStream | null;
   getConnectionState: (userId: number) => RTCPeerConnectionState | null;
   getErrorState: (userId: number) => string | null;
@@ -133,6 +141,8 @@ function PaginatedGridLayout({
   currentUserId,
   showSelfVideo,
   selfStream,
+  selfAudioMuted,
+  selfVideoMuted,
   getRemoteStream,
   getConnectionState,
   getErrorState,
@@ -178,6 +188,8 @@ function PaginatedGridLayout({
                 isMe={isMe}
                 showSelfVideo={showSelfVideo}
                 selfStream={selfStream}
+                selfAudioMuted={selfAudioMuted}
+                selfVideoMuted={selfVideoMuted}
                 remoteStream={!isMe && p.id ? getRemoteStream(p.id) : null}
                 connectionState={!isMe && p.id ? getConnectionState(p.id) : null}
                 errorState={!isMe && p.id ? getErrorState(p.id) : null}

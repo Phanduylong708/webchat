@@ -10,8 +10,12 @@ export type CallEndReason =
   | "leave" // User left the call
   | "disconnect"; // User disconnected
 
-// Call Participant (reuse User from chat.type)
-export type CallParticipant = User;
+// Call Participant (User with media state)
+export interface CallParticipant extends User {
+  audioMuted: boolean;
+  videoMuted: boolean;
+}
+
 // Socket Event Payloads (from server)
 
 export type ConversationType = "PRIVATE" | "GROUP";
@@ -43,6 +47,14 @@ export interface CallEndPayload {
   callId: string;
   conversationId: number;
   reason: CallEndReason;
+}
+
+/** Payload received when a participant's media state changes */
+export interface CallMediaStatePayload {
+  callId: string;
+  userId: number;
+  audioMuted: boolean;
+  videoMuted: boolean;
 }
 
 /** ACK response from call:join */

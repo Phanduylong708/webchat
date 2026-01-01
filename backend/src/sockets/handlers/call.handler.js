@@ -120,6 +120,7 @@ function handleCall(io, socket) {
             avatar: socket.data.user.avatar || null,
           },
           socketIds: new Set([socket.id]),
+          media: { audioMuted: true, videoMuted: true },
         });
       }
 
@@ -135,9 +136,10 @@ function handleCall(io, socket) {
         session.status = "active";
       }
 
+      const joinerMedia = session.participants.get(userId).media;
       io.to(getCallRoom(callId)).emit("call:join", {
         callId,
-        user: socket.data.user,
+        user: { ...socket.data.user, audioMuted: joinerMedia.audioMuted, videoMuted: joinerMedia.videoMuted },
         status: session.status,
       });
 
@@ -147,7 +149,11 @@ function handleCall(io, socket) {
         conversationId: session.conversationId,
         conversationType: session.conversationType,
         isInitiator: userId === session.initiatorId,
-        participants: Array.from(session.participants.values()).map((p) => p.user),
+        participants: Array.from(session.participants.values()).map((p) => ({
+          ...p.user,
+          audioMuted: p.media.audioMuted,
+          videoMuted: p.media.videoMuted,
+        })),
         status: session.status,
       });
     } catch (err) {
@@ -209,6 +215,31 @@ function handleCall(io, socket) {
     const { callId } = payload;
     if (!callId || !callSessions.has(callId)) return;
     socket.to(getCallRoom(callId)).emit("call:candidate", payload);
+  });
+
+  socket.on("call:media-state", (payload = {}) => {
+    const { callId, audioMuted, videoMuted } = payload;
+    if (!callId || !callSessions.has(callId)) return;
+
+    const userId = socket.data.user?.id;
+    if (!userId) return;
+
+    const session = callSessions.get(callId);
+    if (!session.participants.has(userId)) return;
+
+    const currentMedia = session.participants.get(userId).media;
+    const updatedMedia = {
+      audioMuted: audioMuted !== undefined ? audioMuted : currentMedia.audioMuted,
+      videoMuted: videoMuted !== undefined ? videoMuted : currentMedia.videoMuted,
+    };
+    session.participants.get(userId).media = updatedMedia;
+
+    socket.to(getCallRoom(callId)).emit("call:media-state", {
+      callId,
+      userId,
+      audioMuted: updatedMedia.audioMuted,
+      videoMuted: updatedMedia.videoMuted,
+    });
   });
 
   socket.on("disconnect", () => {

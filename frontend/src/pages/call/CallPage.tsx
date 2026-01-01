@@ -4,6 +4,7 @@ import { useCall } from "@/hooks/context/useCall";
 import { useAuth } from "@/hooks/context/useAuth";
 import useSocket from "@/hooks/context/useSocket";
 import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { callEndReasonMessages } from "@/types/call.type";
 import { CallControls } from "@/components/call/CallControls";
 import { Loader2, AlertCircle, Home } from "lucide-react";
@@ -18,6 +19,7 @@ import { useMedia } from "@/hooks/context/useMedia";
 import { useRTC } from "@/hooks/context/useRTC";
 import { useRTCSignaling } from "@/hooks/sockets/useRTCSignaling";
 import { useRTCPeerLifecycle } from "@/hooks/rtc/useRTCPeerLifecycle";
+import { useEmitMediaState } from "@/hooks/sockets/useEmitMediaState";
 import MediaVideo from "@/components/call/MediaVideo";
 
 function AutoStartMedia({ enabled }: { enabled: boolean }): React.JSX.Element | null {
@@ -39,11 +41,25 @@ function AutoStartMedia({ enabled }: { enabled: boolean }): React.JSX.Element | 
 }
 
 function LocalPiP(): React.JSX.Element {
-  const { userStream } = useMedia();
+  const { userStream, isVideoMuted } = useMedia();
+  const { user } = useAuth();
+
+  const showVideo = userStream && !isVideoMuted;
 
   return (
     <div className="fixed top-4 right-4 z-40 w-32 h-44 sm:w-48 sm:h-64 bg-zinc-900 rounded-xl border border-white/10 shadow-2xl overflow-hidden">
-      <MediaVideo stream={userStream ?? null} muted playsInline className="w-full h-full object-cover" />
+      {showVideo ? (
+        <MediaVideo stream={userStream} muted playsInline className="w-full h-full object-cover" />
+      ) : (
+        <div className="w-full h-full flex items-center justify-center bg-zinc-850">
+          <Avatar className="h-16 w-16 sm:h-20 sm:w-20 border-4 border-zinc-800">
+            <AvatarImage src={user?.avatar ?? undefined} />
+            <AvatarFallback className="bg-zinc-700 text-zinc-400 text-xl">
+              {user?.username?.charAt(0).toUpperCase() ?? "?"}
+            </AvatarFallback>
+          </Avatar>
+        </div>
+      )}
     </div>
   );
 }
@@ -175,9 +191,16 @@ function ActiveCallContent({
   showParticipants,
   setShowParticipants,
 }: ActiveCallContentProps): React.JSX.Element {
-  const { userStream, isVideoMuted } = useMedia();
+  const { userStream, isVideoMuted, isAudioMuted } = useMedia();
   const { socket } = useSocket();
   const { getManager, isManagerReady, isLocalStreamSynced } = useRTC();
+
+  // Emit local media state to server (after join, and on changes)
+  useEmitMediaState({
+    socket,
+    isAudioMuted,
+    isVideoMuted,
+  });
 
   // Initialize WebRTC signaling (offer/answer/ICE candidates)
   useRTCSignaling({
@@ -225,6 +248,8 @@ function ActiveCallContent({
               onCloseParticipants={() => setShowParticipants(false)}
               showSelfVideo={showSelfVideo}
               selfStream={userStream}
+              selfAudioMuted={isAudioMuted}
+              selfVideoMuted={isVideoMuted}
             />
           )}
         </div>

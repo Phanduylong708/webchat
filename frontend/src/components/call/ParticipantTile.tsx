@@ -1,5 +1,6 @@
 import { memo } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { MicOff } from "lucide-react";
 import type { CallParticipant } from "@/types/call.type";
 import { cn } from "@/lib/utils";
 import MediaVideo from "@/components/call/MediaVideo";
@@ -11,6 +12,9 @@ interface ParticipantTileProps {
   // Props for self video (only used when isMe === true)
   showSelfVideo?: boolean;
   selfStream?: MediaStream | null;
+  // Props for self mute state (only used when isMe === true)
+  selfAudioMuted?: boolean;
+  selfVideoMuted?: boolean;
   // Props for remote video (only used when isMe === false)
   remoteStream?: MediaStream | null;
   connectionState?: RTCPeerConnectionState | null;
@@ -23,14 +27,20 @@ function ParticipantTileComponent({
   compact = false,
   showSelfVideo = false,
   selfStream = null,
+  selfAudioMuted = false,
+  selfVideoMuted = false,
   remoteStream = null,
   errorState = null,
 }: ParticipantTileProps): React.JSX.Element {
+  // Determine mute state from signaled state (remote) or props (self)
+  const audioMuted = isMe ? selfAudioMuted : participant.audioMuted;
+  const videoMuted = isMe ? selfVideoMuted : participant.videoMuted;
+
   // Determine what to show:
-  // - Self: show video if showSelfVideo is true
-  // - Remote: show video if remoteStream exists
+  // - Self: show video if showSelfVideo is true (already considers selfVideoMuted)
+  // - Remote: show video if remoteStream exists AND videoMuted is false
   const shouldShowSelfVideo = isMe && showSelfVideo;
-  const shouldShowRemoteVideo = !isMe && remoteStream !== null;
+  const shouldShowRemoteVideo = !isMe && remoteStream !== null && !videoMuted;
   const shouldShowVideo = shouldShowSelfVideo || shouldShowRemoteVideo;
 
   // Determine the stream to display
@@ -55,7 +65,7 @@ function ParticipantTileComponent({
           className="w-full h-full object-cover"
         />
       ) : (
-        <div className="w-full h-full flex flex-col items-center justify-center bg-zinc-850">
+        <div className="w-full h-full flex flex-col items-center justify-center bg-zinc-850 relative">
           <Avatar className={cn("border-4 border-zinc-800 shadow-sm", compact ? "h-12 w-12" : "h-20 w-20")}>
             <AvatarImage src={participant.avatar ?? undefined} />
             <AvatarFallback className="bg-zinc-700 text-zinc-400">
@@ -78,6 +88,9 @@ function ParticipantTileComponent({
           <span className="text-xs font-medium text-white truncate">
             {isMe ? "You" : participant.username}
           </span>
+          {audioMuted && (
+            <MicOff className="h-3 w-3 text-zinc-400 shrink-0" />
+          )}
         </div>
       </div>
     </div>

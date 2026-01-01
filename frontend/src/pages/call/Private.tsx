@@ -1,5 +1,5 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { VideoOff } from "lucide-react";
+import { MicOff } from "lucide-react";
 import type { User as UserType } from "@/types/chat.type";
 import type { CallStatus, CallParticipant } from "@/types/call.type";
 import { useRTC } from "@/hooks/context/useRTC";
@@ -21,7 +21,8 @@ export function PrivateCallLayout({
   const { getRemoteStream, getErrorState } = useRTC();
 
   // Determine the remote participant from the live participants list
-  const remoteParticipant = participants.find((p) => p.id !== currentUserId);
+  // Guard against currentUserId being null
+  const remoteParticipant = currentUserId !== null ? participants.find((p) => p.id !== currentUserId) : null;
 
   // Get remote stream if we have a remote participant
   const remoteStream = remoteParticipant ? getRemoteStream(remoteParticipant.id) : null;
@@ -31,8 +32,9 @@ export function PrivateCallLayout({
   const displayUser = remoteParticipant ?? remoteUser;
   const displayName = displayUser?.username ?? "Unknown User";
 
-  // Determine if remote camera is on (has video tracks enabled)
-  const isRemoteCamOn = remoteStream?.getVideoTracks().some((t) => t.enabled) ?? false;
+  // Use signaled state for camera/mic (not track inspection)
+  const isRemoteCamOn = remoteParticipant?.videoMuted === false;
+  const isRemoteMicMuted = remoteParticipant?.audioMuted === true;
 
   // Show waiting/ringing UI if the call is not yet active or if only one person is present
   const showWaitingUI = status === "ringing" || participants.length <= 1;
@@ -50,11 +52,14 @@ export function PrivateCallLayout({
                   {displayName.charAt(0).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
-              {!isRemoteCamOn && status === "active" && !showWaitingUI && (
-                <div className="absolute bottom-0 right-0 p-2 rounded-full bg-zinc-900 border border-zinc-700 text-zinc-400">
-                  <VideoOff className="h-5 w-5" />
-                </div>
-              )}
+              {/* Mute indicators */}
+              <div className="absolute bottom-0 right-0 flex gap-1">
+                {isRemoteMicMuted && status === "active" && !showWaitingUI && (
+                  <div className="p-2 rounded-full bg-zinc-900 border border-zinc-700 text-zinc-400">
+                    <MicOff className="h-5 w-5" />
+                  </div>
+                )}
+              </div>
               {remoteError && (
                 <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 px-2 py-1 rounded bg-red-900/80 text-xs text-red-200">
                   {remoteError}
@@ -64,7 +69,7 @@ export function PrivateCallLayout({
             <div className="text-center space-y-2">
               <h2 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">{displayName}</h2>
               <p className="text-zinc-500 font-medium">
-                {status === "ringing" ? "Ringing..." : remoteStream ? "Camera is off" : "Connecting..."}
+                {status === "ringing" ? "Ringing..." : !showWaitingUI ? "Camera is off" : "Connecting..."}
               </p>
             </div>
           </div>
@@ -77,8 +82,15 @@ export function PrivateCallLayout({
               className="w-full h-full object-cover"
               muted={false}
             />
-            <div className="absolute bottom-6 left-6 z-20 px-3 py-1.5 rounded-lg bg-black/60 backdrop-blur-md border border-white/10 text-sm font-medium text-white/90">
-              {displayName}
+            <div className="absolute bottom-6 left-6 z-20 flex items-center gap-2">
+              <div className="px-3 py-1.5 rounded-lg bg-black/60 backdrop-blur-md border border-white/10 text-sm font-medium text-white/90">
+                {displayName}
+              </div>
+              {isRemoteMicMuted && (
+                <div className="p-1.5 rounded-lg bg-black/60 backdrop-blur-md border border-white/10 text-zinc-400">
+                  <MicOff className="h-4 w-4" />
+                </div>
+              )}
             </div>
           </div>
         )}

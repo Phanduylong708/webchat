@@ -9,6 +9,7 @@ import type {
   CallJoinPayload,
   CallLeavePayload,
   CallEndPayload,
+  CallMediaStatePayload,
 } from "@/types/call.type";
 
 interface UseCallSocketsParams {
@@ -78,8 +79,13 @@ export function useCallSockets({
       setStatus(payload.status);
       setParticipants((prev) => {
         const exists = prev.some((p) => p.id === payload.user.id);
-        if (exists) return prev;
-        return [...prev, payload.user]; //
+        if (exists) {
+          // Update existing participant's media state
+          return prev.map((p) =>
+            p.id === payload.user.id ? { ...p, ...payload.user } : p
+          );
+        }
+        return [...prev, payload.user];
       });
     }
 
@@ -87,7 +93,7 @@ export function useCallSockets({
     return () => {
       socket.off("call:join", handleJoin);
     };
-  }, [socket, setParticipants]);
+  }, [socket, setParticipants, setStatus]);
 
   // Participant left (or disconnected) from active call room
   useEffect(() => {
@@ -120,4 +126,24 @@ export function useCallSockets({
       socket.off("call:end", handleEnd);
     };
   }, [socket, setEndReason, setStatus, setIncomingCall]);
+
+  // Participant media state changed (remote only - self state comes from MediaContext)
+  useEffect(() => {
+    if (!socket) return;
+
+    function handleMediaState(payload: CallMediaStatePayload) {
+      setParticipants((prev) =>
+        prev.map((p) =>
+          p.id === payload.userId
+            ? { ...p, audioMuted: payload.audioMuted, videoMuted: payload.videoMuted }
+            : p
+        )
+      );
+    }
+
+    socket.on("call:media-state", handleMediaState);
+    return () => {
+      socket.off("call:media-state", handleMediaState);
+    };
+  }, [socket, setParticipants]);
 }
