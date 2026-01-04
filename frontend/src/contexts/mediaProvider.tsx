@@ -75,6 +75,7 @@ export function MediaProvider({ children }: { children: React.ReactNode }): Reac
     [initError, isStartingUserMedia, setError]
   );
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const withScreenBusy = useCallback(
     async (fn: (mgr: MediaStreamManager) => Promise<void>): Promise<void> => {
       if (initError || !manager.current) {
@@ -329,6 +330,7 @@ export function MediaProvider({ children }: { children: React.ReactNode }): Reac
       enumerateDevices: async () => {
         return devices ?? { audioInputs: [], videoInputs: [], audioOutputs: [] };
       },
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       startScreenShare: async (_opts?: StartScreenShareOptions) => {},
       stopScreenShare: () => {},
       setAudioOutput: () => {},
