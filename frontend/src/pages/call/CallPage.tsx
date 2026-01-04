@@ -94,7 +94,7 @@ export default function CallPage(): React.JSX.Element {
         return;
       }
       setIsLoading(false);
-
+      console.log("Joined call successfully");
       // Fetch remote user metadata for private calls (best-effort)
       if (ack.conversationType === "PRIVATE") {
         try {
