@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { MediaContext } from "@/contexts/mediaContext";
-import type { MediaContextValue, StartScreenShareOptions } from "@/types/media.type";
+import type { MediaContextValue } from "@/types/media.type";
 import { MediaStreamManager } from "@/lib/videocall/mediaStreamManager";
 import type { NormalizedMediaError, UserMediaOptions } from "@/lib/videocall/mediaStreamManager";
 
@@ -74,26 +74,25 @@ export function MediaProvider({ children }: { children: React.ReactNode }): Reac
     },
     [initError, isStartingUserMedia, setError]
   );
-
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const withScreenBusy = useCallback(
-    async (fn: (mgr: MediaStreamManager) => Promise<void>): Promise<void> => {
-      if (initError || !manager.current) {
-        setError("unsupported", initError || "Media manager not initialized or unsupported");
-        return;
-      }
-      if (isStartingScreenShare) return;
-      setIsStartingScreenShare(true);
-      try {
-        await fn(manager.current);
-      } catch (err) {
-        setError("unknown", (err as Error)?.message || "screen share failed", err);
-      } finally {
-        setIsStartingScreenShare(false);
-      }
-    },
-    [initError, isStartingScreenShare, setError]
-  );
+  // Comment for vite build
+  // const withScreenBusy = useCallback(
+  //   async (fn: (mgr: MediaStreamManager) => Promise<void>): Promise<void> => {
+  //     if (initError || !manager.current) {
+  //       setError("unsupported", initError || "Media manager not initialized or unsupported");
+  //       return;
+  //     }
+  //     if (isStartingScreenShare) return;
+  //     setIsStartingScreenShare(true);
+  //     try {
+  //       await fn(manager.current);
+  //     } catch (err) {
+  //       setError("unknown", (err as Error)?.message || "screen share failed", err);
+  //     } finally {
+  //       setIsStartingScreenShare(false);
+  //     }
+  //   },
+  //   [initError, isStartingScreenShare, setError]
+  // );
 
   useEffect(() => {
     // Guard: missing mediaDevices
@@ -330,8 +329,7 @@ export function MediaProvider({ children }: { children: React.ReactNode }): Reac
       enumerateDevices: async () => {
         return devices ?? { audioInputs: [], videoInputs: [], audioOutputs: [] };
       },
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      startScreenShare: async (_opts?: StartScreenShareOptions) => {},
+      startScreenShare: async () => {}, // to be implemented with options type StartScreenShareOptions
       stopScreenShare: () => {},
       setAudioOutput: () => {},
     };
