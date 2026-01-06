@@ -57,14 +57,31 @@ function ParticipantTileComponent({
         hasError ? "border-red-500/50" : "border-white/5"
       )}
     >
-      {shouldShowVideo && displayStream ? (
+      {/* Always mount MediaVideo for remote streams to keep audio playing */}
+      {displayStream && !isMe && (
         <MediaVideo
           stream={displayStream}
-          muted={isMe}
+          muted={false}
+          playsInline
+          className={cn(
+            "w-full h-full object-cover",
+            !shouldShowRemoteVideo && "invisible absolute"
+          )}
+        />
+      )}
+
+      {/* Self video - only mount when showing */}
+      {shouldShowSelfVideo && displayStream && (
+        <MediaVideo
+          stream={displayStream}
+          muted
           playsInline
           className="w-full h-full object-cover"
         />
-      ) : (
+      )}
+
+      {/* Avatar fallback when video not shown */}
+      {!shouldShowVideo && (
         <div className="w-full h-full flex flex-col items-center justify-center bg-zinc-850 relative">
           <Avatar className={cn("border-4 border-zinc-800 shadow-sm", compact ? "h-12 w-12" : "h-20 w-20")}>
             <AvatarImage src={participant.avatar ?? undefined} />

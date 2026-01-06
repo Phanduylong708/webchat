@@ -42,8 +42,22 @@ export function PrivateCallLayout({
   return (
     <div className="flex h-full w-full items-center justify-center p-4 relative">
       <div className="relative w-full max-w-6xl aspect-video max-h-[calc(100vh-8rem)] bg-zinc-900 rounded-3xl border border-white/5 shadow-2xl overflow-hidden flex items-center justify-center">
-        {/* CASE 1: Waiting for user or remote camera is off */}
-        {showWaitingUI || !isRemoteCamOn ? (
+        {/* Always mount MediaVideo for remote stream to keep audio playing */}
+        {remoteStream && (
+          <MediaVideo
+            stream={remoteStream}
+            playsInline
+            className={
+              isRemoteCamOn && !showWaitingUI
+                ? "w-full h-full object-cover"
+                : "invisible absolute"
+            }
+            muted={false}
+          />
+        )}
+
+        {/* Avatar overlay when waiting or camera off */}
+        {(showWaitingUI || !isRemoteCamOn) && (
           <div className="flex flex-col items-center gap-6">
             <div className="relative">
               <Avatar className="h-32 w-32 sm:h-40 sm:w-40 border-8 border-zinc-800/50 shadow-inner">
@@ -73,25 +87,19 @@ export function PrivateCallLayout({
               </p>
             </div>
           </div>
-        ) : (
-          // CASE 2: Active call with remote camera on - render actual video
-          <div className="w-full h-full flex items-center justify-center bg-black relative">
-            <MediaVideo
-              stream={remoteStream}
-              playsInline
-              className="w-full h-full object-cover"
-              muted={false}
-            />
-            <div className="absolute bottom-6 left-6 z-20 flex items-center gap-2">
-              <div className="px-3 py-1.5 rounded-lg bg-black/60 backdrop-blur-md border border-white/10 text-sm font-medium text-white/90">
-                {displayName}
-              </div>
-              {isRemoteMicMuted && (
-                <div className="p-1.5 rounded-lg bg-black/60 backdrop-blur-md border border-white/10 text-zinc-400">
-                  <MicOff className="h-4 w-4" />
-                </div>
-              )}
+        )}
+
+        {/* Name overlay when video is showing */}
+        {isRemoteCamOn && !showWaitingUI && (
+          <div className="absolute bottom-6 left-6 z-20 flex items-center gap-2">
+            <div className="px-3 py-1.5 rounded-lg bg-black/60 backdrop-blur-md border border-white/10 text-sm font-medium text-white/90">
+              {displayName}
             </div>
+            {isRemoteMicMuted && (
+              <div className="p-1.5 rounded-lg bg-black/60 backdrop-blur-md border border-white/10 text-zinc-400">
+                <MicOff className="h-4 w-4" />
+              </div>
+            )}
           </div>
         )}
       </div>
