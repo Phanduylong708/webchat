@@ -5,6 +5,7 @@ import {
   createGroupConversationController,
   addMemberToGroupController,
   leaveGroupController,
+  startPrivateConversationController,
 } from "../controllers/conversation.controller.js";
 import { passport } from "../../shared/config/passport.config.js";
 
@@ -38,4 +39,10 @@ conversationRoute.delete(
   "/:conversationId/leave",
   passport.authenticate("jwt", { session: false }),
   leaveGroupController
+);
+
+conversationRoute.post(
+  "/private",
+  passport.authenticate("jwt", { session: false }),
+  startPrivateConversationController
 );

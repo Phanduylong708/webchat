@@ -10,6 +10,7 @@ import {
   leaveGroupApi,
 } from "@/api/conversation.api";
 import useSocket from "@/hooks/context/useSocket";
+import { useAuth } from "@/hooks/context/useAuth";
 import { useConversationSockets } from "@/hooks/sockets/useConversationSockets";
 import { ConversationContext } from "./conversationContext";
 
@@ -38,8 +39,10 @@ function ConversationProvider({children}: {children: React.ReactNode}): JSX.Elem
     const [error, setError] = useState<string | null>(null);
 
     const {socket} = useSocket();
+    const { user } = useAuth();
     useConversationSockets({ 
       socket,
+      currentUserId: user?.id ?? null,
       setConversations,
       setOnlineUsers,
       setTypingByConversation,

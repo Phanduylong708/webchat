@@ -46,4 +46,13 @@ async function leaveGroupApi(conversationId: number): Promise<void> {
     }
 }
 
-export { getConversations, getConversationsDetails, addMemberApi, createGroupApi, leaveGroupApi };
+async function startPrivateChatApi(recipientId: number): Promise<{ conversationId: number }> {
+    try {
+        const response: ResponseType<{ conversationId: number }> = await api.post("/conversations/private", { recipientId });
+        return { conversationId: response.data.conversationId };
+    } catch (error) {
+        throw handleApiError(error);
+    }
+}
+
+export { getConversations, getConversationsDetails, addMemberApi, createGroupApi, leaveGroupApi, startPrivateChatApi };

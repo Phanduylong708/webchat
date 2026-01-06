@@ -1,4 +1,6 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 import type { Friend } from "@/types/friend.type";
 import formatLastSeen from "@/utils/helper.util";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
@@ -7,9 +9,21 @@ import { Button } from "@/components/ui/button";
 import { useFriend } from "@/hooks/context/useFriend";
 import { MessageCircle, UserMinus } from "lucide-react";
 import RemoveFriendDialog from "./RemoveFriendDialog";
+import { startPrivateChatApi } from "@/api/conversation.api";
 
 export default function FriendProfile({ friend }: { friend: Friend }): React.JSX.Element {
   const { selectFriend } = useFriend();
+  const navigate = useNavigate();
+
+  async function handleSendMessage(): Promise<void> {
+    try {
+      const { conversationId } = await startPrivateChatApi(friend.id);
+      navigate("/chat", { state: { selectConversationId: conversationId } });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to start chat";
+      toast.error(message);
+    }
+  }
 
   return (
     <Card className="max-w-md mx-auto mt-8">
@@ -28,7 +42,7 @@ export default function FriendProfile({ friend }: { friend: Friend }): React.JSX
         )}
       </CardContent>
       <CardFooter className="flex flex-col gap-2">
-        <Button disabled variant="outline" title="Coming in Phase 4">
+        <Button variant="outline" onClick={handleSendMessage}>
           <MessageCircle className="mr-2 h-4 w-4" />
           Send Message
         </Button>

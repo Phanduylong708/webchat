@@ -4,6 +4,7 @@ import { CallProvider } from "@/contexts/callProvider";
 import { IncomingCallDialog } from "@/components/call/IncomingCallDialog";
 import { useAuth } from "@/hooks/context/useAuth";
 import { Outlet } from "react-router-dom";
+import { Toaster } from "sonner";
 import React from "react";
 
 function AppContent() {
@@ -22,9 +23,10 @@ export default function App() {
       <SocketProvider>
         <CallProvider>
           <IncomingCallDialog />
-        <AppContent />
+          <AppContent />
         </CallProvider>
       </SocketProvider>
+      <Toaster position="top-center" richColors duration={3000} />
     </AuthProvider>
   );
 }

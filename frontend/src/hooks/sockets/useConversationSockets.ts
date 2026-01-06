@@ -18,6 +18,7 @@ type SystemMessageSetter = Dispatch<SetStateAction<Map<number, string>>>;
 
 interface UseConversationSocketsParams {
   socket: Socket | null;
+  currentUserId: number | null;
   setConversations: ConversationSetter;
   setOnlineUsers: OnlineUsersSetter;
   setTypingByConversation: TypingSetter;
@@ -30,6 +31,7 @@ interface UseConversationSocketsParams {
  */
 export function useConversationSockets({
   socket,
+  currentUserId,
   setConversations,
   setOnlineUsers,
   setTypingByConversation,
@@ -169,19 +171,37 @@ export function useConversationSockets({
   useEffect(() => {
     if (!socket) return;
     function handleAdded(payload: { conversation: ConversationsDetail }) {
-      const newConv: ConversationsResponse = {
-        id: payload.conversation.id,
-        title: payload.conversation.title,
-        type: payload.conversation.type,
-        memberCount: payload.conversation.members.length,
-        previewMembers: payload.conversation.members.slice(0, 3),
-        lastMessage: null,
-        //TODO: add otherUser if need to display member list
-      };
+      const conv = payload.conversation;
+      let newConv: ConversationsResponse;
+
+      if (conv.type === "PRIVATE") {
+        const otherUser = currentUserId
+          ? conv.members.find((m) => m.id !== currentUserId)
+          : undefined;
+        newConv = {
+          id: conv.id,
+          title: null,
+          type: "PRIVATE",
+          otherUser,
+          lastMessage: null,
+        };
+      } else {
+        const previewMembers = currentUserId
+          ? conv.members.filter((m) => m.id !== currentUserId).slice(0, 3)
+          : conv.members.slice(0, 3);
+        newConv = {
+          id: conv.id,
+          title: conv.title,
+          type: "GROUP",
+          memberCount: conv.members.length,
+          previewMembers,
+          lastMessage: null,
+        };
+      }
+
       setConversations((prev) => {
         const exists = prev.some((c) => c.id === newConv.id);
         if (exists) return prev;
-        // Prepend new group/private conversation so it shows up at top of list
         return [newConv, ...prev];
       });
     }
@@ -189,7 +209,7 @@ export function useConversationSockets({
     return () => {
       socket.off("addedToConversation", handleAdded);
     };
-  }, [socket, setConversations]);
+  }, [socket, currentUserId, setConversations]);
 
   // Remove leaving members and record a system banner for the conversation.
   useEffect(() => {

@@ -1,7 +1,8 @@
 import { ConversationProvider } from "@/contexts/conversationProvider";
 import { FriendProvider } from "@/contexts/friendContext";
 import { MessageProvider } from "@/contexts/messageProvider";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
+import { useLocation } from "react-router-dom";
 import { useConversation } from "@/hooks/context/useConversation";
 import { useMessage } from "@/hooks/context/useMessage";
 import ConversationListPanel from "@/components/layout/ConversationListPanel";
@@ -21,8 +22,21 @@ export default function ChatPage(): React.JSX.Element {
 }
 
 function ChatPageContent(): React.JSX.Element {
-  const { activeConversationId } = useConversation();
+  const location = useLocation();
+  const { activeConversationId, conversations, loadingConversations, selectConversation } = useConversation();
   const { fetchMessages } = useMessage();
+  const hasAutoSelected = useRef(false);
+
+  useEffect(() => {
+    const selectId = (location.state as { selectConversationId?: number } | null)?.selectConversationId;
+    if (selectId && !loadingConversations && !hasAutoSelected.current) {
+      const exists = conversations.some(c => c.id === selectId);
+      if (exists) {
+        selectConversation(selectId);
+        hasAutoSelected.current = true;
+      }
+    }
+  }, [location.state, loadingConversations, conversations, selectConversation]);
 
   useEffect(() => {
     if (activeConversationId) {

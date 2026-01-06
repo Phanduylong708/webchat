@@ -4,7 +4,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { Separator } from "../ui/separator";
 import { Input } from "../ui/input";
 import { ScrollArea } from "../ui/scroll-area";
-import { useEffect } from "react";
 import CreateGroupDialog from "../chat/CreateGroupDialog";
 
 function ConversationItem({
@@ -89,15 +88,9 @@ function ConversationItem({
 }
 
 export default function ConversationListPanel(): React.JSX.Element {
-  const { conversations, loadingConversations, error, fetchConversations } =
+  const { conversations, loadingConversations, error } =
     useConversation();
 
-  useEffect(() => {
-    fetchConversations();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  //helper component to render conversation list
   function renderConversationList(): React.JSX.Element {
     if (loadingConversations) {
       return (
@@ -129,7 +122,7 @@ export default function ConversationListPanel(): React.JSX.Element {
   }
 
   return (
-    <div className="h-full flex flex-col bg-muted border-r border-border">
+    <div className="h-full min-h-0 flex flex-col bg-muted border-r border-border">
       <div className="p-4 flex items-center justify-between">
         <h2 className="text-xl font-semibold">Conversations</h2>
         <CreateGroupDialog />
@@ -142,7 +135,7 @@ export default function ConversationListPanel(): React.JSX.Element {
         />
       </div>
       <Separator />
-      <ScrollArea className="flex-1">
+      <ScrollArea className="flex-1 min-h-0">
         <div className="p-2 gap-2 flex flex-col">
           {renderConversationList()}
         </div>

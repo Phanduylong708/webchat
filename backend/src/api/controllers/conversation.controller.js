@@ -4,6 +4,7 @@ import {
   createGroupConversation,
   addMemberToGroup,
   leaveGroup,
+  findOrCreatePrivateConversation,
 } from "../services/conversation.service.js";
 import { parseId } from "../../shared/utils/parse.util.js";
 import { sendSuccess } from "../../shared/utils/response.util.js";
@@ -149,10 +150,50 @@ async function leaveGroupController(req, res, next) {
   }
 }
 
+async function startPrivateConversationController(req, res, next) {
+  try {
+    const recipientId = parseId(req.body.recipientId, "recipient ID");
+    const currentUserId = req.user.id;
+    const io = req.io;
+    if (!io) {
+      throw createHTTPError(500, "Socket server not initialized");
+    }
+
+    const conversationId = await findOrCreatePrivateConversation(
+      currentUserId,
+      recipientId
+    );
+
+    const conversation = await getConversationDetails(
+      conversationId,
+      currentUserId
+    );
+
+    const conversationRoom = getConversationRoom(conversationId);
+    const currentUserRoom = getUserRoom(currentUserId);
+    const recipientRoom = getUserRoom(recipientId);
+
+    io.in(currentUserRoom).socketsJoin(conversationRoom);
+    io.in(recipientRoom).socketsJoin(conversationRoom);
+
+    io.to(currentUserRoom).emit("addedToConversation", { conversation });
+    io.to(recipientRoom).emit("addedToConversation", { conversation });
+
+    return sendSuccess(res, {
+      statusCode: 200,
+      data: { conversationId },
+      message: "Private conversation started successfully",
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
 export {
   getConversationsController,
   getConversationDetailsController,
   createGroupConversationController,
   addMemberToGroupController,
   leaveGroupController,
+  startPrivateConversationController,
 };
