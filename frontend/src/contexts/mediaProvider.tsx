@@ -17,7 +17,6 @@ export function MediaProvider({ children }: { children: React.ReactNode }): Reac
   const [initError, setInitError] = useState<string | null>(null);
   const [isManagerReady, setIsManagerReady] = useState<boolean>(false);
 
-  // Step 2: state fields
   const [userStream, setUserStream] = useState<MediaContextValue["userStream"]>(null);
   const [screenStream, setScreenStream] = useState<MediaContextValue["screenStream"]>(null);
   const [isAudioMuted, setIsAudioMuted] = useState<boolean>(true);
@@ -74,25 +73,25 @@ export function MediaProvider({ children }: { children: React.ReactNode }): Reac
     },
     [initError, isStartingUserMedia, setError]
   );
-  // Comment for vite build
-  // const withScreenBusy = useCallback(
-  //   async (fn: (mgr: MediaStreamManager) => Promise<void>): Promise<void> => {
-  //     if (initError || !manager.current) {
-  //       setError("unsupported", initError || "Media manager not initialized or unsupported");
-  //       return;
-  //     }
-  //     if (isStartingScreenShare) return;
-  //     setIsStartingScreenShare(true);
-  //     try {
-  //       await fn(manager.current);
-  //     } catch (err) {
-  //       setError("unknown", (err as Error)?.message || "screen share failed", err);
-  //     } finally {
-  //       setIsStartingScreenShare(false);
-  //     }
-  //   },
-  //   [initError, isStartingScreenShare, setError]
-  // );
+
+  const withScreenBusy = useCallback(
+    async (fn: (mgr: MediaStreamManager) => Promise<void>): Promise<void> => {
+      if (initError || !manager.current) {
+        setError("unsupported", initError || "Media manager not initialized or unsupported");
+        return;
+      }
+      if (isStartingScreenShare) return;
+      setIsStartingScreenShare(true);
+      try {
+        await fn(manager.current);
+      } catch (err) {
+        setError("unknown", (err as Error)?.message || "screen share failed", err);
+      } finally {
+        setIsStartingScreenShare(false);
+      }
+    },
+    [initError, isStartingScreenShare, setError]
+  );
 
   useEffect(() => {
     // Guard: missing mediaDevices
@@ -303,6 +302,31 @@ export function MediaProvider({ children }: { children: React.ReactNode }): Reac
     [withUserBusy, isAudioMuted, isVideoMuted, recomputeMute, syncSelected]
   );
 
+  const startScreenShare = useCallback(async (): Promise<void> => {
+    if (screenStream) {
+      setError("unsupported", "Screen share already active");
+      return;
+    }
+    await withScreenBusy(async (mgr) => {
+      await mgr.startScreenShare({
+        textDetailProfile: true,
+        constraints: { audio: true },
+      });
+    });
+  }, [screenStream, setError, withScreenBusy]);
+
+  const stopScreenShare = useCallback((): void => {
+    if (initError || !manager.current) {
+      setError("unsupported", initError || "Media manager not initialized or unsupported");
+      return;
+    }
+    manager.current.stopScreenShare();
+    // State updates flow via onStreamUpdated callback
+  }, [initError, setError]);
+
+  // Derived state: videoSource based on screenStream
+  const videoSource: "camera" | "screen" = screenStream ? "screen" : "camera";
+
   const value = useMemo<MediaContextValue>(() => {
     return {
       initError,
@@ -317,6 +341,7 @@ export function MediaProvider({ children }: { children: React.ReactNode }): Reac
       lastError,
       isStartingUserMedia,
       isStartingScreenShare,
+      videoSource,
       // Actions (implemented)
       startUserMedia,
       stopUserMedia,
@@ -329,8 +354,8 @@ export function MediaProvider({ children }: { children: React.ReactNode }): Reac
       enumerateDevices: async () => {
         return devices ?? { audioInputs: [], videoInputs: [], audioOutputs: [] };
       },
-      startScreenShare: async () => {}, // to be implemented with options type StartScreenShareOptions
-      stopScreenShare: () => {},
+      startScreenShare,
+      stopScreenShare,
       setAudioOutput: () => {},
     };
   }, [
@@ -345,6 +370,7 @@ export function MediaProvider({ children }: { children: React.ReactNode }): Reac
     lastError,
     isStartingUserMedia,
     isStartingScreenShare,
+    videoSource,
     startUserMedia,
     stopUserMedia,
     restartUserMedia,
@@ -352,6 +378,8 @@ export function MediaProvider({ children }: { children: React.ReactNode }): Reac
     toggleVideo,
     switchCamera,
     switchMicrophone,
+    startScreenShare,
+    stopScreenShare,
   ]);
 
   return <MediaContext.Provider value={value}>{children}</MediaContext.Provider>;

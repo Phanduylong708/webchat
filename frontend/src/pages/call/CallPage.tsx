@@ -19,6 +19,7 @@ import { useMedia } from "@/hooks/context/useMedia";
 import { useRTC } from "@/hooks/context/useRTC";
 import { useRTCSignaling } from "@/hooks/sockets/useRTCSignaling";
 import { useRTCPeerLifecycle } from "@/hooks/rtc/useRTCPeerLifecycle";
+import { useScreenShareRTC } from "@/hooks/rtc/useScreenShareRTC";
 import { useEmitMediaState } from "@/hooks/sockets/useEmitMediaState";
 import MediaVideo from "@/components/call/MediaVideo";
 
@@ -191,7 +192,7 @@ function ActiveCallContent({
   showParticipants,
   setShowParticipants,
 }: ActiveCallContentProps): React.JSX.Element {
-  const { userStream, isVideoMuted, isAudioMuted } = useMedia();
+  const { userStream, screenStream, isVideoMuted, isAudioMuted, stopScreenShare } = useMedia();
   const { socket } = useSocket();
   const { getManager, isManagerReady, isLocalStreamSynced } = useRTC();
 
@@ -220,6 +221,15 @@ function ActiveCallContent({
     getManager,
     isManagerReady,
     isLocalStreamSynced,
+  });
+
+  // Manage screen share track swapping (screen video + mixed audio)
+  useScreenShareRTC({
+    getManager,
+    isManagerReady,
+    userStream,
+    screenStream,
+    stopScreenShare,
   });
 
   // Compute self video state for Group layout (only for "You" tile)

@@ -10,12 +10,21 @@ interface CallControlsProps {
 
 export function CallControls({ onToggleParticipants }: CallControlsProps = {}): React.JSX.Element {
   const { conversationType, status, leaveCall } = useCall();
-  const { isAudioMuted, isVideoMuted, isStartingUserMedia, toggleAudio, toggleVideo } = useMedia();
+  const { isAudioMuted, isVideoMuted, isStartingUserMedia, isStartingScreenShare, screenStream, toggleAudio, toggleVideo, startScreenShare, stopScreenShare } = useMedia();
 
   if (status === "ended") return <></>;
 
   const micOn = !isAudioMuted;
   const camOn = !isVideoMuted;
+  const isSharing = !!screenStream;
+
+  const handleScreenShare = () => {
+    if (isSharing) {
+      stopScreenShare();
+    } else {
+      void startScreenShare();
+    }
+  };
 
   const getMediaButtonClass = (isOn: boolean) =>
     cn(
@@ -68,7 +77,15 @@ export function CallControls({ onToggleParticipants }: CallControlsProps = {}): 
               <Button
                 size="icon"
                 variant="ghost"
-                className="text-white hover:bg-white/20 rounded-full hidden sm:inline-flex"
+                disabled={isStartingScreenShare}
+                onClick={handleScreenShare}
+                className={cn(
+                  "rounded-full hidden sm:inline-flex transition-all duration-200",
+                  isSharing
+                    ? "bg-blue-600 text-white hover:bg-blue-700"
+                    : "text-white hover:bg-white/20",
+                  isStartingScreenShare && "opacity-50 cursor-not-allowed"
+                )}
               >
                 <Monitor className="size-5" />
               </Button>

@@ -12,29 +12,22 @@ export interface SelectedDevices {
 }
 
 export interface StartScreenShareOptions {
-  /** When true, request sharing audio along with the screen/tab if browser supports it. */
-  withAudio?: boolean;
-  /** When true, favor text clarity (mapped to manager's textDetailProfile). */
-  textDetailProfile?: boolean;
+  withAudio?: boolean; // request sharing audio along with screen/tab
+  textDetailProfile?: boolean; // favor text clarity (contentHint = 'text')
 }
 
+export type VideoSource = "camera" | "screen";
+
 export interface MediaContextValue {
-  /**
-   * Initialization error when environment lacks media support (e.g., tests/webview/unsupported browser).
-   * Provider should still render children; consumers can check this to display a friendly message.
-   */
+  // Initialization error when environment lacks media support
   initError: string | null;
 
-  /**
-   * Indicates that the underlying MediaStreamManager has been created and is ready for actions.
-   */
+  // Indicates MediaStreamManager is ready for actions
   isManagerReady: boolean;
 
-  /**
-   * Getter to access the underlying MediaStreamManager instance.
-   * May return null when not initialized yet or when `initError` is present.
-   */
+  // Access underlying MediaStreamManager (null if not initialized or initError)
   getManager(): MediaStreamManager | null;
+
   userStream: MediaStream | null;
   screenStream: MediaStream | null;
 
@@ -42,11 +35,14 @@ export interface MediaContextValue {
   isAudioMuted: boolean;
   isVideoMuted: boolean;
 
+  // Derived from screenStream: 'screen' when sharing, 'camera' otherwise
+  videoSource: VideoSource;
+
   // Devices and selections
   devices: EnumeratedDevices | null;
   selectedDevices: SelectedDevices;
 
-  // Last surfaced error from manager (normalized); do not throw
+  // Last surfaced error from manager (normalized)
   lastError: NormalizedMediaError | null;
 
   // Busy flags for UX feedback
@@ -54,7 +50,7 @@ export interface MediaContextValue {
   isStartingScreenShare: boolean;
 
   // Actions
-  startUserMedia: (options?: UserMediaOptions) => Promise<void>; //
+  startUserMedia: (options?: UserMediaOptions) => Promise<void>;
   stopUserMedia: () => void;
   restartUserMedia: (options?: UserMediaOptions) => Promise<void>;
 
@@ -69,6 +65,5 @@ export interface MediaContextValue {
   startScreenShare: (options?: StartScreenShareOptions) => Promise<void>;
   stopScreenShare: () => void;
 
-  // Stub: store in state only; actual setSinkId deferred
-  setAudioOutput: (deviceId: string) => void;
+  setAudioOutput: (deviceId: string) => void; // stub: store in state only
 }
