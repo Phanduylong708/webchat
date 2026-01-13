@@ -14,6 +14,7 @@ export type CallEndReason =
 export interface CallParticipant extends User {
   audioMuted: boolean;
   videoMuted: boolean;
+  videoSource?: "camera" | "screen";
 }
 
 // Socket Event Payloads (from server)
@@ -55,6 +56,7 @@ export interface CallMediaStatePayload {
   userId: number;
   audioMuted: boolean;
   videoMuted: boolean;
+  videoSource?: "camera" | "screen";
 }
 
 /** ACK response from call:join */

@@ -135,7 +135,12 @@ export function useCallSockets({
       setParticipants((prev) =>
         prev.map((p) =>
           p.id === payload.userId
-            ? { ...p, audioMuted: payload.audioMuted, videoMuted: payload.videoMuted }
+            ? {
+                ...p,
+                audioMuted: payload.audioMuted,
+                videoMuted: payload.videoMuted,
+                videoSource: payload.videoSource,
+              }
             : p
         )
       );

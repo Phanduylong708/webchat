@@ -120,7 +120,7 @@ function handleCall(io, socket) {
             avatar: socket.data.user.avatar || null,
           },
           socketIds: new Set([socket.id]),
-          media: { audioMuted: true, videoMuted: true },
+          media: { audioMuted: true, videoMuted: true, videoSource: "camera" },
         });
       }
 
@@ -139,7 +139,12 @@ function handleCall(io, socket) {
       const joinerMedia = session.participants.get(userId).media;
       io.to(getCallRoom(callId)).emit("call:join", {
         callId,
-        user: { ...socket.data.user, audioMuted: joinerMedia.audioMuted, videoMuted: joinerMedia.videoMuted },
+        user: {
+          ...socket.data.user,
+          audioMuted: joinerMedia.audioMuted,
+          videoMuted: joinerMedia.videoMuted,
+          videoSource: joinerMedia.videoSource,
+        },
         status: session.status,
       });
 
@@ -153,6 +158,7 @@ function handleCall(io, socket) {
           ...p.user,
           audioMuted: p.media.audioMuted,
           videoMuted: p.media.videoMuted,
+          videoSource: p.media.videoSource,
         })),
         status: session.status,
       });
@@ -218,7 +224,7 @@ function handleCall(io, socket) {
   });
 
   socket.on("call:media-state", (payload = {}) => {
-    const { callId, audioMuted, videoMuted } = payload;
+    const { callId, audioMuted, videoMuted, videoSource } = payload;
     if (!callId || !callSessions.has(callId)) return;
 
     const userId = socket.data.user?.id;
@@ -231,6 +237,7 @@ function handleCall(io, socket) {
     const updatedMedia = {
       audioMuted: audioMuted !== undefined ? audioMuted : currentMedia.audioMuted,
       videoMuted: videoMuted !== undefined ? videoMuted : currentMedia.videoMuted,
+      videoSource: videoSource !== undefined ? videoSource : currentMedia.videoSource,
     };
     session.participants.get(userId).media = updatedMedia;
 
@@ -239,6 +246,7 @@ function handleCall(io, socket) {
       userId,
       audioMuted: updatedMedia.audioMuted,
       videoMuted: updatedMedia.videoMuted,
+      videoSource: updatedMedia.videoSource,
     });
   });
 

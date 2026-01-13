@@ -1,21 +1,21 @@
 import { useEffect } from "react";
 import type { Socket } from "socket.io-client";
 import { useCall } from "@/hooks/context/useCall";
+import type { VideoSource } from "@/types/media.type";
 
 interface UseEmitMediaStateParams {
   socket: Socket | null;
   isAudioMuted: boolean;
   isVideoMuted: boolean;
+  videoSource: VideoSource;
 }
 
-/**
- * Emits local media state to the server when it changes.
- * Uses callId from CallContext (set after join ACK) to avoid race conditions.
- */
+// Emits local media state to the server when it changes
 export function useEmitMediaState({
   socket,
   isAudioMuted,
   isVideoMuted,
+  videoSource,
 }: UseEmitMediaStateParams): void {
   const { callId } = useCall();
 
@@ -25,7 +25,8 @@ export function useEmitMediaState({
     socket.emit("call:media-state", {
       callId,
       audioMuted: isAudioMuted,
-      videoMuted: isVideoMuted,
+      videoMuted: videoSource === "screen" ? false : isVideoMuted,
+      videoSource,
     });
-  }, [socket, callId, isAudioMuted, isVideoMuted]);
+  }, [socket, callId, isAudioMuted, isVideoMuted, videoSource]);
 }
