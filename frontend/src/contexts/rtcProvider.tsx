@@ -42,7 +42,7 @@ export function RTCProvider({ children, callId, currentUserId }: RTCProviderProp
 
   // Track manager ready state to trigger re-render for dependent effects
   const [isManagerReady, setIsManagerReady] = useState(false);
-  
+
   // Track when local stream has been synced to manager (required before creating offers)
   const [isLocalStreamSynced, setIsLocalStreamSynced] = useState(false);
 
@@ -58,6 +58,15 @@ export function RTCProvider({ children, callId, currentUserId }: RTCProviderProp
   // Callback handlers for MeshRTCManager events (defined before passing to hook)
   const handleTrackUpdate = useCallback(
     (userId: number, stream: MediaStream | null) => {
+      console.log(
+        `[RTCProvider] onTrack from user ${userId}:`,
+        stream
+          ? stream
+              .getTracks()
+              .map((t) => t.kind + ":" + t.label)
+              .join(", ")
+          : "null"
+      );
       remoteStreams.set(userId, stream);
       invalidate();
     },
@@ -105,31 +114,28 @@ export function RTCProvider({ children, callId, currentUserId }: RTCProviderProp
 
   // Handle ICE candidate: emit to signaling server
   // Uses refs to avoid recreating callback when socket/callId/currentUserId change
-  const handleIceCandidate = useCallback(
-    (peerId: string, candidate: RTCIceCandidate) => {
-      const currentSocket = socketRef.current;
-      const currentCallId = callIdRef.current;
-      const userId = currentUserIdRef.current;
+  const handleIceCandidate = useCallback((peerId: string, candidate: RTCIceCandidate) => {
+    const currentSocket = socketRef.current;
+    const currentCallId = callIdRef.current;
+    const userId = currentUserIdRef.current;
 
-      if (!currentSocket || !currentCallId || userId === null) {
-        console.warn("[RTCProvider] Cannot emit ICE candidate: socket/callId/userId not ready");
-        return;
-      }
+    if (!currentSocket || !currentCallId || userId === null) {
+      console.warn("[RTCProvider] Cannot emit ICE candidate: socket/callId/userId not ready");
+      return;
+    }
 
-      // Parse toUserId from peerId (format: "callId_userId")
-      const parts = peerId.split("_");
-      const toUserId = parseInt(parts[1], 10);
+    // Parse toUserId from peerId (format: "callId_userId")
+    const parts = peerId.split("_");
+    const toUserId = parseInt(parts[1], 10);
 
-      const payload: CallCandidatePayload = {
-        callId: currentCallId,
-        fromUserId: userId,
-        toUserId,
-        candidate: candidate.toJSON(),
-      };
-      currentSocket.emit("call:candidate", payload);
-    },
-    []
-  );
+    const payload: CallCandidatePayload = {
+      callId: currentCallId,
+      fromUserId: userId,
+      toUserId,
+      candidate: candidate.toJSON(),
+    };
+    currentSocket.emit("call:candidate", payload);
+  }, []);
 
   // Manager lifecycle with callbacks
   const manager = useMeshManager({
@@ -149,8 +155,17 @@ export function RTCProvider({ children, callId, currentUserId }: RTCProviderProp
       setIsLocalStreamSynced(false);
       return;
     }
-    
+
     // Sync the stream and mark as synced when done
+    console.log(
+      "[RTCProvider] setLocalStream called with:",
+      userStream
+        ? `stream(${userStream
+            .getTracks()
+            .map((t) => t.kind + ":" + t.label)
+            .join(", ")})`
+        : "null"
+    );
     void manager.current.setLocalStream(userStream).then(() => {
       // Only mark as synced if we have a stream (tracks attached)
       // This ensures offers are only created after tracks are ready

@@ -53,6 +53,7 @@ export function useScreenShareRTC({
   }, []);
 
   useEffect(() => {
+    console.log("[useScreenShareRTC] effect run, screenStream:", screenStream ? "EXISTS" : "NULL", "userStream:", userStream ? "EXISTS" : "NULL");
     const manager = getManager();
     if (!isManagerReady || !manager) return;
 
@@ -112,6 +113,7 @@ export function useScreenShareRTC({
       const outboundStream = new MediaStream(outboundTracks);
       mixedStreamRef.current = outboundStream;
 
+      console.log("[useScreenShareRTC] setLocalStream called with:", `outbound(${outboundTracks.map(t => t.kind + ":" + t.label).join(", ")})`);
       manager.setLocalStream(outboundStream).catch((err) => {
         console.error("[useScreenShareRTC] Failed to set screen share stream:", err);
       });
@@ -137,6 +139,7 @@ export function useScreenShareRTC({
       cleanupMixing();
 
       // Always restore - manager handles null case
+      console.log("[useScreenShareRTC] restoring userStream:", userStream ? `stream(${userStream.getTracks().map(t => t.kind + ":" + t.label).join(", ")})` : "null");
       manager.setLocalStream(userStream).catch((err) => {
         console.error("[useScreenShareRTC] Failed to restore user stream:", err);
       });

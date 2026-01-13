@@ -448,6 +448,7 @@ export class MeshRTCManager {
    * Creates a new RTCPeerConnection for a peer and initializes it.
    */
   private createPeer(peerId: string): RTCPeerConnection {
+    console.log(`[MeshRTCManager] createPeer(${peerId}), localStream:`, this.localStream ? `stream(${this.localStream.getTracks().map(t => t.kind + ":" + t.label).join(", ")})` : "null");
     // Create a new RTCPeerConnection with the configured settings
     const connection = new RTCPeerConnection(this.rtcConfig);
 

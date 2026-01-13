@@ -239,9 +239,11 @@ function ActiveCallContent({
   const showSelfVideo = useMemo(() => !!userStream && !isVideoMuted, [userStream, isVideoMuted]);
 
   // Find presenter (first participant with videoSource === 'screen')
+  // Prioritize local videoSource since socket.to() excludes sender
   const presenterId = useMemo(() => {
+    if (videoSource === "screen") return currentUserId;
     return participants.find((p) => p.videoSource === "screen")?.id ?? null;
-  }, [participants]);
+  }, [participants, videoSource, currentUserId]);
 
   const isPresenterLocal = presenterId === currentUserId;
 
