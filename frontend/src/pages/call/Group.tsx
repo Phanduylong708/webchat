@@ -31,7 +31,7 @@ export function GroupCallLayout({
   selfVideoMuted,
 }: GroupCallLayoutProps): React.JSX.Element {
   // Get RTC context for remote streams
-  const { getRemoteStream, getConnectionState, getErrorState } = useRTC();
+  const { getRemoteStream, getConnectionState, getErrorState, remoteStreamsVersion } = useRTC();
 
   // Pagination state (MVP)
   const [currentPage, setCurrentPage] = useState(0);
@@ -73,6 +73,7 @@ export function GroupCallLayout({
         getRemoteStream={getRemoteStream}
         getConnectionState={getConnectionState}
         getErrorState={getErrorState}
+        remoteStreamsVersion={remoteStreamsVersion}
       />
 
       {/* Participants side panel */}
@@ -131,6 +132,7 @@ interface PaginatedGridLayoutProps {
   getRemoteStream: (userId: number) => MediaStream | null;
   getConnectionState: (userId: number) => RTCPeerConnectionState | null;
   getErrorState: (userId: number) => string | null;
+  remoteStreamsVersion: number;
 }
 
 function PaginatedGridLayout({
@@ -146,7 +148,12 @@ function PaginatedGridLayout({
   getRemoteStream,
   getConnectionState,
   getErrorState,
+  remoteStreamsVersion,
 }: PaginatedGridLayoutProps) {
+  // Use remoteStreamsVersion to ensure re-render when streams change
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const _version = remoteStreamsVersion;
+  
   const totalPages = Math.max(1, Math.ceil(participants.length / pageSize));
 
   // Reset page if participants shrink

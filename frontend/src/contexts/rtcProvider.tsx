@@ -58,15 +58,6 @@ export function RTCProvider({ children, callId, currentUserId }: RTCProviderProp
   // Callback handlers for MeshRTCManager events (defined before passing to hook)
   const handleTrackUpdate = useCallback(
     (userId: number, stream: MediaStream | null) => {
-      console.log(
-        `[RTCProvider] onTrack from user ${userId}:`,
-        stream
-          ? stream
-              .getTracks()
-              .map((t) => t.kind + ":" + t.label)
-              .join(", ")
-          : "null"
-      );
       remoteStreams.set(userId, stream);
       invalidate();
     },
@@ -157,15 +148,6 @@ export function RTCProvider({ children, callId, currentUserId }: RTCProviderProp
     }
 
     // Sync the stream and mark as synced when done
-    console.log(
-      "[RTCProvider] setLocalStream called with:",
-      userStream
-        ? `stream(${userStream
-            .getTracks()
-            .map((t) => t.kind + ":" + t.label)
-            .join(", ")})`
-        : "null"
-    );
     void manager.current.setLocalStream(userStream).then(() => {
       // Only mark as synced if we have a stream (tracks attached)
       // This ensures offers are only created after tracks are ready
@@ -203,6 +185,7 @@ export function RTCProvider({ children, callId, currentUserId }: RTCProviderProp
       remoteStreams,
       connectionStates,
       errorStates,
+      remoteStreamsVersion: version,
       isManagerReady,
       isLocalStreamSynced,
       getManager: () => manager.current,

@@ -196,7 +196,7 @@ function ActiveCallContent({
 }: ActiveCallContentProps): React.JSX.Element {
   const { userStream, screenStream, isVideoMuted, isAudioMuted, videoSource, stopScreenShare } = useMedia();
   const { socket } = useSocket();
-  const { getManager, isManagerReady, isLocalStreamSynced, getRemoteStream } = useRTC();
+  const { getManager, isManagerReady, isLocalStreamSynced, getRemoteStream, remoteStreamsVersion } = useRTC();
 
   // Emit local media state to server (after join, and on changes)
   useEmitMediaState({
@@ -252,7 +252,7 @@ function ActiveCallContent({
     if (presenterId === null) return null;
     if (isPresenterLocal) return screenStream;
     return getRemoteStream(presenterId);
-  }, [presenterId, isPresenterLocal, screenStream, getRemoteStream]);
+  }, [presenterId, isPresenterLocal, screenStream, getRemoteStream, remoteStreamsVersion]);
 
   // Build tiles for StageLayout
   const buildStageTiles = useCallback((): StageLayoutTile[] => {
@@ -282,7 +282,7 @@ function ActiveCallContent({
         isVideoOff: isMe ? isVideoMuted : p.videoMuted,
       };
     });
-  }, [participants, currentUserId, presenterId, userStream, getRemoteStream, isAudioMuted, isVideoMuted]);
+  }, [participants, currentUserId, presenterId, userStream, getRemoteStream, isAudioMuted, isVideoMuted, remoteStreamsVersion]);
 
   const stageTiles = useMemo(() => buildStageTiles(), [buildStageTiles]);
 

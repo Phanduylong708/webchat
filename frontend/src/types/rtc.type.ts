@@ -22,6 +22,7 @@ export interface RTCContextValue {
   remoteStreams: RemoteStreamsMap; // remote streams per user
   connectionStates: ConnectionStatesMap; // connection state per user
   errorStates: ErrorStatesMap; // error message per user
+  remoteStreamsVersion: number; // version counter for useMemo dependencies
   isManagerReady: boolean; // true when MeshRTCManager is initialized
   isLocalStreamSynced: boolean; // true when local stream has been synced to manager
   getManager(): MeshRTCManager | null; // underlying MeshRTCManager (null if not ready)
