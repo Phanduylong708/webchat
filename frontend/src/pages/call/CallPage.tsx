@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useCall } from "@/hooks/context/useCall";
 import { useAuth } from "@/hooks/context/useAuth";
@@ -21,9 +21,9 @@ import { useRTCSignaling } from "@/hooks/sockets/useRTCSignaling";
 import { useRTCPeerLifecycle } from "@/hooks/rtc/useRTCPeerLifecycle";
 import { useScreenShareRTC } from "@/hooks/rtc/useScreenShareRTC";
 import { useEmitMediaState } from "@/hooks/sockets/useEmitMediaState";
+import { useStagePresenter } from "@/hooks/call/useStagePresenter";
 import MediaVideo from "@/components/call/MediaVideo";
 import { StageLayout } from "@/components/call/StageLayout";
-import type { StageLayoutTile } from "@/components/call/StageLayout";
 
 function AutoStartMedia({ enabled }: { enabled: boolean }): React.JSX.Element | null {
   const { startUserMedia, initError, userStream, isStartingUserMedia, isManagerReady } = useMedia();
@@ -238,56 +238,18 @@ function ActiveCallContent({
   // Compute self video state for Group layout (only for "You" tile)
   const showSelfVideo = useMemo(() => !!userStream && !isVideoMuted, [userStream, isVideoMuted]);
 
-  // Find presenter (first participant with videoSource === 'screen')
-  // Prioritize local videoSource since socket.to() excludes sender
-  const presenterId = useMemo(() => {
-    if (videoSource === "screen") return currentUserId;
-    return participants.find((p) => p.videoSource === "screen")?.id ?? null;
-  }, [participants, videoSource, currentUserId]);
-
-  const isPresenterLocal = presenterId === currentUserId;
-
-  // Compute presenter stream: local screenStream if I'm presenting, remote stream otherwise
-  const presenterStream = useMemo(() => {
-    if (presenterId === null) return null;
-    if (isPresenterLocal) return screenStream;
-    return getRemoteStream(presenterId);
-  }, [presenterId, isPresenterLocal, screenStream, getRemoteStream, remoteStreamsVersion]);
-
-  // Build tiles for StageLayout
-  const buildStageTiles = useCallback((): StageLayoutTile[] => {
-    return participants.map((p): StageLayoutTile => {
-      const isMe = p.id === currentUserId;
-      const isPresenting = p.id === presenterId;
-
-      // For self: use userStream (camera)
-      // For remote presenter: null (can't get camera, only screen via replaceTrack)
-      // For other remotes: use getRemoteStream (their camera)
-      let cameraStream: MediaStream | null = null;
-      if (isMe) {
-        cameraStream = userStream;
-      } else if (!isPresenting) {
-        cameraStream = getRemoteStream(p.id);
-      }
-      // Remote presenter: cameraStream stays null (avatar only)
-
-      return {
-        participantId: p.id,
-        displayName: p.username,
-        avatarUrl: p.avatar,
-        cameraStream,
-        isPresenting,
-        isLocal: isMe,
-        isMuted: isMe ? isAudioMuted : p.audioMuted,
-        isVideoOff: isMe ? isVideoMuted : p.videoMuted,
-      };
-    });
-  }, [participants, currentUserId, presenterId, userStream, getRemoteStream, isAudioMuted, isVideoMuted, remoteStreamsVersion]);
-
-  const stageTiles = useMemo(() => buildStageTiles(), [buildStageTiles]);
-
-  // Determine if we're in stage mode
-  const isStageMode = presenterId !== null;
+  // Stage presenter logic (presenter detection + tile building)
+  const { presenterId, isPresenterLocal, presenterStream, stageTiles, isStageMode } = useStagePresenter({
+    participants,
+    currentUserId,
+    videoSource,
+    screenStream,
+    userStream,
+    isAudioMuted,
+    isVideoMuted,
+    getRemoteStream,
+    remoteStreamsVersion,
+  });
 
   return (
     <>
