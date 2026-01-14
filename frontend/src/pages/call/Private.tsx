@@ -18,17 +18,14 @@ export function PrivateCallLayout({
   currentUserId,
   status,
 }: PrivateCallLayoutProps): React.JSX.Element {
-  const { getRemoteStream, getErrorState, remoteStreamsVersion } = useRTC();
+  const { getRemoteStream, getErrorState } = useRTC();
 
   // Determine the remote participant from the live participants list
   // Guard against currentUserId being null
   const remoteParticipant = currentUserId !== null ? participants.find((p) => p.id !== currentUserId) : null;
 
   // Get remote stream if we have a remote participant
-  // Note: remoteStreamsVersion triggers re-render when streams update
   const remoteStream = remoteParticipant ? getRemoteStream(remoteParticipant.id) : null;
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const _streamVersion = remoteStreamsVersion; // ensure re-render on stream changes
   const remoteError = remoteParticipant ? getErrorState(remoteParticipant.id) : null;
 
   // Use live participant data if available, otherwise fallback to fetched metadata
