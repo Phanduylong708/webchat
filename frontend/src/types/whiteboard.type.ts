@@ -34,7 +34,7 @@ export interface SerializedObject {
 }
 
 export interface ObjectPatch {
-  version: number;
+  version?: number;
   left?: number;
   top?: number;
   angle?: number;
@@ -61,6 +61,7 @@ export interface UseFabricOptions {
   onAdd?: (object: Omit<SerializedObject, "createdBy">) => void;
   onUpdate?: (objectId: ObjectID, patch: ObjectPatch) => void;
   onDelete?: (objectId: ObjectID) => void;
+  setActiveTool?: (tool: ToolType) => void;
 }
 
 export interface UseFabricReturn {

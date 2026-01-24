@@ -1,6 +1,6 @@
 import * as fabric from "fabric";
-import type { PartialSerializedObject, ShapeToolType } from "@/types/whiteboard.type";
-import { DEFAULT_STROKE_WIDTH } from "./whiteboard.config";
+import type { PartialSerializedObject, ShapeToolType, ObjectPatch } from "@/types/whiteboard.type";
+import { DEFAULT_STROKE_WIDTH, DEFAULT_FONT_SIZE, DEFAULT_FONT_FAMILY, DEFAULT_TEXT_WIDTH } from "./whiteboard.config";
 
 export function serializePath(path: fabric.Path): PartialSerializedObject {
   return {
@@ -61,7 +61,7 @@ export function createShapeObject(
   color: string
 ): fabric.FabricObject {
   const commonProps = {
-    fill: tool === "line" ? "" : "color",
+    fill: tool === "line" ? "" : color,
     stroke: color,
     strokeWidth: DEFAULT_STROKE_WIDTH,
     selectable: false,
@@ -123,5 +123,55 @@ export function computeBoundingBox(
     minY: Math.min(startY, endY),
     width: Math.abs(endX - startX),
     height: Math.abs(endY - startY),
+  };
+}
+
+export function createTextbox(x: number, y: number, color: string): fabric.Textbox {
+  return new fabric.Textbox("", {
+    left: x,
+    top: y,
+    width: DEFAULT_TEXT_WIDTH,
+    fontSize: DEFAULT_FONT_SIZE,
+    fontFamily: DEFAULT_FONT_FAMILY,
+    fill: color,
+    editable: true,
+    selectable: true,
+    evented: true,
+  });
+}
+
+export function serializeTextbox(textbox: fabric.Textbox, objectId: string): PartialSerializedObject {
+  return {
+    id: objectId,
+    type: "textbox",
+    version: 1,
+    left: textbox.left ?? 0,
+    top: textbox.top ?? 0,
+    angle: textbox.angle ?? 0,
+    width: textbox.width,
+    height: textbox.height,
+    scaleX: textbox.scaleX ?? 1,
+    scaleY: textbox.scaleY ?? 1,
+    fill: (textbox.fill as string) ?? "#000000",
+    stroke: (textbox.stroke as string) ?? "",
+    strokeWidth: textbox.strokeWidth ?? 0,
+    opacity: textbox.opacity ?? 1,
+    text: textbox.text ?? "",
+  };
+}
+
+export function getObjectId(obj: fabric.FabricObject): string | undefined {
+  return (obj as fabric.FabricObject & { objectId?: string }).objectId;
+}
+
+export function getTransformPatch(obj: fabric.FabricObject): ObjectPatch {
+  return {
+    left: obj.left ?? 0,
+    top: obj.top ?? 0,
+    angle: obj.angle ?? 0,
+    scaleX: obj.scaleX ?? 1,
+    scaleY: obj.scaleY ?? 1,
+    width: obj.width,
+    height: obj.height,
   };
 }
