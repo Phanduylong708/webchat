@@ -61,7 +61,7 @@ export function createShapeObject(
   color: string
 ): fabric.FabricObject {
   const commonProps = {
-    fill: tool === "line" ? "" : color,
+    fill: tool === "line" ? "" : "transparent",
     stroke: color,
     strokeWidth: DEFAULT_STROKE_WIDTH,
     selectable: false,
@@ -165,12 +165,15 @@ export function getObjectId(obj: fabric.FabricObject): string | undefined {
 }
 
 export function getTransformPatch(obj: fabric.FabricObject): ObjectPatch {
+  const matrix = obj.calcTransformMatrix();
+  const transform = fabric.util.qrDecompose(matrix);
+  
   return {
-    left: obj.left ?? 0,
-    top: obj.top ?? 0,
-    angle: obj.angle ?? 0,
-    scaleX: obj.scaleX ?? 1,
-    scaleY: obj.scaleY ?? 1,
+    left: transform.translateX,
+    top: transform.translateY,
+    angle: transform.angle,
+    scaleX: transform.scaleX,
+    scaleY: transform.scaleY,
     width: obj.width,
     height: obj.height,
   };
