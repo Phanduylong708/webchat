@@ -67,6 +67,30 @@ function getOnlineUserIds(io, userIds) {
   return onlineUserIds;
 }
 
+function maybeAck(callback, payload) {
+  if (typeof callback === "function") {
+    callback(payload);
+  }
+}
+
+function isFiniteNumber(value) {
+  return typeof value === "number" && Number.isFinite(value);
+}
+
+function toSafeInt(value) {
+  if (typeof value !== "number" || !Number.isFinite(value)) return null;
+  if (!Number.isInteger(value)) return null;
+  return value;
+}
+
+function isValidObjectId(objectId, maxLength = 128) {
+  return typeof objectId === "string" && objectId.length > 0 && objectId.length <= maxLength;
+}
+
+function isValidCallId(callId, maxLength = 128) {
+  return typeof callId === "string" && callId.length > 0 && callId.length <= maxLength;
+}
+
 export {
   joinUserConversations,
   verifyMembership,
@@ -76,4 +100,9 @@ export {
   getConversationMemberIds,
   getConversationType,
   getOnlineUserIds,
+  maybeAck,
+  isFiniteNumber,
+  toSafeInt,
+  isValidObjectId,
+  isValidCallId,
 };

@@ -5,6 +5,7 @@ import {
   getConversationMemberIds,
   getConversationType,
   getOnlineUserIds,
+  maybeAck,
 } from "../helpers/helpers.js";
 import { randomUUID } from "crypto";
 
@@ -324,12 +325,6 @@ function cleanupCall(callId) {
     clearTimeout(session.timeoutHandle);
   }
   callSessions.delete(callId);
-}
-
-function maybeAck(callback, payload) {
-  if (typeof callback === "function") {
-    callback(payload);
-  }
 }
 
 export { handleCall, CALL_TIMEOUT_MS, callSessions };

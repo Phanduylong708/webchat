@@ -11,6 +11,7 @@ import ProtectedRoute from "./components/ProtectedRoute.tsx";
 import FriendsPage from "./pages/home/FriendsPage.tsx";
 import ChatPage from "./pages/chat/ChatPage.tsx";
 import CallPage from "./pages/call/CallPage.tsx";
+import WhiteboardTestPage from "./pages/dev/WhiteboardTestPage.tsx";
 
 const router = createBrowserRouter([
   {
@@ -46,6 +47,10 @@ const router = createBrowserRouter([
       },
       { path: "login", element: <LoginPage /> },
       { path: "signup", element: <SignUp /> },
+      // Dev routes - only accessible in development
+      ...(import.meta.env.DEV
+        ? [{ path: "dev/whiteboard", element: <WhiteboardTestPage /> }]
+        : []),
     ],
   },
 ]);

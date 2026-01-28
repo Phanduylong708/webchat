@@ -2,6 +2,7 @@ import { socketAuthMiddleware } from "./middlewares/auth.middleware.js";
 import { handleChatMessage } from "./handlers/chat.handler.js";
 import { handleStatus } from "./handlers/status.handler.js";
 import { handleCall } from "./handlers/call.handler.js";
+import { handleWhiteboard } from "./handlers/whiteboard.handler.js";
 import { Server } from "socket.io";
 
 function initializeSocketServer(httpServer) {
@@ -24,6 +25,7 @@ function initializeSocketServer(httpServer) {
     handleStatus(io, socket);
     handleChatMessage(io, socket);
     handleCall(io, socket);
+    handleWhiteboard(io, socket);
   });
   return io;
 }
