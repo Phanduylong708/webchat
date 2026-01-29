@@ -102,3 +102,57 @@ export interface WhiteboardContextValue {
   canUndo: boolean;
   canRedo: boolean;
 }
+
+// useWhiteboardSync types below
+
+export interface UseWhiteboardSyncParams {
+  socket: import("socket.io-client").Socket | null;
+  callId: string | null;
+  isActive: boolean;
+  canSync: boolean;
+  isReadyToApply: boolean;
+  onSnapshot: (objects: SerializedObject[], userColors: Record<UserID, string>) => void;
+  onSetMyColor: (color: string | null) => void;
+  onRemoteAdd: (object: SerializedObject) => void;
+  onRemoteUpdate: (objectId: ObjectID, patch: ObjectPatch) => void;
+  onRemoteDelete: (objectId: ObjectID, version: number) => void;
+  onCursorUpdate: (userId: UserID, position: CursorPosition | null, color: string) => void;
+  onSyncError?: (error: string) => void;
+}
+
+export interface WbSnapshotPayload {
+  callId: string;
+  objects: SerializedObject[];
+  userColors: Record<UserID, string>;
+  myColor: string;
+}
+
+export interface WbAddPayload {
+  callId: string;
+  object: SerializedObject;
+}
+
+export interface WbUpdatePayload {
+  callId: string;
+  objectId: ObjectID;
+  patch: ObjectPatch & { version?: number };
+}
+
+export interface WbDeletePayload {
+  callId: string;
+  objectId: ObjectID;
+  version: number;
+}
+
+export interface WbCursorPayload {
+  callId: string;
+  userId: UserID;
+  color: string;
+  position: CursorPosition | null;
+}
+
+export type WbPendingEvent =
+  | { type: "add"; payload: WbAddPayload }
+  | { type: "update"; payload: WbUpdatePayload }
+  | { type: "delete"; payload: WbDeletePayload }
+  | { type: "cursor"; payload: WbCursorPayload };
