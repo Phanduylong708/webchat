@@ -8,6 +8,7 @@ export type PathData = (string | number)[][];
 export type PartialSerializedObject = Omit<SerializedObject, "createdBy">;
 
 import type { Canvas, FabricObject } from "fabric";
+import type { Socket } from "socket.io-client";
 
 export interface SerializedObject {
   id: ObjectID;
@@ -93,6 +94,12 @@ export interface WhiteboardContextValue {
   setActiveTool: (tool: ToolType) => void;
   setActiveColor: (color: string) => void;
 
+  applySnapshot: (objects: SerializedObject[], userColors: Record<UserID, string>) => void;
+  applyRemoteAdd: (object: SerializedObject) => void;
+  applyRemoteUpdate: (objectId: ObjectID, patch: ObjectPatch) => void;
+  applyRemoteDelete: (objectId: ObjectID, version: number) => void;
+  setMyColor: (color: string | null) => void;
+
   emitAdd: (object: SerializedObject) => void;
   emitUpdate: (objectId: ObjectID, patch: ObjectPatch) => void;
   emitDelete: (objectId: ObjectID) => void;
@@ -106,7 +113,7 @@ export interface WhiteboardContextValue {
 // useWhiteboardSync types below
 
 export interface UseWhiteboardSyncParams {
-  socket: import("socket.io-client").Socket | null;
+  socket: Socket | null;
   callId: string | null;
   isActive: boolean;
   canSync: boolean;
@@ -118,6 +125,25 @@ export interface UseWhiteboardSyncParams {
   onRemoteDelete: (objectId: ObjectID, version: number) => void;
   onCursorUpdate: (userId: UserID, position: CursorPosition | null, color: string) => void;
   onSyncError?: (error: string) => void;
+}
+
+export type WbAckReason = "stale" | "not_found";
+
+export interface WbAck {
+  success: boolean;
+  applied?: boolean;
+  objectId?: ObjectID;
+  version?: number;
+  reason?: WbAckReason;
+  error?: string;
+}
+
+export interface WhiteboardProviderProps {
+  children: React.ReactNode;
+  socket?: Socket | null;
+  callId?: string | null;
+  canSync?: boolean;
+  onStaleAck?: (ack: WbAck) => void;
 }
 
 export interface WbSnapshotPayload {
