@@ -94,7 +94,7 @@ Coordination & Listeners.
 
 #### Step 8: Create Backend Whiteboard Handler
 
-**File:** `backend/src/api/handlers/whiteboard.handler.js` (new file)
+**File:** `backend/src/sockets/handlers/whiteboard.handler.js`
 
 - Create in-memory Map: `whiteboardStates = new Map<callId, WhiteboardState>()`
 - `WhiteboardState`: `{ objects: Map, userColors: Map, createdAt, lastActivity }`
@@ -105,32 +105,65 @@ Coordination & Listeners.
 
 #### Step 9: Add Cleanup Logic
 
-**File:** `backend/src/api/handlers/whiteboard.handler.js`
+**File:** `backend/src/sockets/handlers/whiteboard.handler.js`
 
 - On call end: start 5-minute grace timer
 - After grace period: delete whiteboard state
 - Add 30-minute hard TTL as safety net
 - Use `setInterval` or call-end event to trigger cleanup
 
-#### Step 10: Create useWhiteboardSync Hook
+#### Step 10: Create useWhiteboardSync Hook (Completed)
 
 **File:** `frontend/src/hooks/whiteboard/useWhiteboardSync.ts` (new file)
 
-- Listen to `wb:snapshot`, `wb:add`, `wb:update`, `wb:delete` events
-- On `wb:snapshot`: call `loadSnapshot()` on canvas
-- On `wb:add`: add remote object to canvas
-- On `wb:update`: update object props on canvas
-- On `wb:delete`: remove object from canvas
-- Emit `wb:join` when whiteboard becomes active
+- Listen to `wb:snapshot`, `wb:add`, `wb:update`, `wb:delete`, `wb:cursor` events
+- Emit `wb:join` when `(socket && callId && isActive && canSync)` becomes true
+- Snapshot-first: buffer incoming ops until snapshot received and `isReadyToApply === true`, then flush
+- Join epochs + retry: avoid applying stale events across callId changes; retry join on snapshot timeout
+- Expose `requestJoin()` for orchestration: change hook signature from returning `void` to returning `{ requestJoin }` so Step 12 can force a re-join on stale/error acks (Completed)
 
-#### Step 11: Wire Sync to Provider
+#### Step 11: Prepare Provider for Sync (State + Outgoing Ops)
 
-**File:** `frontend/src/contexts/whiteboardProvider.tsx`
+**Files:**
 
-- Implement real `emitAdd()`: emit `wb:add` via socket
-- Implement real `emitUpdate()`: emit `wb:update` with version bump
-- Implement real `emitDelete()`: emit `wb:delete`
-- Add throttling for updates (50-100ms during drag)
+- `frontend/src/contexts/whiteboardProvider.tsx`
+- `frontend/src/types/whiteboard.type.ts`
+
+- Types:
+  - Keep `SerializedObject.createdBy?: UserID` optional (server overwrites during normalize)
+  - Add a shared `WbAck` type for `wb:add` / `wb:update` / `wb:delete` acks (`{ success, applied, objectId, version, reason?, error? }`)
+
+- Keep Provider decoupled from call/socket contexts (DI): receive `socket`, `callId`, `canSync` as injected props (optional so dev pages can be local-only)
+- Add "apply" actions for incoming sync (called by the orchestration layer):
+  - `applySnapshot(objects, userColors)`
+  - `applyRemoteAdd(object)`
+  - `applyRemoteUpdate(objectId, patch)`
+  - `applyRemoteDelete(objectId, version)`
+  - `setMyColor(color)`
+- Implement real outgoing actions (optimistic local apply + emit Socket.IO events when `canSync`):
+  - `emitAdd(object)` → `wb:add`
+  - `emitUpdate(objectId, patch)` → bump `version` from local current version, then `wb:update`
+  - `emitDelete(objectId)` → bump `version` from local current version, then `wb:delete`
+- Ack handling (self-heal trigger): if server acks `{ applied: false }` (stale/not_found), notify orchestration layer (e.g. `onStaleAck`) so it can re-join and fetch a fresh snapshot
+- Throttling: deferred for MVP. Current Fabric wiring emits updates on `object:modified` (mouse-up). Implement drag throttling later when wiring `object:moving/scaling/rotating`
+
+#### Step 12: Wire Sync in Whiteboard Container (Orchestration)
+
+**Note:** This step owns the `useWhiteboardSync(...)` call. It should live in the component that has access to `useFabric().isReady` so it can set `isReadyToApply` without prop-drilling back into the Provider.
+
+- Create a small non-UI sync bridge early (before Step 16 exists) so we can test end-to-end sync without UI work (e.g. `WhiteboardSyncBridge` or `useWhiteboardOrchestration`)
+- Call `useWhiteboardSync({ socket, callId, isActive, canSync, isReadyToApply, ...callbacks })`
+- Bridge incoming events into Provider actions:
+  - `onSnapshot` → `applySnapshot`
+  - `onSetMyColor` → `setMyColor`
+  - `onRemoteAdd/update/delete` → `applyRemoteAdd/Update/Delete`
+- Compute `canSync` locally (typically: `Boolean(socket?.connected && callId)`)
+- Implement self-heal by triggering a re-join and reconciling via snapshot:
+  - `useWhiteboardSync` must expose `requestJoin()` for orchestration to call
+  - On any stale/not_found ack (`applied:false`) call `requestJoin()`
+  - If ack returns `{ success:false }` (validation/internal error), do not rollback in MVP; call `requestJoin()` to reconcile
+- `isConnected` semantics in Whiteboard context: treat as "sync-ready" (joined + snapshot received), not `socket.connected`
+- If `emitUpdate/emitDelete` is called for an object missing locally, treat as invariant violation: no-op locally and call `requestJoin()`
 
 ---
 

@@ -13,7 +13,7 @@ export interface SerializedObject {
   id: ObjectID;
   type: WhiteboardObjectType;
   version: number;
-  createdBy: UserID;
+  createdBy?: UserID;
 
   left: number;
   top: number;

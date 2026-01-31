@@ -27,4 +27,10 @@ export default [
       eqeqeq: "error",
     },
   },
+  {
+    files: ["scripts/**/*.{js,mjs,cjs}"],
+    rules: {
+      "n/no-unpublished-import": "off",
+    },
+  },
 ];

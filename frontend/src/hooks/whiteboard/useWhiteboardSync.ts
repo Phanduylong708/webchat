@@ -29,7 +29,7 @@ export function useWhiteboardSync({
   onRemoteDelete,
   onCursorUpdate,
   onSyncError,
-}: UseWhiteboardSyncParams): void {
+}: UseWhiteboardSyncParams): { requestJoin: () => void } {
   const callbacksRef = useRef({
     onSnapshot,
     onSetMyColor,
@@ -285,4 +285,6 @@ export function useWhiteboardSync({
       socket.emit("wb:cursor", { callId, position: null });
     };
   }, [socket, callId, isActive]);
+
+  return { requestJoin };
 }
