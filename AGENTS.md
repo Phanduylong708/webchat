@@ -29,3 +29,13 @@ Before ANY source code modification (create, edit, delete files), you MUST:
 
 - Break big tasks into smaller steps
 - Discuss architecture decisions before coding
+
+## Mindset
+
+- Premature optimization is the root of all evil
+
+### Naming Convention
+
+- Consistency: If you have chosen a word to describe a concept, use it throughout the project.
+- Don't skimp on characters if it reduces clarity. Names should answer the question: What is it? What is it used for? E.g., userdata > data, activeUsers > users > list.
+- For function, prioritize Feature/Intent (Business Logic) over Technical Implementation: findEligibleUsers() > loopThroughArrayAndCheckFlags()

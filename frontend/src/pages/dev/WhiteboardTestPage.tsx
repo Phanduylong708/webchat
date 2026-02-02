@@ -1,8 +1,12 @@
 import { useEffect, useState, useCallback, useRef } from "react";
+import { useSearchParams } from "react-router-dom";
 import { WhiteboardProvider } from "@/contexts/whiteboardProvider";
+import useSocket from "@/hooks/context/useSocket";
 import { useWhiteboard } from "@/hooks/context/useWhiteboard";
 import { useFabric } from "@/hooks/whiteboard/useFabric";
-import type { ToolType, PartialSerializedObject, ObjectPatch } from "@/types/whiteboard.type";
+import { useWhiteboardOrchestration } from "@/hooks/whiteboard/useWhiteboardOrchestration";
+import type { Socket } from "socket.io-client";
+import type { ToolType, PartialSerializedObject, ObjectPatch, SerializedObject, WbAck } from "@/types/whiteboard.type";
 
 interface LogEntry {
   id: number;
@@ -33,40 +37,66 @@ const COLOR_PALETTE = [
   "#6b7280",
 ];
 
-function WhiteboardTestHarness() {
-  const { activeTool, activeColor, setActiveTool, setActiveColor } = useWhiteboard();
+interface WhiteboardTestHarnessProps {
+  socket: Socket | null;
+  callId: string | null;
+  canSync: boolean;
+  registerStaleAckHandler: (handler: (ack?: WbAck) => void) => void;
+}
+
+function WhiteboardTestHarness({ socket, callId, canSync, registerStaleAckHandler }: WhiteboardTestHarnessProps) {
+  const {
+    isActive,
+    objects,
+    activeTool,
+    activeColor,
+    openWhiteboard,
+    setActiveTool,
+    setActiveColor,
+    applySnapshot,
+    applyRemoteAdd,
+    applyRemoteUpdate,
+    applyRemoteDelete,
+    setMyColor,
+    emitAdd,
+    emitUpdate,
+    emitDelete,
+  } = useWhiteboard();
   const [logs, setLogs] = useState<LogEntry[]>([]);
-  const [objectCount, setObjectCount] = useState(0);
   const logIdRef = useRef(0);
+
+  useEffect(() => {
+    openWhiteboard(); // dev harness: keep whiteboard active to exercise join/sync
+  }, [openWhiteboard]);
 
   const addLog = useCallback((type: LogEntry["type"], objectId: string, data?: Record<string, unknown>) => {
     logIdRef.current += 1;
     const newId = logIdRef.current;
     setLogs((logs) => [...logs.slice(-49), { id: newId, type, objectId, data, timestamp: new Date() }]);
-
-    if (type === "add") setObjectCount((c) => c + 1);
-    if (type === "delete") setObjectCount((c) => Math.max(0, c - 1));
   }, []);
 
   const handleAdd = useCallback(
     (object: PartialSerializedObject) => {
       addLog("add", object.id, { type: object.type });
+      emitAdd(object as SerializedObject);
     },
-    [addLog],
+    [addLog, emitAdd],
   );
 
   const handleUpdate = useCallback(
     (objectId: string, patch: ObjectPatch) => {
       addLog("update", objectId, patch as Record<string, unknown>);
+      emitUpdate(objectId, patch);
     },
-    [addLog],
+    [addLog, emitUpdate],
   );
 
   const handleDelete = useCallback(
     (objectId: string) => {
       addLog("delete", objectId);
+      emitDelete(objectId);
     },
-    [addLog],
+    [addLog, emitDelete],
   );
 
   const { canvasCallbackRef, isReady } = useFabric({
@@ -77,6 +107,26 @@ function WhiteboardTestHarness() {
     onDelete: handleDelete,
     setActiveTool,
   });
+
+  const { handleStaleAck } = useWhiteboardOrchestration({
+    socket,
+    callId,
+    isActive,
+    canSync,
+    isReadyToApply: isReady,
+    applySnapshot,
+    setMyColor,
+    applyRemoteAdd,
+    applyRemoteUpdate,
+    applyRemoteDelete,
+    onSyncError: (error) => {
+      console.warn("whiteboard sync error:", error);
+    },
+  });
+
+  useEffect(() => {
+    registerStaleAckHandler(handleStaleAck);
+  }, [registerStaleAckHandler, handleStaleAck]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -142,7 +192,8 @@ function WhiteboardTestHarness() {
           <span>
             Color: <span className="inline-block h-4 w-4 rounded" style={{ backgroundColor: activeColor }} />
           </span>
-          <span>Objects: {objectCount}</span>
+          <span>Synced Objects: {Object.keys(objects).length}</span>
+          <span>Sync: {canSync ? "Enabled" : "Disabled"}</span>
           <span>Canvas: {isReady ? "✓ Ready" : "Loading..."}</span>
         </div>
       </div>
@@ -199,9 +250,28 @@ function WhiteboardTestHarness() {
 }
 
 export default function WhiteboardTestPage() {
+  const { socket, isConnected } = useSocket();
+  const [searchParams] = useSearchParams();
+  const callId = searchParams.get("callId");
+  const canSync = Boolean(isConnected && callId);
+  const staleAckHandlerRef = useRef<(ack?: WbAck) => void>(() => {});
+  const registerStaleAckHandler = useCallback((handler: (ack?: WbAck) => void) => {
+    staleAckHandlerRef.current = handler;
+  }, []);
+
   return (
-    <WhiteboardProvider>
-      <WhiteboardTestHarness />
+    <WhiteboardProvider
+      socket={socket}
+      callId={callId}
+      canSync={canSync}
+      onStaleAck={(ack) => staleAckHandlerRef.current(ack)}
+    >
+      <WhiteboardTestHarness
+        socket={socket}
+        callId={callId}
+        canSync={canSync}
+        registerStaleAckHandler={registerStaleAckHandler}
+      />
     </WhiteboardProvider>
   );
 }
