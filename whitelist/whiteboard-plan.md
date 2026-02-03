@@ -1,171 +1,168 @@
 # Whiteboard Implementation Plan
 
-## Problem Statement
+## 1. Executive Summary
 
-Video calls need a collaborative whiteboard for brainstorming, explaining concepts, and visual collaboration. Currently no whiteboard exists - need to build canvas, real-time sync, and integrate into call UI.
+**Problem:** Video calls need a collaborative whiteboard for brainstorming, explaining concepts, and visual collaboration. Currently no whiteboard exists.
 
-## Solution
+**Solution:** Fabric.js-powered canvas with Socket.IO event-based synchronization using snapshot-first strategy, optimistic UI updates, and version-based LWW conflict resolution.
 
-Build collaborative whiteboard using Fabric.js for canvas, Socket.IO for real-time sync, with in-memory server state. Integrate as stage takeover (like screen share) with split view layout.
+**Current State:**
+- ✅ **Phase 1a (Canvas Foundation):** Complete - Types, Fabric.js lifecycle, tool strategies, serialization
+- ✅ **Phase 1b (Socket Sync):** Complete - Provider, sync hooks, server handler, multi-select fix
+- 🔄 **Phase 1c (UI Components):** Pending - Toolbar, color picker, call layout integration
 
 ---
 
-## Architecture Overview
+## 2. Architecture Snapshot
 
-**Sync Strategy** (Operation-based + Snapshot):
+### Data Flow
 
-- Individual operations (add/update/delete) for real-time feel
-- Full snapshot for late joiners
-- Server stores state in-memory (relay + state store)
-- Per-object versioning with granular LWW for conflicts
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              FRONTEND                                        │
+│                                                                              │
+│  ┌──────────────────┐    ┌─────────────────────┐    ┌──────────────────┐    │
+│  │ WhiteboardProvider│◄───│useWhiteboardOrchestration│◄───│ useWhiteboardSync│    │
+│  │  (Context State)  │    │    (Bridge Layer)   │    │  (Socket I/O)    │    │
+│  │                   │    │                     │    │                  │    │
+│  │ • objects{}       │    │ • handleStaleAck()  │    │ • requestJoin()  │    │
+│  │ • emit*()/apply*()│    │ • requestJoin()     │    │ • bufferOrDispatch│   │
+│  └────────┬──────────┘    └─────────────────────┘    └────────┬─────────┘    │
+│           │                                                    │              │
+│           ▼                                                    │              │
+│  ┌──────────────────┐                                          │              │
+│  │   useCanvasSync  │◄── objects Record<ID, SerializedObject>  │              │
+│  │ (Reconciliation) │                                          │              │
+│  │ • version check  │                                          │              │
+│  │ • skip if grouped│                                          │              │
+│  └────────┬─────────┘                                          │              │
+│           ▼                                                    │              │
+│  ┌──────────────────┐    ┌─────────────────────┐               │              │
+│  │    useFabric     │───▶│   useFabricEvents   │               │              │
+│  │(Canvas Lifecycle)│    │   (Event Router)    │               │              │
+│  └──────────────────┘    └──────────┬──────────┘               │              │
+│                                     ▼                          │              │
+│                          ┌─────────────────────┐               │              │
+│                          │whiteboard.strategies│               │              │
+│                          │   (Tool Logic)      │               │              │
+│                          └──────────────────────┘               │              │
+└─────────────────────────────────────────────────────────────────┼──────────────┘
+                                                                  │
+                                    Socket.IO Events              │
+                    ┌─────────────────────────────────────────────┘
+                    ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                              BACKEND                                         │
+│  whiteboard.handler.js                                                       │
+│  • whiteboardStates: Map<callId, {objects, tombstones, userColors}>         │
+│  • Events: wb:join → wb:snapshot, wb:add/update/delete → broadcast + ACK   │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
 
-**Component Ownership**:
+### Component Ownership
 
-- `WhiteboardProvider`: State management, socket actions
-- `useFabric` hook: Fabric.js canvas lifecycle, drawing logic
-- `useWhiteboardSync` hook: Socket.IO event handling
+| Component | Responsibility |
+|-----------|----------------|
+| `WhiteboardProvider` | Context: `objects`, `userColors`, `activeTool`; exposes `emit*()` and `apply*()` |
+| `useWhiteboardSync` | Socket listeners, join/snapshot flow, pending buffer, reconnect |
+| `useWhiteboardOrchestration` | Bridges provider ↔ sync; exposes `handleStaleAck()` |
+| `useCanvasSync` | Reconciles `objects` → Fabric canvas; version-gated, skips grouped |
+| `useFabric` | Canvas lifecycle (init/dispose), `canvasCallbackRef`, `isReady` |
+| `useFabricEvents` | Event router: tool modes, mouse/keyboard listeners → strategies |
+| `whiteboard.strategies` | Tool logic: shape drag, text editing, eraser, multi-select patch |
+| `whiteboard.handler.js` | Server state, version validation, tombstones, broadcast |
+
+---
+
+## 3. Key Decisions & Implementation Notes
+
+### Provider Dependency Injection
+- Accepts optional `socket`, `callId`, `canSync` props for testability
+- `onStaleAck` callback for parent to intercept version conflicts
+
+### Stale ACK Handling
+- Server returns `applied: false` → orchestration calls `requestJoin()` to re-fetch snapshot
+- Auto retry with backoff (max 3 retries, 5s timeout)
+
+### Snapshot-First, Optimistic UI
+- `wb:join` → server sends `wb:snapshot` with full state
+- Local edits apply immediately, then emit to server
+- Remote events buffered until snapshot received
+
+### Multi-Select Fix (`getTransformPatch`)
+Objects in `ActiveSelection` have relative coords. Fix computes world coords:
+```typescript
+const center = obj.getCenterPoint();
+const totalAngle = obj.getTotalAngle();
+const totalScale = obj.getObjectScaling();
+// Manual rotation: derive top-left from center
+left = center.x + (-halfW * cos + halfH * sin);
+top = center.y + (-halfW * sin - halfH * cos);
+```
+
+---
+
+## 4. Critical Files Map
+
+| File | Purpose | Key Exports |
+|------|---------|-------------|
+| `whiteboard.type.ts` | TypeScript types | `SerializedObject`, `ObjectPatch`, `ToolType`, `WbAck` |
+| `whiteboard.config.ts` | Constants | `CANVAS_WIDTH/HEIGHT`, `DEFAULT_STROKE_WIDTH`, `CANVAS_OPTIONS` |
+| `whiteboard.utils.ts` | Serialization | `serializePath/Shape/Textbox`, `deserializeToFabric`, `getTransformPatch` |
+| `whiteboard.strategies.ts` | Tool logic | `handleShape*`, `handleText*`, `handleEraserClick`, `handleObjectModified` |
+| `useFabric.ts` | Canvas lifecycle | `useFabric()` → `{canvas, isReady, canvasCallbackRef}` |
+| `useFabricEvents.ts` | Event routing | `useFabricEvents()` - attaches listeners per tool |
+| `useWhiteboardSync.ts` | Socket sync | `useWhiteboardSync()` → `{requestJoin}` |
+| `useWhiteboardOrchestration.ts` | Bridge | `useWhiteboardOrchestration()` → `{handleStaleAck}` |
+| `useCanvasSync.ts` | Reconciliation | `useCanvasSync(canvas, objects, isReady)` |
+| `whiteboardProvider.tsx` | Context | `emit*`, `apply*`, `applySnapshot` |
+| `whiteboard.handler.js` | Server | `handleWhiteboard()`, `whiteboardStates` |
+
+---
+
+## 5. Dev Testing Notes
+
+### Using `/dev/whiteboard`
+1. Start backend with socket server
+2. Create/join a call to get valid `callId`
+3. Navigate to: `/dev/whiteboard?callId=<your-call-id>`
+4. Verify: "Sync: Enabled" and "Canvas: ✓ Ready"
+
+### Requirements
+- Active socket connection (must be call participant)
+- Without `callId`: local-only mode (no sync)
+
+### Tool Hotkeys
+| Key | Tool |
+|-----|------|
+| S | Select |
+| P | Pen |
+| R | Rectangle |
+| E | Ellipse |
+| L | Line |
+| T | Text |
+| X | Eraser |
+| Del | Delete selected |
+
+---
+
+## 6. Known Limitations
+
+| Issue | Description |
+|-------|-------------|
+| Skip update when in ActiveSelection | `useCanvasSync` skips remote updates for grouped objects |
+| No skew/flip handling | `getTransformPatch` doesn't handle skewX/Y or flipX/Y |
+| Path geometry immutable | Path data can't be updated after creation |
+
+### Phase 2 Items (Pending)
+- **2a:** Remote cursors with user colors
+- **2b:** Undo/redo (stubs exist in provider)
+- **2c:** Zoom/pan controls
+- **2d:** Database persistence (currently in-memory with TTL)
 
 ---
 
 ## Implementation Phases
-
-### Phase 1a: Canvas Foundation [x]
-
-> <NOTE>
-> **Consolidated Completion**: This phase is finished. The architecture was implemented using a decoupled approach (Hooks + Orchestration + Strategies) instead of a single bloated hook.
-> **AGENT DIRECTIVE**: Prioritize reading the **real source code** over these plan summaries.
-> </NOTE>
-
-#### Core Architecture Implemented:
-
-- **Types & Interfaces**: Full type safety for tools, objects, and sync patches.
-- **Provider & Context**: State management using optimized `Record` structures for objects and colors.
-- **Hook Layering**:
-  - `useFabric` (Initialization)
-  - `useFabricEvents` (Orchestration)
-  - `Strategies` (Tool-specific logic)
-- **Serialization Helpers**: Clean conversion between Fabric.js objects and simple JSON-friendly types.
-
----
-
-### Codebase Reference & Navigation
-
-Use this map to navigate the current implementation. **Always view the content of these files before making changes/move to next phase.**
-
-#### [whiteboard.type.ts](../frontend/src/types/whiteboard.type.ts)
-
-Core types & interfaces.
-
-- `SerializedObject`, `ObjectPatch`, `WhiteboardContextValue`
-
-#### [whiteboard.config.ts](../frontend/src/hooks/whiteboard/utils/whiteboard.config.ts)
-
-Hardcoded constants & config.
-
-- `CANVAS_OPTIONS`, `INITIAL_SHAPE_STATE`, `DEFAULT_STROKE_WIDTH`
-
-#### [whiteboard.utils.ts](../frontend/src/hooks/whiteboard/utils/whiteboard.utils.ts)
-
-Pure helper functions.
-
-- `serializeShape`, `createShapeObject`, `getTransformPatch`
-
-#### [whiteboard.strategies.ts](../frontend/src/hooks/whiteboard/whiteboard.strategies.ts)
-
-Tool-specific business logic.
-
-- `handleShapeMouseMove`, `handleTextMouseDown`, `handleKeyDown`
-
-#### [useFabric.ts](../frontend/src/hooks/whiteboard/useFabric.ts)
-
-Canvas lifecycle & initialization.
-
-- `useFabric`, `canvasCallbackRef`
-
-#### [useFabricEvents.ts](../frontend/src/hooks/whiteboard/useFabricEvents.ts)
-
-Coordination & Listeners.
-
-- `useFabricEvents`, `handlePathCreated`
-
----
-
-### Phase 1b: Socket Sync Layer
-
-#### Step 8: Create Backend Whiteboard Handler
-
-**File:** `backend/src/sockets/handlers/whiteboard.handler.js`
-
-- Create in-memory Map: `whiteboardStates = new Map<callId, WhiteboardState>()`
-- `WhiteboardState`: `{ objects: Map, userColors: Map, createdAt, lastActivity }`
-- Handle `wb:join`: assign user color, emit `wb:snapshot`
-- Handle `wb:add`: store object, broadcast to room (exclude sender)
-- Handle `wb:update`: apply patch with version check, broadcast
-- Handle `wb:delete`: remove object, broadcast
-
-#### Step 9: Add Cleanup Logic
-
-**File:** `backend/src/sockets/handlers/whiteboard.handler.js`
-
-- On call end: start 5-minute grace timer
-- After grace period: delete whiteboard state
-- Add 30-minute hard TTL as safety net
-- Use `setInterval` or call-end event to trigger cleanup
-
-#### Step 10: Create useWhiteboardSync Hook (Completed)
-
-**File:** `frontend/src/hooks/whiteboard/useWhiteboardSync.ts` (new file)
-
-- Listen to `wb:snapshot`, `wb:add`, `wb:update`, `wb:delete`, `wb:cursor` events
-- Emit `wb:join` when `(socket && callId && isActive && canSync)` becomes true
-- Snapshot-first: buffer incoming ops until snapshot received and `isReadyToApply === true`, then flush
-- Join epochs + retry: avoid applying stale events across callId changes; retry join on snapshot timeout
-- Expose `requestJoin()` for orchestration: change hook signature from returning `void` to returning `{ requestJoin }` so Step 12 can force a re-join on stale/error acks (Completed)
-
-#### Step 11: Prepare Provider for Sync (State + Outgoing Ops)
-
-**Files:**
-
-- `frontend/src/contexts/whiteboardProvider.tsx`
-- `frontend/src/types/whiteboard.type.ts`
-
-- Types:
-  - Keep `SerializedObject.createdBy?: UserID` optional (server overwrites during normalize)
-  - Add a shared `WbAck` type for `wb:add` / `wb:update` / `wb:delete` acks (`{ success, applied, objectId, version, reason?, error? }`)
-
-- Keep Provider decoupled from call/socket contexts (DI): receive `socket`, `callId`, `canSync` as injected props (optional so dev pages can be local-only)
-- Add "apply" actions for incoming sync (called by the orchestration layer):
-  - `applySnapshot(objects, userColors)`
-  - `applyRemoteAdd(object)`
-  - `applyRemoteUpdate(objectId, patch)`
-  - `applyRemoteDelete(objectId, version)`
-  - `setMyColor(color)`
-- Implement real outgoing actions (optimistic local apply + emit Socket.IO events when `canSync`):
-  - `emitAdd(object)` → `wb:add`
-  - `emitUpdate(objectId, patch)` → bump `version` from local current version, then `wb:update`
-  - `emitDelete(objectId)` → bump `version` from local current version, then `wb:delete`
-- Ack handling (self-heal trigger): if server acks `{ applied: false }` (stale/not_found), notify orchestration layer (e.g. `onStaleAck`) so it can re-join and fetch a fresh snapshot
-- Throttling: deferred for MVP. Current Fabric wiring emits updates on `object:modified` (mouse-up). Implement drag throttling later when wiring `object:moving/scaling/rotating`
-
-#### Step 12: Wire Sync in Whiteboard Container (Orchestration)
-
-**Note:** This step owns the `useWhiteboardSync(...)` call. It should live in the component that has access to `useFabric().isReady` so it can set `isReadyToApply` without prop-drilling back into the Provider.
-
-- Create a small non-UI sync bridge early (before Step 16 exists) so we can test end-to-end sync without UI work (e.g. `WhiteboardSyncBridge` or `useWhiteboardOrchestration`)
-- Call `useWhiteboardSync({ socket, callId, isActive, canSync, isReadyToApply, ...callbacks })`
-- Bridge incoming events into Provider actions:
-  - `onSnapshot` → `applySnapshot`
-  - `onSetMyColor` → `setMyColor`
-  - `onRemoteAdd/update/delete` → `applyRemoteAdd/Update/Delete`
-- Compute `canSync` locally (typically: `Boolean(socket?.connected && callId)`)
-- Implement self-heal by triggering a re-join and reconciling via snapshot:
-  - `useWhiteboardSync` must expose `requestJoin()` for orchestration to call
-  - On any stale/not_found ack (`applied:false`) call `requestJoin()`
-  - If ack returns `{ success:false }` (validation/internal error), do not rollback in MVP; call `requestJoin()` to reconcile
-- `isConnected` semantics in Whiteboard context: treat as "sync-ready" (joined + snapshot received), not `socket.connected`
-- If `emitUpdate/emitDelete` is called for an object missing locally, treat as invariant violation: no-op locally and call `requestJoin()`
-
----
 
 ### Phase 1c: UI Components
 
