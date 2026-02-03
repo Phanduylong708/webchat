@@ -196,6 +196,8 @@ function handleWhiteboard(io, socket) {
         return maybeAck(callback, { success: false, error: guard.error });
       }
 
+      socket.join(getCallRoom(callId));
+
       const callIds = socket.data.whiteboardCallIds ?? new Set();
       callIds.add(callId);
       socket.data.whiteboardCallIds = callIds;

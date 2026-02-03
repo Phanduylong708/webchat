@@ -5,6 +5,7 @@ import useSocket from "@/hooks/context/useSocket";
 import { useWhiteboard } from "@/hooks/context/useWhiteboard";
 import { useFabric } from "@/hooks/whiteboard/useFabric";
 import { useWhiteboardOrchestration } from "@/hooks/whiteboard/useWhiteboardOrchestration";
+import { useCanvasSync } from "@/hooks/whiteboard/useCanvasSync";
 import type { Socket } from "socket.io-client";
 import type { ToolType, PartialSerializedObject, ObjectPatch, SerializedObject, WbAck } from "@/types/whiteboard.type";
 
@@ -63,6 +64,7 @@ function WhiteboardTestHarness({ socket, callId, canSync, registerStaleAckHandle
     emitDelete,
   } = useWhiteboard();
   const [logs, setLogs] = useState<LogEntry[]>([]);
+  const [isLogPanelOpen, setIsLogPanelOpen] = useState(false);
   const logIdRef = useRef(0);
 
   useEffect(() => {
@@ -99,7 +101,7 @@ function WhiteboardTestHarness({ socket, callId, canSync, registerStaleAckHandle
     [addLog, emitDelete],
   );
 
-  const { canvasCallbackRef, isReady } = useFabric({
+  const { canvas, canvasCallbackRef, isReady } = useFabric({
     activeTool,
     activeColor,
     onAdd: handleAdd,
@@ -107,6 +109,8 @@ function WhiteboardTestHarness({ socket, callId, canSync, registerStaleAckHandle
     onDelete: handleDelete,
     setActiveTool,
   });
+
+  useCanvasSync(canvas.current, objects, isReady);
 
   const { handleStaleAck } = useWhiteboardOrchestration({
     socket,
@@ -198,52 +202,69 @@ function WhiteboardTestHarness({ socket, callId, canSync, registerStaleAckHandle
         </div>
       </div>
 
-      {/* Log Panel */}
-      <div className="flex w-80 flex-col bg-gray-900 text-sm text-gray-300">
-        <div className="flex items-center justify-between border-b border-gray-700 px-3 py-2">
-          <span className="font-semibold">Event Log ({logs.length})</span>
-          <button onClick={clearLogs} className="rounded bg-gray-700 px-2 py-1 text-xs hover:bg-gray-600">
-            Clear
-          </button>
-        </div>
-        <div className="flex-1 overflow-y-auto p-2 font-mono text-xs">
-          {logs.length === 0 ? (
-            <div className="py-4 text-center text-gray-500">No events yet</div>
-          ) : (
-            logs
-              .slice()
-              .reverse()
-              .map((log) => (
-                <div key={log.id} className="mb-2 rounded bg-gray-800 p-2">
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={`rounded px-1.5 py-0.5 text-xs font-bold ${
-                        log.type === "add"
-                          ? "bg-green-600"
-                          : log.type === "update"
-                            ? "bg-yellow-600"
-                            : "bg-red-600"
-                      }`}
-                    >
-                      {log.type.toUpperCase()}
-                    </span>
-                    <span className="text-gray-400">{log.objectId.slice(0, 8)}...</span>
-                  </div>
-                  {log.data && (
-                    <pre className="mt-1 text-gray-500">{String(JSON.stringify(log.data, null, 2))}</pre>
-                  )}
-                </div>
-              ))
-          )}
-        </div>
+      {/* Log Panel - Collapsible */}
+      <div
+        className={`flex flex-col bg-gray-900 text-sm text-gray-300 transition-all duration-200 ${
+          isLogPanelOpen ? "w-80" : "w-10"
+        }`}
+      >
+        {/* Toggle Button */}
+        <button
+          onClick={() => setIsLogPanelOpen(!isLogPanelOpen)}
+          className="flex h-10 items-center justify-center border-b border-gray-700 hover:bg-gray-800"
+          title={isLogPanelOpen ? "Collapse" : "Expand Event Log"}
+        >
+          <span className="text-lg">{isLogPanelOpen ? "»" : "«"}</span>
+        </button>
 
-        {/* Keyboard Shortcuts Help */}
-        <div className="border-t border-gray-700 p-3 text-xs text-gray-500">
-          <div className="font-semibold text-gray-400">Shortcuts:</div>
-          <div>S=Select P=Pen R=Rect E=Ellipse</div>
-          <div>L=Line T=Text X=Eraser</div>
-          <div>Del/Backspace = Delete selected</div>
-        </div>
+        {isLogPanelOpen && (
+          <>
+            <div className="flex items-center justify-between border-b border-gray-700 px-3 py-2">
+              <span className="font-semibold">Event Log ({logs.length})</span>
+              <button onClick={clearLogs} className="rounded bg-gray-700 px-2 py-1 text-xs hover:bg-gray-600">
+                Clear
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-2 font-mono text-xs">
+              {logs.length === 0 ? (
+                <div className="py-4 text-center text-gray-500">No events yet</div>
+              ) : (
+                logs
+                  .slice()
+                  .reverse()
+                  .map((log) => (
+                    <div key={log.id} className="mb-2 rounded bg-gray-800 p-2">
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`rounded px-1.5 py-0.5 text-xs font-bold ${
+                            log.type === "add"
+                              ? "bg-green-600"
+                              : log.type === "update"
+                                ? "bg-yellow-600"
+                                : "bg-red-600"
+                          }`}
+                        >
+                          {log.type.toUpperCase()}
+                        </span>
+                        <span className="text-gray-400">{log.objectId.slice(0, 8)}...</span>
+                      </div>
+                      {log.data && (
+                        <pre className="mt-1 text-gray-500">{String(JSON.stringify(log.data, null, 2))}</pre>
+                      )}
+                    </div>
+                  ))
+              )}
+            </div>
+
+            {/* Keyboard Shortcuts Help */}
+            <div className="border-t border-gray-700 p-3 text-xs text-gray-500">
+              <div className="font-semibold text-gray-400">Shortcuts:</div>
+              <div>S=Select P=Pen R=Rect E=Ellipse</div>
+              <div>L=Line T=Text X=Eraser</div>
+              <div>Del/Backspace = Delete selected</div>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

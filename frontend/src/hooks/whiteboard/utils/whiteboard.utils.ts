@@ -1,5 +1,5 @@
 import * as fabric from "fabric";
-import type { PartialSerializedObject, ShapeToolType, ObjectPatch } from "@/types/whiteboard.type";
+import type { PartialSerializedObject, ShapeToolType, ObjectPatch, SerializedObject } from "@/types/whiteboard.type";
 import { DEFAULT_STROKE_WIDTH, DEFAULT_FONT_SIZE, DEFAULT_FONT_FAMILY, DEFAULT_TEXT_WIDTH } from "./whiteboard.config";
 
 export function serializePath(path: fabric.Path): PartialSerializedObject {
@@ -105,6 +105,8 @@ export function createLine(
     strokeWidth: DEFAULT_STROKE_WIDTH,
     selectable: false,
     evented: false,
+    originX: "left",
+    originY: "top",
   });
 }
 
@@ -137,6 +139,8 @@ export function createTextbox(x: number, y: number, color: string): fabric.Textb
     editable: true,
     selectable: true,
     evented: true,
+    originX: "left",
+    originY: "top",
   });
 }
 
@@ -165,16 +169,112 @@ export function getObjectId(obj: fabric.FabricObject): string | undefined {
 }
 
 export function getTransformPatch(obj: fabric.FabricObject): ObjectPatch {
-  const matrix = obj.calcTransformMatrix();
-  const transform = fabric.util.qrDecompose(matrix);
-  
+  const group = (obj as fabric.FabricObject & { group?: fabric.Group }).group;
+
+  let left: number;
+  let top: number;
+  let angle: number;
+  let scaleX: number;
+  let scaleY: number;
+
+  if (group) {
+    const center = obj.getCenterPoint();
+    const totalAngle = obj.getTotalAngle();
+    const totalScale = obj.getObjectScaling();
+
+    const width = obj.width ?? 0;
+    const height = obj.height ?? 0;
+    const halfW = (width * totalScale.x) / 2;
+    const halfH = (height * totalScale.y) / 2;
+
+    // Calculate top-left position by rotating offset from center
+    // translateToOriginPoint uses local angle, but we need total angle
+    const angleRad = (totalAngle * Math.PI) / 180;
+    const cos = Math.cos(angleRad);
+    const sin = Math.sin(angleRad);
+    left = center.x + (-halfW * cos + halfH * sin);
+    top = center.y + (-halfW * sin - halfH * cos);
+    angle = totalAngle;
+    scaleX = totalScale.x;
+    scaleY = totalScale.y;
+  } else {
+    left = obj.left ?? 0;
+    top = obj.top ?? 0;
+    angle = obj.angle ?? 0;
+    scaleX = obj.scaleX ?? 1;
+    scaleY = obj.scaleY ?? 1;
+  }
+
   return {
-    left: transform.translateX,
-    top: transform.translateY,
-    angle: transform.angle,
-    scaleX: transform.scaleX,
-    scaleY: transform.scaleY,
+    left,
+    top,
+    angle,
+    scaleX,
+    scaleY,
     width: obj.width,
     height: obj.height,
   };
+}
+
+export function deserializeToFabric(obj: SerializedObject): fabric.FabricObject {
+  const commonProps = {
+    left: obj.left ?? 0,
+    top: obj.top ?? 0,
+    angle: obj.angle ?? 0,
+    scaleX: obj.scaleX ?? 1,
+    scaleY: obj.scaleY ?? 1,
+    fill: obj.fill ?? "",
+    stroke: obj.stroke ?? "#000000",
+    strokeWidth: obj.strokeWidth ?? DEFAULT_STROKE_WIDTH,
+    opacity: obj.opacity ?? 1,
+    selectable: true,
+    evented: true,
+    originX: "left" as const,
+    originY: "top" as const,
+  };
+
+  let fabricObj: fabric.FabricObject;
+
+  switch (obj.type) {
+    case "rect":
+      fabricObj = new fabric.Rect({
+        ...commonProps,
+        width: obj.width ?? 0,
+        height: obj.height ?? 0,
+      });
+      break;
+    case "ellipse":
+      fabricObj = new fabric.Ellipse({
+        ...commonProps,
+        rx: (obj.width ?? 0) / 2,
+        ry: (obj.height ?? 0) / 2,
+      });
+      break;
+    case "line":
+      fabricObj = new fabric.Line(
+        [0, 0, obj.width ?? 0, obj.height ?? 0],
+        commonProps
+      );
+      break;
+    case "path":
+      fabricObj = new fabric.Path(obj.path, {
+        ...commonProps,
+        width: obj.width,
+        height: obj.height,
+      });
+      break;
+    case "textbox":
+      fabricObj = new fabric.Textbox(obj.text ?? "", {
+        ...commonProps,
+        width: obj.width ?? DEFAULT_TEXT_WIDTH,
+        fontSize: DEFAULT_FONT_SIZE,
+        fontFamily: DEFAULT_FONT_FAMILY,
+      });
+      break;
+    default:
+      throw new Error(`Unknown object type: ${obj.type}`);
+  }
+
+  (fabricObj as fabric.FabricObject & { objectId: string }).objectId = obj.id;
+  return fabricObj;
 }

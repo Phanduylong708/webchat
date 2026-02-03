@@ -70,10 +70,19 @@ export function useFabricEvents({
     if (!canvas || !isReady) return;
 
     const handlePathCreated = (e: { path: fabric.Path }) => {
-      // Re-use logic from strategies if needed, or keep here if simple
-      // Importing directly for now to keep flow clear
       const path = e.path as fabric.Path;
       if (!path) return;
+
+      // Standardize origin to left/top (Fabric defaults to center)
+      const currentPos = path.getPointByOrigin("left", "top");
+      path.set({
+        originX: "left",
+        originY: "top",
+        left: currentPos.x,
+        top: currentPos.y,
+      });
+      path.setCoords();
+
       const objectId = crypto.randomUUID();
       const pathWithId = path as fabric.Path & { objectId: string; contentHint?: string };
       pathWithId.objectId = objectId;
