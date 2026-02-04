@@ -6,6 +6,7 @@ import { useWhiteboard } from "@/hooks/context/useWhiteboard";
 import { useFabric } from "@/hooks/whiteboard/useFabric";
 import { useWhiteboardOrchestration } from "@/hooks/whiteboard/useWhiteboardOrchestration";
 import { useCanvasSync } from "@/hooks/whiteboard/useCanvasSync";
+import { Whiteboard } from "@/components/whiteboard/Whiteboard";
 import type { Socket } from "socket.io-client";
 import type { ToolType, PartialSerializedObject, ObjectPatch, SerializedObject, WbAck } from "@/types/whiteboard.type";
 
@@ -270,10 +271,49 @@ function WhiteboardTestHarness({ socket, callId, canSync, registerStaleAckHandle
   );
 }
 
+interface WhiteboardUIMountProps {
+  socket: Socket | null;
+  callId: string | null;
+  canSync: boolean;
+  registerStaleAckHandler: (handler: (ack?: WbAck) => void) => void;
+}
+
+function WhiteboardUIMount({ socket, callId, canSync, registerStaleAckHandler }: WhiteboardUIMountProps) {
+  const { isActive, openWhiteboard } = useWhiteboard();
+
+  useEffect(() => {
+    openWhiteboard();
+  }, [openWhiteboard]);
+
+  return (
+    <div className="h-screen w-screen overflow-hidden bg-zinc-950">
+      {isActive ? (
+        <Whiteboard
+          socket={socket}
+          callId={callId}
+          canSync={canSync}
+          registerStaleAckHandler={registerStaleAckHandler}
+        />
+      ) : (
+        <div className="flex h-full w-full items-center justify-center">
+          <button
+            type="button"
+            onClick={openWhiteboard}
+            className="rounded-lg bg-blue-600 px-6 py-3 text-white hover:bg-blue-700 transition-colors"
+          >
+            Open Whiteboard
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function WhiteboardTestPage() {
   const { socket, isConnected } = useSocket();
   const [searchParams] = useSearchParams();
   const callId = searchParams.get("callId");
+  const isUIMode = searchParams.get("ui") === "1";
   const canSync = Boolean(isConnected && callId);
   const staleAckHandlerRef = useRef<(ack?: WbAck) => void>(() => {});
   const registerStaleAckHandler = useCallback((handler: (ack?: WbAck) => void) => {
@@ -287,12 +327,21 @@ export default function WhiteboardTestPage() {
       canSync={canSync}
       onStaleAck={(ack) => staleAckHandlerRef.current(ack)}
     >
-      <WhiteboardTestHarness
-        socket={socket}
-        callId={callId}
-        canSync={canSync}
-        registerStaleAckHandler={registerStaleAckHandler}
-      />
+      {isUIMode ? (
+        <WhiteboardUIMount
+          socket={socket}
+          callId={callId}
+          canSync={canSync}
+          registerStaleAckHandler={registerStaleAckHandler}
+        />
+      ) : (
+        <WhiteboardTestHarness
+          socket={socket}
+          callId={callId}
+          canSync={canSync}
+          registerStaleAckHandler={registerStaleAckHandler}
+        />
+      )}
     </WhiteboardProvider>
   );
 }

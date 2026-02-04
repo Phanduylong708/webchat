@@ -9,7 +9,7 @@ interface WhiteboardCanvasProps {
 
 export function WhiteboardCanvas({ canvasCallbackRef, isReady, className }: WhiteboardCanvasProps) {
   return (
-    <div className={cn("relative flex-1 min-h-0 overflow-auto", className)}>
+    <div className={cn("relative h-full w-full overflow-auto min-h-0", className)}>
       <div className="flex items-start justify-center p-4">
         <div className="relative inline-block border border-zinc-300 shadow-lg bg-white">
           <canvas
