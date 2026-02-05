@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useCall } from "@/hooks/context/useCall";
 import { useAuth } from "@/hooks/context/useAuth";
@@ -13,10 +13,13 @@ import { PrivateCallLayout } from "./Private";
 import { GroupCallLayout } from "./Group";
 import type { User } from "@/types/chat.type";
 import type { ConversationType, CallParticipant, CallStatus } from "@/types/call.type";
+import type { WbAck } from "@/types/whiteboard.type";
 import { MediaProvider } from "@/contexts/mediaProvider";
 import { RTCProvider } from "@/contexts/rtcProvider";
+import { WhiteboardProvider } from "@/contexts/whiteboardProvider";
 import { useMedia } from "@/hooks/context/useMedia";
 import { useRTC } from "@/hooks/context/useRTC";
+import { useWhiteboard } from "@/hooks/context/useWhiteboard";
 import { useRTCSignaling } from "@/hooks/sockets/useRTCSignaling";
 import { useRTCPeerLifecycle } from "@/hooks/rtc/useRTCPeerLifecycle";
 import { useScreenShareRTC } from "@/hooks/rtc/useScreenShareRTC";
@@ -24,6 +27,7 @@ import { useEmitMediaState } from "@/hooks/sockets/useEmitMediaState";
 import { useStagePresenter } from "@/hooks/call/useStagePresenter";
 import MediaVideo from "@/components/call/MediaVideo";
 import { StageLayout } from "@/components/call/StageLayout";
+import { Whiteboard } from "@/components/whiteboard/Whiteboard";
 
 function AutoStartMedia({ enabled }: { enabled: boolean }): React.JSX.Element | null {
   const { startUserMedia, initError, userStream, isStartingUserMedia, isManagerReady } = useMedia();
@@ -195,8 +199,15 @@ function ActiveCallContent({
   setShowParticipants,
 }: ActiveCallContentProps): React.JSX.Element {
   const { userStream, screenStream, isVideoMuted, isAudioMuted, videoSource, stopScreenShare } = useMedia();
-  const { socket } = useSocket();
+  const { socket, isConnected } = useSocket();
   const { getManager, isManagerReady, isLocalStreamSynced, getRemoteStream, remoteStreamsVersion } = useRTC();
+
+  // Whiteboard stale ACK bridge (pattern from dev harness)
+  const staleAckHandlerRef = useRef<(ack?: WbAck) => void>(() => {});
+  const registerStaleAckHandler = useCallback((handler: (ack?: WbAck) => void) => {
+    staleAckHandlerRef.current = handler;
+  }, []);
+  const canSync = Boolean(isConnected && callId);
 
   // Emit local media state to server (after join, and on changes)
   useEmitMediaState({
@@ -252,47 +263,146 @@ function ActiveCallContent({
   });
 
   return (
-    <>
+    <WhiteboardProvider
+      socket={socket}
+      callId={callId}
+      canSync={canSync}
+      onStaleAck={(ack) => staleAckHandlerRef.current(ack)}
+    >
       <AutoStartMedia enabled={true} />
-      {/* Force bg-zinc-950 to ensure it's always dark/black regardless of theme */}
-      <div className="relative h-screen w-full bg-zinc-950 overflow-hidden text-white">
-        {/* LAYER 1: Main Content */}
-        <div className="absolute inset-0 z-0">
-          {isStageMode ? (
-            <StageLayout
-              presenterStream={presenterStream}
-              presenterId={presenterId}
-              isPresenterLocal={isPresenterLocal}
-              tiles={stageTiles}
-            />
-          ) : conversationType === "PRIVATE" ? (
-            <PrivateCallLayout
-              remoteUser={remoteUser}
-              participants={participants}
-              currentUserId={currentUserId}
-              status={status}
-            />
-          ) : (
-            <GroupCallLayout
-              participants={participants}
-              currentUserId={currentUserId}
-              status={status}
-              participantsOpen={showParticipants}
-              onCloseParticipants={() => setShowParticipants(false)}
-              showSelfVideo={showSelfVideo}
-              selfStream={userStream}
-              selfAudioMuted={isAudioMuted}
-              selfVideoMuted={isVideoMuted}
-            />
-          )}
-        </div>
+      <CallStage
+        callId={callId}
+        socket={socket}
+        canSync={canSync}
+        registerStaleAckHandler={registerStaleAckHandler}
+        conversationType={conversationType}
+        isStageMode={isStageMode}
+        presenterStream={presenterStream}
+        presenterId={presenterId}
+        isPresenterLocal={isPresenterLocal}
+        stageTiles={stageTiles}
+        remoteUser={remoteUser}
+        participants={participants}
+        currentUserId={currentUserId}
+        status={status}
+        showParticipants={showParticipants}
+        setShowParticipants={setShowParticipants}
+        showSelfVideo={showSelfVideo}
+        userStream={userStream}
+        isAudioMuted={isAudioMuted}
+        isVideoMuted={isVideoMuted}
+      />
+    </WhiteboardProvider>
+  );
+}
 
-        {/* LAYER 2: PiP (Local Video) - Top Right, hidden in stage mode */}
-        {conversationType === "PRIVATE" && !isStageMode && <LocalPiP />}
+interface CallStageProps {
+  callId: string | null;
+  socket: ReturnType<typeof useSocket>["socket"];
+  canSync: boolean;
+  registerStaleAckHandler: (handler: (ack?: WbAck) => void) => void;
+  conversationType: ConversationType | null;
+  isStageMode: boolean;
+  presenterStream: MediaStream | null;
+  presenterId: number | null;
+  isPresenterLocal: boolean;
+  stageTiles: import("@/components/call/StageLayout").StageLayoutTile[];
+  remoteUser: User | null;
+  participants: CallParticipant[];
+  currentUserId: number | null;
+  status: CallStatus;
+  showParticipants: boolean;
+  setShowParticipants: React.Dispatch<React.SetStateAction<boolean>>;
+  showSelfVideo: boolean;
+  userStream: MediaStream | null;
+  isAudioMuted: boolean;
+  isVideoMuted: boolean;
+}
 
-        {/* LAYER 3: Controls - Bottom Center */}
-        <CallControls onToggleParticipants={() => setShowParticipants((v) => !v)} />
+function CallStage({
+  callId,
+  socket,
+  canSync,
+  registerStaleAckHandler,
+  conversationType,
+  isStageMode,
+  presenterStream,
+  presenterId,
+  isPresenterLocal,
+  stageTiles,
+  remoteUser,
+  participants,
+  currentUserId,
+  status,
+  showParticipants,
+  setShowParticipants,
+  showSelfVideo,
+  userStream,
+  isAudioMuted,
+  isVideoMuted,
+}: CallStageProps): React.JSX.Element {
+  const { isActive: isWhiteboardActive, closeWhiteboard } = useWhiteboard();
+
+  // Auto-close whiteboard when screen share starts (screen share wins)
+  useEffect(() => {
+    if (isStageMode && isWhiteboardActive) {
+      closeWhiteboard();
+    }
+  }, [isStageMode, isWhiteboardActive, closeWhiteboard]);
+
+  return (
+    <div className="relative h-screen w-full bg-zinc-950 overflow-hidden text-white">
+      {/* LAYER 1: Main Content */}
+      <div className="absolute inset-0 z-0">
+        {isStageMode ? (
+          <StageLayout
+            presenterStream={presenterStream}
+            presenterId={presenterId}
+            isPresenterLocal={isPresenterLocal}
+            tiles={stageTiles}
+          />
+        ) : isWhiteboardActive ? (
+          <StageLayout
+            presenterStream={null}
+            presenterId={null}
+            isPresenterLocal={false}
+            tiles={stageTiles}
+            stageContent={
+              <Whiteboard
+                socket={socket}
+                callId={callId}
+                canSync={canSync}
+                registerStaleAckHandler={registerStaleAckHandler}
+              />
+            }
+          />
+        ) : conversationType === "PRIVATE" ? (
+          <PrivateCallLayout
+            remoteUser={remoteUser}
+            participants={participants}
+            currentUserId={currentUserId}
+            status={status}
+          />
+        ) : (
+          <GroupCallLayout
+            participants={participants}
+            currentUserId={currentUserId}
+            status={status}
+            participantsOpen={showParticipants}
+            onCloseParticipants={() => setShowParticipants(false)}
+            showSelfVideo={showSelfVideo}
+            selfStream={userStream}
+            selfAudioMuted={isAudioMuted}
+            selfVideoMuted={isVideoMuted}
+          />
+        )}
       </div>
-    </>
+
+      {/* LAYER 2: PiP (Local Video) - Top Right, hidden in stage mode or whiteboard */}
+      {conversationType === "PRIVATE" && !isStageMode && !isWhiteboardActive && <LocalPiP />}
+
+      {/* LAYER 3: Controls - Bottom Center */}
+      <CallControls onToggleParticipants={() => setShowParticipants((v) => !v)} />
+    </div>
   );
 }

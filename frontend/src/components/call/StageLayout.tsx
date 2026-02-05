@@ -20,6 +20,7 @@ export interface StageLayoutProps {
   presenterId: number | null;
   isPresenterLocal: boolean;
   tiles: StageLayoutTile[];
+  stageContent?: React.ReactNode;
 }
 
 function StageLayoutComponent({
@@ -27,6 +28,7 @@ function StageLayoutComponent({
   presenterId,
   isPresenterLocal,
   tiles,
+  stageContent,
 }: StageLayoutProps): React.JSX.Element {
   const presenterTile = tiles.find((t) => t.participantId === presenterId);
   const presenterName = presenterTile?.displayName ?? "Presenter";
@@ -35,7 +37,9 @@ function StageLayoutComponent({
     <div className="h-full w-full flex flex-col lg:flex-row bg-zinc-950">
       {/* Stage - main presenter view */}
       <main className="relative flex-1 min-h-0 bg-black flex items-center justify-center">
-        {presenterStream ? (
+        {stageContent ? (
+          <div className="h-full w-full min-h-0">{stageContent}</div>
+        ) : presenterStream ? (
           <MediaVideo
             stream={presenterStream}
             muted={isPresenterLocal}

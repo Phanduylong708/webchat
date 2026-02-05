@@ -33,6 +33,7 @@ Before ANY source code modification (create, edit, delete files), you MUST:
 ## Mindset
 
 - Premature optimization is the root of all evil
+- Don't over-engineering
 
 ### Naming Convention
 
