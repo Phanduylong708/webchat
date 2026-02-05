@@ -7,9 +7,10 @@
 **Solution:** Fabric.js-powered canvas with Socket.IO event-based synchronization using snapshot-first strategy, optimistic UI updates, and version-based LWW conflict resolution.
 
 **Current State:**
+
 - ✅ **Phase 1a (Canvas Foundation):** Complete - Types, Fabric.js lifecycle, tool strategies, serialization
 - ✅ **Phase 1b (Socket Sync):** Complete - Provider, sync hooks, server handler, multi-select fix
-- 🔄 **Phase 1c (UI Components):** Pending - Toolbar, color picker, call layout integration
+- ✅ **Phase 1c (UI + Call Integration):** Complete - UI components, call controls toggle, stage takeover
 
 ---
 
@@ -18,79 +19,139 @@
 ### Data Flow
 
 ```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                              FRONTEND                                        │
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                                   FRONTEND                                   │
 │                                                                              │
-│  ┌──────────────────┐    ┌─────────────────────┐    ┌──────────────────┐    │
-│  │ WhiteboardProvider│◄───│useWhiteboardOrchestration│◄───│ useWhiteboardSync│    │
-│  │  (Context State)  │    │    (Bridge Layer)   │    │  (Socket I/O)    │    │
-│  │                   │    │                     │    │                  │    │
-│  │ • objects{}       │    │ • handleStaleAck()  │    │ • requestJoin()  │    │
-│  │ • emit*()/apply*()│    │ • requestJoin()     │    │ • bufferOrDispatch│   │
-│  └────────┬──────────┘    └─────────────────────┘    └────────┬─────────┘    │
-│           │                                                    │              │
-│           ▼                                                    │              │
-│  ┌──────────────────┐                                          │              │
-│  │   useCanvasSync  │◄── objects Record<ID, SerializedObject>  │              │
-│  │ (Reconciliation) │                                          │              │
-│  │ • version check  │                                          │              │
-│  │ • skip if grouped│                                          │              │
-│  └────────┬─────────┘                                          │              │
-│           ▼                                                    │              │
-│  ┌──────────────────┐    ┌─────────────────────┐               │              │
-│  │    useFabric     │───▶│   useFabricEvents   │               │              │
-│  │(Canvas Lifecycle)│    │   (Event Router)    │               │              │
-│  └──────────────────┘    └──────────┬──────────┘               │              │
-│                                     ▼                          │              │
-│                          ┌─────────────────────┐               │              │
-│                          │whiteboard.strategies│               │              │
-│                          │   (Tool Logic)      │               │              │
-│                          └──────────────────────┘               │              │
-└─────────────────────────────────────────────────────────────────┼──────────────┘
-                                                                  │
-                                    Socket.IO Events              │
-                    ┌─────────────────────────────────────────────┘
-                    ▼
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                              BACKEND                                         │
-│  whiteboard.handler.js                                                       │
-│  • whiteboardStates: Map<callId, {objects, tombstones, userColors}>         │
-│  • Events: wb:join → wb:snapshot, wb:add/update/delete → broadcast + ACK   │
-└─────────────────────────────────────────────────────────────────────────────┘
+│  Call UI Integration (Phase 1c)                                               │
+│  ┌───────────────────────────────┐                                           │
+│  │ CallPage.tsx                  │                                           │
+│  │ • wraps WhiteboardProvider    │                                           │
+│  │ • staleAckHandlerRef bridge   │◄───────────────────────────────┐          │
+│  │ • stage precedence:           │                                onStaleAck  │
+│  │   screenshare > whiteboard >  │                                           │
+│  │   normal                      │                                           │
+│  └───────────────┬───────────────┘                                           │
+│                  │                                                           │
+│                  │ stage takeover (stageContent)                              │
+│                  ▼                                                           │
+│  ┌───────────────────────────────┐        ┌──────────────────────────────┐   │
+│  │ StageLayout.tsx               │        │ CallControls.tsx              │   │
+│  │ • stageContent?: ReactNode    │        │ • whiteboard toggle           │   │
+│  │ • renders stage + strip tiles │        │ • disabled during screenshare │   │
+│  └───────────────┬───────────────┘        └───────────────┬──────────────┘   │
+│                  │                                        │                  │
+│                  │ stageContent=<Whiteboard .../>         │ open/close        │
+│                  ▼                                        ▼                  │
+│  Whiteboard UI Container                                                    │
+│  ┌────────────────────────────────────────────────────────────────────────┐ │
+│  │ Whiteboard.tsx                                                          │ │
+│  │ • gates isActive -> unmount when inactive                               │ │
+│  │ • registers handleStaleAck via registerStaleAckHandler()                │ │
+│  │ • composes Toolbar + Canvas + Controls                                  │ │
+│  └───────────────┬────────────────────────────────────────────────────────┘ │
+│                  │                                                          │
+│                  ▼                                                          │
+│  Sync + Canvas Core (Phase 1a/1b)                                           │
+│  ┌──────────────────┐   ┌──────────────────────────┐   ┌──────────────────┐ │
+│  │ WhiteboardProvider│◄──│ useWhiteboardOrchestration│◄──│ useWhiteboardSync│ │
+│  │ (Context State)   │   │ (Bridge Layer)            │   │ (Socket I/O)     │ │
+│  │ • objects{}       │   │ • handleStaleAck()        │   │ • requestJoin()  │ │
+│  │ • emit/apply      │   │ • requestJoin()           │   │ • buffer ops     │ │
+│  └─────────┬────────┘   └──────────────┬───────────┘   └─────────┬────────┘ │
+│            │                           │                         │          │
+│            ▼                           │                         │          │
+│  ┌──────────────────┐                  │                         │          │
+│  │ useCanvasSync     │◄────────────────┘                         │          │
+│  │ • version gate    │                                            │          │
+│  │ • skip grouped    │                                            │          │
+│  └─────────┬────────┘                                            │          │
+│            ▼                                                     │          │
+│  ┌──────────────────┐   ┌─────────────────────┐                 │          │
+│  │ useFabric         │──▶│ useFabricEvents     │                 │          │
+│  │ • canvasCallbackRef│  │ • routes strategies  │                 │          │
+│  └──────────────────┘   └──────────┬──────────┘                 │          │
+│                                    ▼                             │          │
+│                           ┌─────────────────────┐                │          │
+│                           │ whiteboard.strategies│                │          │
+│                           └──────────────────────┘                │          │
+└───────────────────────────────────────────────────────────────────┼──────────┘
+                                                                    │ Socket.IO
+                                                                    ▼
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                                   BACKEND                                    │
+│  backend/src/sockets/handlers/whiteboard.handler.js                           │
+│  • whiteboardStates: Map<callId, { objects, tombstones, userColors }>         │
+│  • wb:join -> socket.join(call_room) -> wb:snapshot                           │
+│  • wb:add/update/delete -> validate/version -> broadcast + ACK                │
+└──────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ### Component Ownership
 
-| Component | Responsibility |
-|-----------|----------------|
-| `WhiteboardProvider` | Context: `objects`, `userColors`, `activeTool`; exposes `emit*()` and `apply*()` |
-| `useWhiteboardSync` | Socket listeners, join/snapshot flow, pending buffer, reconnect |
-| `useWhiteboardOrchestration` | Bridges provider ↔ sync; exposes `handleStaleAck()` |
-| `useCanvasSync` | Reconciles `objects` → Fabric canvas; version-gated, skips grouped |
-| `useFabric` | Canvas lifecycle (init/dispose), `canvasCallbackRef`, `isReady` |
-| `useFabricEvents` | Event router: tool modes, mouse/keyboard listeners → strategies |
-| `whiteboard.strategies` | Tool logic: shape drag, text editing, eraser, multi-select patch |
-| `whiteboard.handler.js` | Server state, version validation, tombstones, broadcast |
+| Component / Layer | Responsibility |
+| --- | --- |
+| `frontend/src/contexts/whiteboardProvider.tsx` | Whiteboard context state: `objects`, `activeTool`, `activeColor`; optimistic local apply; emits ops to server; invokes `onStaleAck` when server rejects/stales an op |
+| `frontend/src/hooks/whiteboard/useWhiteboardSync.ts` | Socket sync: `wb:join` → `wb:snapshot`; buffers ops until snapshot + Fabric ready; retries join on snapshot timeout |
+| `frontend/src/hooks/whiteboard/useWhiteboardOrchestration.ts` | Bridge: wires sync callbacks to provider `apply*`; exposes `handleStaleAck()` (re-join on `applied:false`) |
+| `frontend/src/hooks/whiteboard/useCanvasSync.ts` | Canvas reconciliation: provider `objects` → Fabric canvas; version-gated; skips updates for objects currently grouped/ActiveSelection |
+| `frontend/src/hooks/whiteboard/useFabric.ts` | Fabric lifecycle: init/dispose canvas via `canvasCallbackRef`; exposes `isReady`; integrates `useFabricEvents` |
+| `frontend/src/hooks/whiteboard/useFabricEvents.ts` + `frontend/src/hooks/whiteboard/whiteboard.strategies.ts` | Event routing + tool strategies: create/update/delete objects, compute patches, serialize |
+| `frontend/src/components/whiteboard/*` | UI: toolbar, canvas surface, close controls, and the `Whiteboard` container wiring hooks + provider |
+| `frontend/src/pages/call/CallPage.tsx` | Call integration: wraps call UI with `WhiteboardProvider`; stage takeover decision (screen share > whiteboard > normal) |
+| `frontend/src/components/call/StageLayout.tsx` | Stage layout: reusable stage + participant strip; supports `stageContent` for whiteboard takeover |
+| `frontend/src/components/call/CallControls.tsx` | Call control bar: whiteboard toggle button; disabled during screen share |
+| `backend/src/sockets/handlers/whiteboard.handler.js` | Backend authority: validates versions, maintains per-call state (`objects`, `tombstones`, `userColors`), broadcasts ops to call room |
+
+### Call Integration (Phase 1c)
+
+- **Stage precedence:** `screen share` (presenter detected) > `whiteboard` (local toggle) > normal call layouts.
+- **Stage rendering:** `StageLayout` is reused for both screen share and whiteboard via the `stageContent` slot.
+- **Screen share wins (no auto-resume):** if screen share starts while whiteboard is active, `CallPage` auto-closes whiteboard so it will not re-open when screen share ends.
 
 ---
 
 ## 3. Key Decisions & Implementation Notes
 
 ### Provider Dependency Injection
+
 - Accepts optional `socket`, `callId`, `canSync` props for testability
 - `onStaleAck` callback for parent to intercept version conflicts
 
 ### Stale ACK Handling
+
 - Server returns `applied: false` → orchestration calls `requestJoin()` to re-fetch snapshot
 - Auto retry with backoff (max 3 retries, 5s timeout)
 
+### Stale ACK Bridge (UI/Call Integration Critical Path)
+
+Because `WhiteboardProvider` lives above the orchestration hook in the call tree, Phase 1c uses a **ref-bridge** pattern:
+
+- `CallPage` keeps `staleAckHandlerRef` and passes `onStaleAck={(ack) => staleAckHandlerRef.current(ack)}` into `WhiteboardProvider`.
+- `Whiteboard` registers the orchestration handler via `registerStaleAckHandler(handleStaleAck)`.
+
+If you remove this wiring, stale/not_found updates will not self-heal (clients drift until refresh).
+
 ### Snapshot-First, Optimistic UI
+
 - `wb:join` → server sends `wb:snapshot` with full state
 - Local edits apply immediately, then emit to server
 - Remote events buffered until snapshot received
 
+### Canvas Presentation (Phase 1c)
+
+- **1:1 canvas, center + internal scroll:** no CSS scale / fit-to-view in Phase 1c.
+- **Scroll container must be constrained:** the scrollable wrapper needs a bounded height (`h-full w-full overflow-auto`) or scroll will be clipped by call stage wrappers (`overflow-hidden`).
+- **Unmount when inactive:** the `Whiteboard` UI returns `null` when not active so Fabric and event listeners are disposed cleanly.
+
+### Screen Share Conflict Policy
+
+- **Screen share wins:** the whiteboard toggle is disabled during screen share.
+- **Auto-close + no auto-resume:** if screen share starts while whiteboard is active, `CallPage` closes whiteboard; it will not automatically re-open when screen share ends.
+
 ### Multi-Select Fix (`getTransformPatch`)
+
 Objects in `ActiveSelection` have relative coords. Fix computes world coords:
+
 ```typescript
 const center = obj.getCenterPoint();
 const totalAngle = obj.getTotalAngle();
@@ -104,124 +165,70 @@ top = center.y + (-halfW * sin - halfH * cos);
 
 ## 4. Critical Files Map
 
-| File | Purpose | Key Exports |
-|------|---------|-------------|
-| `whiteboard.type.ts` | TypeScript types | `SerializedObject`, `ObjectPatch`, `ToolType`, `WbAck` |
-| `whiteboard.config.ts` | Constants | `CANVAS_WIDTH/HEIGHT`, `DEFAULT_STROKE_WIDTH`, `CANVAS_OPTIONS` |
-| `whiteboard.utils.ts` | Serialization | `serializePath/Shape/Textbox`, `deserializeToFabric`, `getTransformPatch` |
-| `whiteboard.strategies.ts` | Tool logic | `handleShape*`, `handleText*`, `handleEraserClick`, `handleObjectModified` |
-| `useFabric.ts` | Canvas lifecycle | `useFabric()` → `{canvas, isReady, canvasCallbackRef}` |
-| `useFabricEvents.ts` | Event routing | `useFabricEvents()` - attaches listeners per tool |
-| `useWhiteboardSync.ts` | Socket sync | `useWhiteboardSync()` → `{requestJoin}` |
-| `useWhiteboardOrchestration.ts` | Bridge | `useWhiteboardOrchestration()` → `{handleStaleAck}` |
-| `useCanvasSync.ts` | Reconciliation | `useCanvasSync(canvas, objects, isReady)` |
-| `whiteboardProvider.tsx` | Context | `emit*`, `apply*`, `applySnapshot` |
-| `whiteboard.handler.js` | Server | `handleWhiteboard()`, `whiteboardStates` |
+| File | Purpose | Key Exports / Notes |
+| --- | --- | --- |
+| `frontend/src/types/whiteboard.type.ts` | Types | `SerializedObject`, `PartialSerializedObject`, `ObjectPatch`, `ToolType`, `WbAck` |
+| `frontend/src/hooks/whiteboard/utils/whiteboard.config.ts` | Constants | `CANVAS_WIDTH`, `CANVAS_HEIGHT`, `CANVAS_OPTIONS` |
+| `frontend/src/hooks/whiteboard/utils/whiteboard.utils.ts` | Serialization + transforms | `serialize*`, `deserializeToFabric`, `getTransformPatch` |
+| `frontend/src/hooks/whiteboard/whiteboard.strategies.ts` | Tool logic | shape/text/eraser handlers; emits add/update/delete patches |
+| `frontend/src/hooks/whiteboard/useFabric.ts` | Fabric lifecycle | `{ canvas, isReady, canvasCallbackRef }` |
+| `frontend/src/hooks/whiteboard/useFabricEvents.ts` | Event routing | attaches Fabric listeners based on `activeTool` |
+| `frontend/src/hooks/whiteboard/useWhiteboardSync.ts` | Socket sync | join/snapshot/buffer/retry; exposes `requestJoin()` |
+| `frontend/src/hooks/whiteboard/useWhiteboardOrchestration.ts` | Bridge | returns `{ requestJoin, handleStaleAck }` |
+| `frontend/src/hooks/whiteboard/useCanvasSync.ts` | Reconciliation | applies provider `objects` into Fabric; version-gated |
+| `frontend/src/contexts/whiteboardProvider.tsx` | Context provider | `emit*` + `apply*` + `applySnapshot`; accepts `onStaleAck` |
+| `frontend/src/hooks/context/useWhiteboard.tsx` | Context hook | throws if used outside provider |
+| `frontend/src/components/whiteboard/Whiteboard.tsx` | Container | wires hooks, registers stale-ack handler, composes toolbar/canvas/controls |
+| `frontend/src/components/whiteboard/WhiteboardCanvas.tsx` | Canvas UI | mounts `<canvas>` via `canvasCallbackRef`; 1:1 + scroll |
+| `frontend/src/components/whiteboard/WhiteboardToolbar.tsx` | Toolbar UI | tool + color selection (desktop only) |
+| `frontend/src/components/whiteboard/WhiteboardControls.tsx` | Controls UI | close button overlay |
+| `frontend/src/pages/call/CallPage.tsx` | Call integration | wraps call with `WhiteboardProvider`, stage takeover, auto-close on screen share |
+| `frontend/src/components/call/StageLayout.tsx` | Stage layout | accepts `stageContent` for whiteboard takeover |
+| `frontend/src/components/call/CallControls.tsx` | Toggle UI | whiteboard button (desktop) disabled during screen share |
+| `frontend/src/pages/dev/WhiteboardTestPage.tsx` | Dev harness | `/dev/whiteboard` + UI mode `?ui=1` |
+| `backend/src/sockets/handlers/whiteboard.handler.js` | Backend handler | `wb:join`, `wb:add/update/delete`, snapshot + broadcast |
+| `backend/src/sockets/index.js` | Socket registration | registers the whiteboard handler |
 
 ---
 
 ## 5. Dev Testing Notes
 
-### Using `/dev/whiteboard`
-1. Start backend with socket server
-2. Create/join a call to get valid `callId`
-3. Navigate to: `/dev/whiteboard?callId=<your-call-id>`
-4. Verify: "Sync: Enabled" and "Canvas: ✓ Ready"
+Primary verification happens in the real call flow (`/call/:callId`) since Phase 1c integrates stage takeover.
 
-### Requirements
-- Active socket connection (must be call participant)
-- Without `callId`: local-only mode (no sync)
+Dev fallback:
 
-### Tool Hotkeys
-| Key | Tool |
-|-----|------|
-| S | Select |
-| P | Pen |
-| R | Rectangle |
-| E | Ellipse |
-| L | Line |
-| T | Text |
-| X | Eraser |
-| Del | Delete selected |
+- `/dev/whiteboard?ui=1&callId=<callId>` mounts the Phase 1c UI directly.
+- Without `callId`, whiteboard runs in local-only mode.
 
 ---
 
 ## 6. Known Limitations
 
-| Issue | Description |
-|-------|-------------|
+| Issue                               | Description                                              |
+| ----------------------------------- | -------------------------------------------------------- |
 | Skip update when in ActiveSelection | `useCanvasSync` skips remote updates for grouped objects |
-| No skew/flip handling | `getTransformPatch` doesn't handle skewX/Y or flipX/Y |
-| Path geometry immutable | Path data can't be updated after creation |
+| No skew/flip handling               | `getTransformPatch` doesn't handle skewX/Y or flipX/Y    |
+| Path geometry immutable             | Path data can't be updated after creation                |
+
+Additional Phase 1c behaviors (by design):
+
+- Whiteboard toolbar is desktop-first (`hidden sm:flex`); mobile UX is intentionally minimal in MVP.
+- Whiteboard toggle button is currently implemented in GROUP call controls only; extend to PRIVATE calls if needed.
+- Whiteboard toggle is disabled during screen share and will auto-close if screen share starts (no auto-resume).
+- No zoom/pan in Phase 1c (roadmap Phase 1d).
 
 ### Phase 2 Items (Pending)
+
 - **2a:** Remote cursors with user colors
 - **2b:** Undo/redo (stubs exist in provider)
-- **2c:** Zoom/pan controls
+- **2c:** Polish (disconnect queue, screen share refinements, mobile view-only, limits)
 - **2d:** Database persistence (currently in-memory with TTL)
 
 ---
 
 ## Implementation Phases
 
-### Phase 1c: UI Components
-
-#### Step 13: Create WhiteboardCanvas Component
-
-**File:** `frontend/src/components/whiteboard/WhiteboardCanvas.tsx` (new file)
-
-- Render `<canvas>` element with ref
-- Get canvasCallbackRef from the hook and mount it
-- use canvas
-- Apply container styles (centered, overflow hidden)
-- Show loading state while canvas initializes
-
-#### Step 14: Create WhiteboardToolbar Component
-
-**File:** `frontend/src/components/whiteboard/WhiteboardToolbar.tsx` (new file)
-
-- Vertical toolbar on left side
-- Tool buttons: Select, Pen, Rect, Ellipse, Line, Text, Eraser
-- Color palette (8 preset colors)
-- Active tool/color highlighted
-- Hidden on mobile (`hidden sm:flex`)
-
-#### Step 15: Create WhiteboardControls Component
-
-**File:** `frontend/src/components/whiteboard/WhiteboardControls.tsx` (new file)
-
-- Zoom buttons: +, -, Reset (fit to view)
-- Close button (X icon)
-- Position: top-right corner overlay
-- Wire close button to `closeWhiteboard()`
-
-#### Step 16: Create Whiteboard Container
-
-**File:** `frontend/src/components/whiteboard/Whiteboard.tsx` (new file)
-
-- Compose: `WhiteboardToolbar` + `WhiteboardCanvas` + `WhiteboardControls`
-- Layout: toolbar left, canvas center, controls overlay
-- Only render when `isActive === true`
-
-#### Step 17: Add Whiteboard Button to CallControls
-
-**File:** `frontend/src/components/call/CallControls.tsx`
-
-- Add whiteboard button (PenTool or similar icon)
-- Click → toggle `openWhiteboard()` / `closeWhiteboard()`
-- Highlight when whiteboard is active
-- Hidden on mobile (`hidden sm:inline-flex`)
-
-#### Step 18: Integrate Whiteboard into Call Layout
-
-**File:** `frontend/src/pages/call/CallPage.tsx` (or layout component)
-
-- Wrap with `WhiteboardProvider`
-- When `isActive`: show Whiteboard as main stage
-- Reuse StageLayout: whiteboard = stage content, videos in strip
-- Similar to screen share stage takeover
-
----
+Phases below are roadmap items. Phase 1c is documented above in the architecture sections.
 
 ### Phase 1d: Zoom & Pan
 
