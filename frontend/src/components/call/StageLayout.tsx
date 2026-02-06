@@ -36,9 +36,9 @@ function StageLayoutComponent({
   return (
     <div className="h-full w-full flex flex-col lg:flex-row bg-zinc-950">
       {/* Stage - main presenter view */}
-      <main className="relative flex-1 min-h-0 bg-black flex items-center justify-center">
+      <main className="relative flex-1 min-h-0 min-w-0 bg-black flex items-center justify-center">
         {stageContent ? (
-          <div className="h-full w-full min-h-0">{stageContent}</div>
+          <div className="h-full w-full min-h-0 min-w-0">{stageContent}</div>
         ) : presenterStream ? (
           <MediaVideo
             stream={presenterStream}

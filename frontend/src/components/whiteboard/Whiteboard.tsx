@@ -95,18 +95,19 @@ function WhiteboardInner({ socket, callId, canSync, registerStaleAckHandler, cla
   }, [registerStaleAckHandler, handleStaleAck]);
 
   return (
-    <div className={cn("flex h-full w-full bg-zinc-950 text-white min-h-0", className)}>
+    <div className={cn("relative h-full w-full bg-zinc-950 text-white min-h-0 min-w-0", className)}>
+      <WhiteboardCanvas canvasCallbackRef={canvasCallbackRef} isReady={isReady} />
       <WhiteboardToolbar
         activeTool={activeTool}
         setActiveTool={setActiveTool}
         activeColor={activeColor}
         setActiveColor={setActiveColor}
-        className="m-4 shrink-0"
+        className="absolute top-4 left-4 z-10 bg-zinc-950/70 backdrop-blur-xl border border-white/10 shadow-2xl"
       />
-      <div className="relative flex-1 min-h-0 overflow-hidden">
-        <WhiteboardCanvas canvasCallbackRef={canvasCallbackRef} isReady={isReady} />
-        <WhiteboardControls onClose={closeWhiteboard} />
-      </div>
+      <WhiteboardControls onClose={closeWhiteboard} />
+      <span className="hidden sm:block absolute bottom-3 left-3 z-10 text-xs text-zinc-500/80 select-none pointer-events-none">
+        Hold Space to pan
+      </span>
     </div>
   );
 }

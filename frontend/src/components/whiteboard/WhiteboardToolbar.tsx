@@ -39,7 +39,7 @@ export function WhiteboardToolbar({
   className,
 }: WhiteboardToolbarProps) {
   return (
-    <div className={cn("hidden sm:flex flex-col gap-1 bg-zinc-900 p-2 rounded-lg", className)}>
+    <div className={cn("hidden sm:flex flex-col gap-1 p-2 rounded-lg", className)}>
       <div className="text-xs text-zinc-400 text-center mb-1">Tools</div>
 
       {TOOLS.map(({ id, label, icon: Icon }) => (
