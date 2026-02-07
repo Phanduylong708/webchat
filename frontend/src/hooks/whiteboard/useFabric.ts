@@ -47,7 +47,7 @@ export function useFabric(options: UseFabricOptions): UseFabricReturn {
     fabricCanvas.selectionColor = SELECTION_COLOR;
     fabricCanvas.selectionBorderColor = SELECTION_BORDER_COLOR;
     fabricCanvas.selectionLineWidth = SELECTION_LINE_WIDTH;
-    fabric.FabricObject.prototype.set(OBJECT_CONTROL_CONFIG);
+    Object.assign(fabric.InteractiveFabricObject.ownDefaults, OBJECT_CONTROL_CONFIG);
 
     canvas.current = fabricCanvas;
     setIsReady(true);

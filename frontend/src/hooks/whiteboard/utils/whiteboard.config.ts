@@ -8,17 +8,18 @@ export const DEFAULT_FONT_SIZE = 20;
 export const DEFAULT_FONT_FAMILY = "Arial";
 export const DEFAULT_TEXT_WIDTH = 200;
 
-export const SELECTION_COLOR = "rgba(59, 130, 246, 0.1)";
-export const SELECTION_BORDER_COLOR = "#3b82f6";
-export const SELECTION_LINE_WIDTH = 1;
+export const SELECTION_COLOR = "rgba(45, 127, 249, 0.08)";
+export const SELECTION_BORDER_COLOR = "#4c91fa";
+export const SELECTION_LINE_WIDTH = 1.5;
 export const EDITING_BORDER_COLOR = "#f59e0b";
 
 export const OBJECT_CONTROL_CONFIG = {
-  cornerColor: "#3b82f6",
-  cornerStyle: "circle" as const,
-  cornerSize: 8,
+  cornerColor: "#ffffff",
+  cornerStrokeColor: "#4c91fa",
+  cornerStyle: "rect" as const,
+  cornerSize: 9,
   transparentCorners: false,
-  borderColor: "#3b82f6",
+  borderColor: "#4c91fa",
   borderScaleFactor: 1.5,
 };
 

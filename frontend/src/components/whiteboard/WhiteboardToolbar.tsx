@@ -39,8 +39,8 @@ export function WhiteboardToolbar({
   className,
 }: WhiteboardToolbarProps) {
   return (
-    <div className={cn("hidden sm:flex flex-col gap-1 p-2 rounded-lg", className)}>
-      <div className="text-xs text-zinc-400 text-center mb-1">Tools</div>
+    <div className={cn("hidden sm:flex flex-col items-center gap-0.5 p-1.5 rounded-lg", className)}>
+      <div className="text-xs text-[#B8BEC7] tracking-[0.02em] text-center mb-0.5">Tools</div>
 
       {TOOLS.map(({ id, label, icon: Icon }) => (
         <button
@@ -51,19 +51,23 @@ export function WhiteboardToolbar({
           aria-label={label}
           title={label}
           className={cn(
-            "flex items-center justify-center w-10 h-10 rounded-md transition-colors",
-            activeTool === id ? "bg-blue-600 text-white" : "text-zinc-300 hover:bg-zinc-700",
+            "flex items-center justify-center w-9 h-9 rounded-md transition-colors",
+            activeTool === id
+              ? "bg-[#2D7FF9] text-white"
+              : "text-[#D6DAE0] hover:bg-white/10",
           )}
         >
-          <Icon className="w-5 h-5" />
+          <span className="flex items-center justify-center w-5 h-5">
+            <Icon className="w-5 h-5" />
+          </span>
         </button>
       ))}
 
-      <div className="h-px bg-zinc-700 my-2" />
+      <div className="h-px w-full bg-white/12 my-1.5" />
 
-      <div className="text-xs text-zinc-400 text-center mb-1">Color</div>
+      <div className="text-xs text-[#B8BEC7] tracking-[0.02em] text-center mb-0.5">Color</div>
 
-      <div className="grid grid-cols-2 gap-1">
+      <div className="grid grid-cols-2 gap-0.5">
         {COLOR_PALETTE.map((color) => (
           <button
             type="button"
