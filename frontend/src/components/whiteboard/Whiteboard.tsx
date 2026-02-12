@@ -5,6 +5,7 @@ import { useWhiteboard } from "@/hooks/context/useWhiteboard";
 import { useFabric } from "@/hooks/whiteboard/useFabric";
 import { useCanvasSync } from "@/hooks/whiteboard/useCanvasSync";
 import { useWhiteboardOrchestration } from "@/hooks/whiteboard/useWhiteboardOrchestration";
+import { useCursorPresence } from "@/hooks/whiteboard/useCursorPresence";
 import { WhiteboardCanvas } from "@/components/whiteboard/WhiteboardCanvas";
 import { WhiteboardToolbar } from "@/components/whiteboard/WhiteboardToolbar";
 import { WhiteboardControls } from "@/components/whiteboard/WhiteboardControls";
@@ -69,6 +70,16 @@ function WhiteboardInner({ socket, callId, canSync, registerStaleAckHandler, cla
 
   useCanvasSync(canvas.current, objects, isReady);
 
+  const { remoteCursors, handleRemoteCursor, emitCursor } = useCursorPresence({
+    socket,
+    callId,
+    isActive,
+    canSync,
+    ttlMs: 3000,
+    removeGraceMs: 1500,
+    throttleMs: 75,
+  });
+
   const { handleStaleAck } = useWhiteboardOrchestration({
     socket,
     callId,
@@ -80,6 +91,7 @@ function WhiteboardInner({ socket, callId, canSync, registerStaleAckHandler, cla
     applyRemoteAdd,
     applyRemoteUpdate,
     applyRemoteDelete,
+    onCursorUpdate: handleRemoteCursor,
     onSyncError: (error) => {
       console.warn("whiteboard sync error:", error);
     },
@@ -96,7 +108,7 @@ function WhiteboardInner({ socket, callId, canSync, registerStaleAckHandler, cla
 
   return (
     <div className={cn("relative h-full w-full bg-zinc-950 text-white min-h-0 min-w-0", className)}>
-      <WhiteboardCanvas canvasCallbackRef={canvasCallbackRef} isReady={isReady} />
+      <WhiteboardCanvas canvasCallbackRef={canvasCallbackRef} isReady={isReady} remoteCursors={remoteCursors} emitCursor={emitCursor} />
       <div className="absolute top-4 left-4 z-20 pointer-events-none">
         <WhiteboardToolbar
           activeTool={activeTool}

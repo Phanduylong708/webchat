@@ -215,14 +215,15 @@ Additional Phase 1c behaviors (by design):
 - Whiteboard toolbar is desktop-first (`hidden sm:flex`); mobile UX is intentionally minimal in MVP.
 - Whiteboard toggle button is currently implemented in GROUP call controls only; extend to PRIVATE calls if needed.
 - Whiteboard toggle is disabled during screen share and will auto-close if screen share starts (no auto-resume).
-- No zoom/pan in Phase 1c (roadmap Phase 1d).
+- No zoom/pan in Phase 1c (roadmap moved to Phase 1e after Presence/Cursors).
 
-### Phase 2 Items (Pending)
+### Next Items (Pending)
 
-- **2a:** Remote cursors with user colors
-- **2b:** Undo/redo (stubs exist in provider)
-- **2c:** Polish (disconnect queue, screen share refinements, mobile view-only, limits)
-- **2d:** Database persistence (currently in-memory with TTL)
+- **1d:** Presence & cursors (cursor sync + overlay + user colors)
+- **1e:** Zoom & pan (viewport zoom/pan controls)
+- **2a:** Undo/redo (stubs exist in provider)
+- **2b:** Polish (disconnect queue, screen share refinements, mobile view-only, limits)
+- **2c:** Database persistence (currently in-memory with TTL)
 
 ---
 
@@ -230,46 +231,16 @@ Additional Phase 1c behaviors (by design):
 
 Phases below are roadmap items. Phase 1c is documented above in the architecture sections.
 
-### Phase 1d: Zoom & Pan
+### Phase 1d: Presence & Cursors
 
-#### Step 19: Implement Zoom Controls
-
-**File:** `frontend/src/hooks/whiteboard/useFabric.ts`
-
-- Add `zoomIn()`, `zoomOut()`, `resetZoom()` functions
-- Zoom centered on canvas center
-- Min zoom: 0.1, Max zoom: 5
-- Expose via hook return
-
-#### Step 20: Implement Wheel Zoom
-
-**File:** `frontend/src/hooks/whiteboard/useFabric.ts`
-
-- Listen to `mouse:wheel` event
-- Zoom centered on cursor position
-- Prevent default scroll behavior
-
-#### Step 21: Implement Pan
-
-**File:** `frontend/src/hooks/whiteboard/useFabric.ts`
-
-- Pan mode: when spacebar held OR hand tool selected
-- On drag: adjust `viewportTransform`
-- Alternative: middle-mouse drag for pan
-
----
-
-### Phase 2a: Presence & Cursors
-
-#### Step 22: Add Cursor Sync
-
+#### Step 19: Add Cursor Sync
 **File:** `frontend/src/hooks/whiteboard/useWhiteboardSync.ts`
 
 - Emit `wb:cursor` on mouse move (throttled 50-75ms)
 - Listen for remote `wb:cursor` events
 - Maintain `remoteCursors` state: `Map<odId, CursorPosition>`
 
-#### Step 23: Create WhiteboardCursors Component
+#### Step 20: Create WhiteboardCursors Component
 
 **File:** `frontend/src/components/whiteboard/WhiteboardCursors.tsx` (new file)
 
@@ -278,7 +249,7 @@ Phases below are roadmap items. Phase 1c is documented above in the architecture
 - Transform cursor position based on current zoom/pan
 - Fade out cursor if no update for 3 seconds
 
-#### Step 24: Add User Colors
+#### Step 21: Add User Colors
 
 **File:** `backend/src/api/handlers/whiteboard.handler.js`
 
@@ -291,7 +262,7 @@ Phases below are roadmap items. Phase 1c is documented above in the architecture
 - Store `myColor` from snapshot
 - Store `userColors` map for cursor rendering
 
-#### Step 25: Add Object Highlight
+#### Step 22: Add Object Highlight
 
 **File:** `frontend/src/hooks/whiteboard/useFabric.ts`
 
@@ -301,7 +272,36 @@ Phases below are roadmap items. Phase 1c is documented above in the architecture
 
 ---
 
-### Phase 2b: Undo/Redo
+### Phase 1e: Zoom & Pan
+
+#### Step 23: Implement Zoom Controls
+
+**File:** `frontend/src/hooks/whiteboard/useFabric.ts`
+
+- Add `zoomIn()`, `zoomOut()`, `resetZoom()` functions
+- Zoom centered on canvas center
+- Min zoom: 0.1, Max zoom: 5
+- Expose via hook return
+
+#### Step 24: Implement Wheel Zoom
+
+**File:** `frontend/src/hooks/whiteboard/useFabric.ts`
+
+- Listen to `mouse:wheel` event
+- Zoom centered on cursor position
+- Prevent default scroll behavior
+
+#### Step 25: Implement Pan
+
+**File:** `frontend/src/hooks/whiteboard/useFabric.ts`
+
+- Pan mode: when spacebar held OR hand tool selected
+- On drag: adjust `viewportTransform`
+- Alternative: middle-mouse drag for pan
+
+---
+
+### Phase 2a: Undo/Redo
 
 #### Step 26: Implement Undo Stack
 
@@ -322,7 +322,7 @@ Phases below are roadmap items. Phase 1c is documented above in the architecture
 
 ---
 
-### Phase 2c: Polish
+### Phase 2b: Polish
 
 #### Step 28: Add Disconnect Queue
 
@@ -433,10 +433,10 @@ Phases below are roadmap items. Phase 1c is documented above in the architecture
 | 1a    | Canvas foundation  | 1-7   |
 | 1b    | Socket sync        | 8-12  |
 | 1c    | UI components      | 13-18 |
-| 1d    | Zoom & pan         | 19-21 |
-| 2a    | Cursors & presence | 22-25 |
-| 2b    | Undo/redo          | 26-27 |
-| 2c    | Polish             | 28-31 |
+| 1d    | Cursors & presence | 19-22 |
+| 1e    | Zoom & pan         | 23-25 |
+| 2a    | Undo/redo          | 26-27 |
+| 2b    | Polish             | 28-31 |
 
-**MVP (Phase 1):** Steps 1-21
-**Full feature (Phase 2):** Steps 22-31
+**MVP (Phase 1):** Steps 1-25
+**Full feature (Phase 2):** Steps 26-31

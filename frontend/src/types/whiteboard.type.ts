@@ -180,5 +180,4 @@ export interface WbCursorPayload {
 export type WbPendingEvent =
   | { type: "add"; payload: WbAddPayload }
   | { type: "update"; payload: WbUpdatePayload }
-  | { type: "delete"; payload: WbDeletePayload }
-  | { type: "cursor"; payload: WbCursorPayload };
+  | { type: "delete"; payload: WbDeletePayload };

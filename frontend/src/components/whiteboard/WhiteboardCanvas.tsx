@@ -1,10 +1,15 @@
 import { useRef, useState, useEffect, useCallback } from "react";
 import { CANVAS_WIDTH, CANVAS_HEIGHT } from "@/hooks/whiteboard/utils/whiteboard.config";
+import type { RemoteCursorPresence } from "@/hooks/whiteboard/useCursorPresence";
+import type { CursorPosition } from "@/types/whiteboard.type";
+import { WhiteboardCursors } from "@/components/whiteboard/WhiteboardCursors";
 import { cn } from "@/lib/utils";
 
 interface WhiteboardCanvasProps {
   canvasCallbackRef: React.RefCallback<HTMLCanvasElement>;
   isReady: boolean;
+  remoteCursors: RemoteCursorPresence[];
+  emitCursor: (position: CursorPosition | null) => void;
   className?: string;
 }
 
@@ -23,7 +28,7 @@ function isEditableTarget(element: Element | null): boolean {
   return false;
 }
 
-export function WhiteboardCanvas({ canvasCallbackRef, isReady, className }: WhiteboardCanvasProps) {
+export function WhiteboardCanvas({ canvasCallbackRef, isReady, remoteCursors, emitCursor, className }: WhiteboardCanvasProps) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const [isSpacePressed, setIsSpacePressed] = useState(false);
@@ -34,6 +39,8 @@ export function WhiteboardCanvas({ canvasCallbackRef, isReady, className }: Whit
   const isPointerInRegionRef = useRef(false);
   const dragSeedRef = useRef<DragSeed>({ startX: 0, startY: 0, scrollLeft: 0, scrollTop: 0 });
   const pointerCaptureIdRef = useRef<number | null>(null);
+  const lastEmittedNullRef = useRef(true);
+  const emitCursorRef = useRef(emitCursor);
 
   useEffect(() => {
     isSpacePressedRef.current = isSpacePressed;
@@ -42,6 +49,10 @@ export function WhiteboardCanvas({ canvasCallbackRef, isReady, className }: Whit
   useEffect(() => {
     isPanningRef.current = isPanning;
   }, [isPanning]);
+
+  useEffect(() => {
+    emitCursorRef.current = emitCursor;
+  }, [emitCursor]);
 
   // B3.1: Cursor feedback for pan mode
   useEffect(() => {
@@ -113,6 +124,8 @@ export function WhiteboardCanvas({ canvasCallbackRef, isReady, className }: Whit
     function handleWindowBlur() {
       endPan();
       resetPanState();
+      emitCursorRef.current(null);
+      lastEmittedNullRef.current = true;
     }
 
     window.addEventListener("keydown", handleKeyDown);
@@ -126,13 +139,47 @@ export function WhiteboardCanvas({ canvasCallbackRef, isReady, className }: Whit
     };
   }, [resetPanState, endPan]);
 
+  const computeCanvasPosition = useCallback((event: React.PointerEvent<HTMLDivElement>): CursorPosition | null => {
+    const container = scrollContainerRef.current;
+    if (!container) return null;
+    const canvasEl = container.querySelector("canvas");
+    if (!canvasEl) return null;
+    const rect = canvasEl.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+    if (x < 0 || y < 0 || x > rect.width || y > rect.height) return null;
+    return { x, y };
+  }, []);
+
+  const emitCursorPosition = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+    if (event.pointerType !== "mouse") return;
+    const position = computeCanvasPosition(event);
+    if (position) {
+      lastEmittedNullRef.current = false;
+      emitCursorRef.current(position);
+    } else {
+      if (!lastEmittedNullRef.current) {
+        emitCursorRef.current(null);
+        lastEmittedNullRef.current = true;
+      }
+    }
+  }, [computeCanvasPosition]);
+
+  const clearCursorEmit = useCallback(() => {
+    if (!lastEmittedNullRef.current) {
+      emitCursorRef.current(null);
+      lastEmittedNullRef.current = true;
+    }
+  }, []);
+
   const handlePointerEnter = useCallback(() => {
     isPointerInRegionRef.current = true;
   }, []);
 
   const handlePointerLeave = useCallback(() => {
     isPointerInRegionRef.current = false;
-  }, []);
+    clearCursorEmit();
+  }, [clearCursorEmit]);
 
   const handlePointerDown = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
     if (event.button !== 0) return;
@@ -160,6 +207,8 @@ export function WhiteboardCanvas({ canvasCallbackRef, isReady, className }: Whit
   }, []);
 
   const handlePointerMove = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+    emitCursorPosition(event);
+
     if (!isPanningRef.current) return;
 
     event.preventDefault();
@@ -173,7 +222,7 @@ export function WhiteboardCanvas({ canvasCallbackRef, isReady, className }: Whit
 
     container.scrollLeft = scrollLeft - dx;
     container.scrollTop = scrollTop - dy;
-  }, []);
+  }, [emitCursorPosition]);
 
   const handlePointerUp = useCallback(() => {
     if (isPanningRef.current) {
@@ -185,7 +234,8 @@ export function WhiteboardCanvas({ canvasCallbackRef, isReady, className }: Whit
     if (isPanningRef.current) {
       endPan();
     }
-  }, [endPan]);
+    clearCursorEmit();
+  }, [endPan, clearCursorEmit]);
 
   const handleLostPointerCapture = useCallback(() => {
     pointerCaptureIdRef.current = null;
@@ -193,7 +243,8 @@ export function WhiteboardCanvas({ canvasCallbackRef, isReady, className }: Whit
       setIsPanning(false);
       isPanningRef.current = false;
     }
-  }, []);
+    clearCursorEmit();
+  }, [clearCursorEmit]);
 
   return (
     <div
@@ -210,6 +261,8 @@ export function WhiteboardCanvas({ canvasCallbackRef, isReady, className }: Whit
       <div className="w-max min-w-full">
         <div className="relative w-fit">
           <canvas ref={canvasCallbackRef} width={CANVAS_WIDTH} height={CANVAS_HEIGHT} className="block" />
+
+          <WhiteboardCursors cursors={remoteCursors} />
 
           {!isReady && (
             <div className="absolute inset-0 flex items-center justify-center bg-zinc-100/80">

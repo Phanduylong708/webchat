@@ -12,7 +12,6 @@ import type {
 type TimeoutHandle = ReturnType<typeof setTimeout>;
 
 const SNAPSHOT_TIMEOUT_MS = 5000;
-// TODO Phase 2a: Cursor events fill this limit quickly. Optimize by separating cursors into Map<UserId, CursorPayload>
 const MAX_PENDING_EVENTS = 200;
 const MAX_JOIN_RETRIES = 3;
 
@@ -106,12 +105,6 @@ export function useWhiteboardSync({
         callbacksRef.current.onRemoteUpdate(event.payload.objectId, event.payload.patch);
       } else if (event.type === "delete") {
         callbacksRef.current.onRemoteDelete(event.payload.objectId, event.payload.version);
-      } else if (event.type === "cursor") {
-        callbacksRef.current.onCursorUpdate(
-          event.payload.userId,
-          event.payload.position,
-          event.payload.color,
-        );
       }
     }
   }, [isReadyToApply]);
@@ -153,7 +146,6 @@ export function useWhiteboardSync({
     });
   }, [socket, callId, isActive, canSync, resetState]);
 
-  // TODO Phase 2a: Use Map<UserId, CursorPayload> for cursors - only keep latest position per user
   const bufferOrDispatch = useCallback((event: WbPendingEvent) => {
     if (!hasSnapshotRef.current || !isReadyToApply) {
       if (pendingEventsRef.current.length >= MAX_PENDING_EVENTS) {
@@ -177,12 +169,6 @@ export function useWhiteboardSync({
       callbacksRef.current.onRemoteUpdate(event.payload.objectId, event.payload.patch);
     } else if (event.type === "delete") {
       callbacksRef.current.onRemoteDelete(event.payload.objectId, event.payload.version);
-    } else if (event.type === "cursor") {
-      callbacksRef.current.onCursorUpdate(
-        event.payload.userId,
-        event.payload.position,
-        event.payload.color,
-      );
     }
   }, [isReadyToApply, requestJoin]);
 
@@ -226,7 +212,8 @@ export function useWhiteboardSync({
 
     const handleCursor = (payload: WbCursorPayload) => {
       if (!shouldProcessPayload(payload.callId)) return;
-      bufferOrDispatch({ type: "cursor", payload });
+      if (!hasSnapshotRef.current || !isReadyToApply) return;
+      callbacksRef.current.onCursorUpdate(payload.userId, payload.position, payload.color);
     };
 
     socket.on("wb:snapshot", handleSnapshot);

@@ -22,6 +22,7 @@ export interface UseWhiteboardOrchestrationParams {
   applyRemoteAdd: (object: SerializedObject) => void;
   applyRemoteUpdate: (objectId: ObjectID, patch: ObjectPatch) => void;
   applyRemoteDelete: (objectId: ObjectID, version: number) => void;
+  onCursorUpdate?: (userId: UserID, position: CursorPosition | null, color: string) => void;
 
   onSyncError?: (error: string) => void;
 }
@@ -37,14 +38,10 @@ export function useWhiteboardOrchestration({
   applyRemoteAdd,
   applyRemoteUpdate,
   applyRemoteDelete,
+  onCursorUpdate,
   onSyncError,
 }: UseWhiteboardOrchestrationParams): { requestJoin: () => void; handleStaleAck: (ack?: WbAck) => void } {
-  const onCursorUpdate = useCallback(
-    (_userId: UserID, _position: CursorPosition | null, _color: string) => {
-      // Phase 2a: cursors
-    },
-    [],
-  );
+  const cursorUpdateCallback = onCursorUpdate ?? (() => {});
 
   const { requestJoin } = useWhiteboardSync({
     socket,
@@ -57,7 +54,7 @@ export function useWhiteboardOrchestration({
     onRemoteAdd: applyRemoteAdd,
     onRemoteUpdate: applyRemoteUpdate,
     onRemoteDelete: applyRemoteDelete,
-    onCursorUpdate,
+    onCursorUpdate: cursorUpdateCallback,
     onSyncError,
   });
 
