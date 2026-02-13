@@ -39,7 +39,13 @@ passport.use(
     try {
       const user = await prisma.user.findUnique({
         where: { id: jwt_payload.sub },
-        select: { id: true, email: true, username: true },
+        select: {
+          id: true,
+          email: true,
+          username: true,
+          createdAt: true,
+          avatar: true,
+        },
       });
       if (!user) {
         return done(null, false, { message: "User not found" });
