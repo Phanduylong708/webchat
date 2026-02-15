@@ -14,6 +14,10 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = React.useState<boolean>(true);
   const [error, setError] = React.useState<string | null>(null);
 
+  function setCurrentUser(nextUser: User): void {
+    setUser(nextUser);
+  }
+
   function logout(): void {
     setUser(null);
     setError(null);
@@ -78,7 +82,16 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(false);
     }
   }
-  const value = { user, loading, error, login, logout, register, checkAuth };
+  const value = {
+    user,
+    loading,
+    error,
+    login,
+    logout,
+    register,
+    checkAuth,
+    setCurrentUser,
+  };
   return <AuthContext value={value}>{children}</AuthContext>;
 }
 

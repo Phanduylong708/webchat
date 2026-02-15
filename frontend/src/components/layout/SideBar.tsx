@@ -3,7 +3,7 @@ import { User, MessageCircle } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/context/useAuth";
 import { LogOut } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
+import { ProfileDialog } from "@/components/profile/ProfileDialog";
 
 export default function SideBar(): React.JSX.Element {
   const { user, logout } = useAuth();
@@ -32,10 +32,7 @@ export default function SideBar(): React.JSX.Element {
       </div>
 
       <div className="p-4 flex flex-col items-center gap-2">
-        <Avatar className="size-9">
-          <AvatarImage src={user?.avatar || "https://github.com/shadcn.png"} />
-          <AvatarFallback>CN</AvatarFallback>
-        </Avatar>
+        <ProfileDialog />
         <span className="text-xs text-center truncate w-full">
           {user?.username}
         </span>

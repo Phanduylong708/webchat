@@ -32,6 +32,11 @@ function uploadImageBufferToCloudinary(buffer) {
       },
       (error, result) => {
         if (error) {
+          console.error("Cloudinary upload error:", {
+            name: error.name,
+            message: error.message,
+            http_code: error.http_code,
+          });
           return reject(createHTTPError(502, "Cloud upload failed"));
         }
         return resolve(result);

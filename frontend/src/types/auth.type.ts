@@ -41,5 +41,6 @@ interface AuthContextType extends AuthState {
     register: (data: RegisterRequest) => Promise<boolean>;
     logout: () => void;
     checkAuth: () => Promise<void>;
+    setCurrentUser: (user: User) => void;
 }
 export type { User, AuthResponse, AuthData, LoginRequest, RegisterRequest, AuthState, AuthContextType };

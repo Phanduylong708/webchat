@@ -31,6 +31,20 @@
   --chart-3: oklch(0.824 0.0786 281.3313);
   --chart-4: oklch(0.9182 0.0313 281.8071);
   --chart-5: oklch(0.9619 0.0109 274.8944);
+  --surface-raised: var(--popover);
+  --surface-inset: var(--muted);
+  --border-subtle: var(--border);
+  --signature-gradient: linear-gradient(
+    135deg,
+    var(--primary) 0%,
+    oklch(0.48 0.19 315) 100%
+  );
+  --status-online: oklch(0.72 0.19 145);
+  --overlay-dim: oklch(0.4 0.01 264 / 0.35);
+  --ease-out-smooth: cubic-bezier(0.16, 1, 0.3, 1);
+  --dur-fast: 120ms;
+  --dur: 180ms;
+  --dur-slow: 260ms;
   --sidebar: oklch(0.2956 0.0201 260.6249);
   --sidebar-foreground: oklch(1 0 0);
   --sidebar-primary: oklch(0.5747 0.2117 275.6666);
