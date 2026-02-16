@@ -34,3 +34,12 @@ export function getOptimizedAvatarUrl(
     `/upload/w_${retinaSize},h_${retinaSize},c_fill,g_face,f_auto,q_auto/`
   );
 }
+
+/**
+ * Returns the first two characters of a username, uppercased,
+ * for use as an avatar fallback label.
+ */
+export function getAvatarFallback(username: string): string {
+  return username.slice(0, 2).toUpperCase();
+}
+

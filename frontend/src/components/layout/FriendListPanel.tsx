@@ -6,7 +6,7 @@ import { Trash2 } from "lucide-react";
 import { Input } from "../ui/input";
 import { ScrollArea } from "../ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
-import { getOptimizedAvatarUrl } from "@/utils/image.util";
+import { getOptimizedAvatarUrl, getAvatarFallback } from "@/utils/image.util";
 import type { Friend } from "@/types/friend.type";
 import { useFriend } from "@/hooks/context/useFriend";
 import AddFriendDialog from "../friends/AddFriendDialog";
@@ -24,7 +24,7 @@ function FriendItem({ friend }: { friend: Friend }): React.JSX.Element {
       <div className="relative shrink-0">
         <Avatar className="size-10">
           <AvatarImage src={getOptimizedAvatarUrl(friend.avatar, 40)} />
-          <AvatarFallback>{friend.username[0].toUpperCase()}</AvatarFallback>
+          <AvatarFallback>{getAvatarFallback(friend.username)}</AvatarFallback>
         </Avatar>
         <span
           className={`absolute bottom-0 right-0 size-2.5 rounded-full border-2 border-background ${

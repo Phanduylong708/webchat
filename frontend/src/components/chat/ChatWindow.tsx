@@ -2,7 +2,7 @@ import { useConversation } from "@/hooks/context/useConversation";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { StackedAvatars } from "@/components/ui/stacked-avatars";
-import { getOptimizedAvatarUrl } from "@/utils/image.util";
+import { getOptimizedAvatarUrl, getAvatarFallback } from "@/utils/image.util";
 import MessageList from "./MessageList";
 import ChatInput from "./ChatInput";
 import AddMemberDialog from "./AddMemberDialog";
@@ -50,7 +50,9 @@ function ChatWindow(): React.JSX.Element {
                 <Avatar className="size-10">
                   <AvatarImage src={getOptimizedAvatarUrl(activeConversations.otherUser?.avatar, 40)} />
                   <AvatarFallback>
-                    {activeConversations.otherUser?.username?.[0]?.toUpperCase() ?? "U"}
+                    {activeConversations.otherUser
+                      ? getAvatarFallback(activeConversations.otherUser.username)
+                      : "U"}
                   </AvatarFallback>
                 </Avatar>
                 {/* Online indicator dot overlaid on avatar */}

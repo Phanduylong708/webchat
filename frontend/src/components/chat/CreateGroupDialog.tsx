@@ -15,7 +15,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { getOptimizedAvatarUrl } from "@/utils/image.util";
+import { getOptimizedAvatarUrl, getAvatarFallback } from "@/utils/image.util";
 import { Plus } from "lucide-react";
 
 export default function CreateGroupDialog(): React.JSX.Element {
@@ -112,7 +112,9 @@ export default function CreateGroupDialog(): React.JSX.Element {
                     />
                     <Avatar className="size-8 shrink-0">
                       <AvatarImage src={getOptimizedAvatarUrl(friend.avatar, 32)} />
-                      <AvatarFallback className="text-xs">{friend.username[0].toUpperCase()}</AvatarFallback>
+                      <AvatarFallback className="text-xs">
+                        {getAvatarFallback(friend.username)}
+                      </AvatarFallback>
                     </Avatar>
                     <label htmlFor={`friend-${friend.id}`} className="cursor-pointer flex-1 text-sm">
                       {friend.username}

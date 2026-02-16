@@ -3,16 +3,12 @@ import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { Camera, Pencil, X } from "lucide-react";
 import { useAuth } from "@/hooks/context/useAuth";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { getOptimizedAvatarUrl } from "@/utils/image.util";
+import { getOptimizedAvatarUrl, getAvatarFallback } from "@/utils/image.util";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { uploadMyAvatarApi } from "@/api/user.api";
 import { Dialog, DialogClose, DialogOverlay, DialogPortal, DialogTrigger } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
-
-function getAvatarFallback(username: string): string {
-  return username.slice(0, 2).toUpperCase();
-}
 
 type EditableField = "displayName" | "email";
 const MAX_AVATAR_FILE_SIZE_BYTES = 5 * 1024 * 1024;

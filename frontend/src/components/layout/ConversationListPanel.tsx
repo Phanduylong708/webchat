@@ -2,7 +2,7 @@ import { useConversation } from "@/hooks/context/useConversation";
 import type { ConversationsResponse } from "@/types/chat.type";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { StackedAvatars } from "../ui/stacked-avatars";
-import { getOptimizedAvatarUrl } from "@/utils/image.util";
+import { getOptimizedAvatarUrl, getAvatarFallback } from "@/utils/image.util";
 import { Separator } from "../ui/separator";
 import { Input } from "../ui/input";
 import { ScrollArea } from "../ui/scroll-area";
@@ -21,8 +21,12 @@ function ConversationItem({ conversation }: { conversation: ConversationsRespons
   const avatarSrc = isGroup ? (firstPreview?.avatar ?? undefined) : (otherUser?.avatar ?? undefined);
 
   const fallback = isGroup
-    ? (firstPreview?.username[0].toUpperCase() ?? "G")
-    : (otherUser?.username[0].toUpperCase() ?? "U");
+    ? firstPreview
+      ? getAvatarFallback(firstPreview.username)
+      : "G"
+    : otherUser
+      ? getAvatarFallback(otherUser.username)
+      : "U";
 
   const title = isGroup ? (conversation.title ?? "Unnamed Group") : (otherUser?.username ?? "Unknown user");
   return (

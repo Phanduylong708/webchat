@@ -1,16 +1,12 @@
 import type { Messages } from "@/types/chat.type";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { getOptimizedAvatarUrl } from "@/utils/image.util";
+import { getOptimizedAvatarUrl, getAvatarFallback } from "@/utils/image.util";
 
 interface MessageItemProps {
   message: Messages;
   isOwn: boolean;
   isFirstInGroup: boolean;
   isLastInGroup: boolean;
-}
-
-function getAvatarFallback(username: string): string {
-  return username.slice(0, 2).toUpperCase();
 }
 
 export default function MessageItem({

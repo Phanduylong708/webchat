@@ -1,5 +1,5 @@
 import { Avatar, AvatarFallback, AvatarImage } from "./avatar";
-import { getOptimizedAvatarUrl } from "@/utils/image.util";
+import { getOptimizedAvatarUrl, getAvatarFallback } from "@/utils/image.util";
 
 interface StackedAvatarUser {
   id: number;
@@ -44,7 +44,7 @@ export function StackedAvatars({ users, max = 3, size = 28, overlap = 10 }: Stac
           }}
         >
           <AvatarImage src={getOptimizedAvatarUrl(user.avatar, size)} />
-          <AvatarFallback className="text-[10px]">{user.username[0].toUpperCase()}</AvatarFallback>
+          <AvatarFallback className="text-[10px]">{getAvatarFallback(user.username)}</AvatarFallback>
         </Avatar>
       ))}
     </div>
