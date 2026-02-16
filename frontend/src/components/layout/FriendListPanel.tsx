@@ -21,10 +21,17 @@ function FriendItem({ friend }: { friend: Friend }): React.JSX.Element {
   transition-all"
       onClick={() => selectFriend(friend.id)}
     >
-      <Avatar className="size-10">
-        <AvatarImage src={getOptimizedAvatarUrl(friend.avatar, 40)} />
-        <AvatarFallback>{friend.username[0].toUpperCase()}</AvatarFallback>
-      </Avatar>
+      <div className="relative shrink-0">
+        <Avatar className="size-10">
+          <AvatarImage src={getOptimizedAvatarUrl(friend.avatar, 40)} />
+          <AvatarFallback>{friend.username[0].toUpperCase()}</AvatarFallback>
+        </Avatar>
+        <span
+          className={`absolute bottom-0 right-0 size-2.5 rounded-full border-2 border-background ${
+            friend.isOnline ? "bg-green-500" : "bg-muted-foreground/30"
+          }`}
+        />
+      </div>
 
       <div className="flex-1 min-w-0">
         <p className="font-medium truncate">{friend.username}</p>

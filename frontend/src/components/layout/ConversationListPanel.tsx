@@ -37,10 +37,17 @@ function ConversationItem({ conversation }: { conversation: ConversationsRespons
       {isGroup ? (
         <StackedAvatars users={conversation.previewMembers ?? []} size={24} overlap={8} />
       ) : (
-        <Avatar className="size-10">
-          <AvatarImage src={getOptimizedAvatarUrl(avatarSrc, 40)} />
-          <AvatarFallback>{fallback}</AvatarFallback>
-        </Avatar>
+        <div className="relative shrink-0">
+          <Avatar className="size-10">
+            <AvatarImage src={getOptimizedAvatarUrl(avatarSrc, 40)} />
+            <AvatarFallback>{fallback}</AvatarFallback>
+          </Avatar>
+          <span
+            className={`absolute bottom-0 right-0 size-2.5 rounded-full border-2 border-background ${
+              isOnline ? "bg-green-500" : "bg-muted-foreground/30"
+            }`}
+          />
+        </div>
       )}
 
       <div className="flex-1 min-w-0">
@@ -56,16 +63,7 @@ function ConversationItem({ conversation }: { conversation: ConversationsRespons
             >
               Group
             </span>
-          ) : (
-            <span className={`text-xs shrink-0 ${isActive ? "text-foreground/80" : "text-muted-foreground"}`}>
-              {/* TODO: online badge */}
-              {isOnline ? (
-                <span className="text-green-500">Online</span>
-              ) : (
-                <span className="text-red-500">Offline</span>
-              )}
-            </span>
-          )}
+          ) : null}
         </div>
         <p className="text-xs text-muted-foreground truncate">
           {conversation.lastMessage?.content ?? "No messages yet."}

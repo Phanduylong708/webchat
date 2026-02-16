@@ -14,6 +14,8 @@ import {
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { getOptimizedAvatarUrl } from "@/utils/image.util";
 import { Plus } from "lucide-react";
 
 export default function CreateGroupDialog(): React.JSX.Element {
@@ -73,9 +75,7 @@ export default function CreateGroupDialog(): React.JSX.Element {
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Create New Group</DialogTitle>
-          <DialogDescription>
-            Enter a group name and select friends to add to the group.
-          </DialogDescription>
+          <DialogDescription>Enter a group name and select friends to add to the group.</DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -95,14 +95,14 @@ export default function CreateGroupDialog(): React.JSX.Element {
 
             <ScrollArea className="h-48 border rounded-md p-2 mt-2">
               {friends.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-8">
-                  No friends available
-                </p>
+                <p className="text-sm text-muted-foreground text-center py-8">No friends available</p>
               ) : (
                 friends.map((friend) => (
                   <div
                     key={friend.id}
-                    className="flex items-center space-x-2 p-2 rounded-md hover:bg-accent/50"
+                    className={`flex items-center gap-3 p-2 rounded-md cursor-pointer ${
+                      selectedFriendIds.includes(friend.id) ? "bg-primary/10" : "hover:bg-accent/50"
+                    }`}
                   >
                     <Checkbox
                       id={`friend-${friend.id}`}
@@ -110,10 +110,11 @@ export default function CreateGroupDialog(): React.JSX.Element {
                       onCheckedChange={() => toggleFriend(friend.id)}
                       className="border-foreground/30 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
                     />
-                    <label
-                      htmlFor={`friend-${friend.id}`}
-                      className="cursor-pointer flex-1"
-                    >
+                    <Avatar className="size-8 shrink-0">
+                      <AvatarImage src={getOptimizedAvatarUrl(friend.avatar, 32)} />
+                      <AvatarFallback className="text-xs">{friend.username[0].toUpperCase()}</AvatarFallback>
+                    </Avatar>
+                    <label htmlFor={`friend-${friend.id}`} className="cursor-pointer flex-1 text-sm">
                       {friend.username}
                     </label>
                   </div>
@@ -125,9 +126,7 @@ export default function CreateGroupDialog(): React.JSX.Element {
               {selectedFriendIds.length} friend(s) selected
             </p>
           </div>
-          {localError && (
-            <div className="text-sm text-destructive">{localError}</div>
-          )}
+          {localError && <div className="text-sm text-destructive">{localError}</div>}
 
           <DialogFooter>
             <Button type="submit" disabled={!isValid || isSubmitting}>

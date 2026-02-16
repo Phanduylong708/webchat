@@ -4,6 +4,8 @@ import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/context/useAuth";
 import { LogOut } from "lucide-react";
 import { ProfileDialog } from "@/components/profile/ProfileDialog";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { getOptimizedAvatarUrl } from "@/utils/image.util";
 
 export default function SideBar(): React.JSX.Element {
   const { user, logout } = useAuth();
@@ -32,10 +34,21 @@ export default function SideBar(): React.JSX.Element {
       </div>
 
       <div className="p-4 flex flex-col items-center gap-2">
-        <ProfileDialog />
-        <span className="text-xs text-center truncate w-full">
-          {user?.username}
-        </span>
+        <ProfileDialog
+          trigger={
+            <button
+              type="button"
+              className="w-16 flex flex-col items-center justify-center gap-1 rounded-lg py-2 cursor-pointer hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-colors"
+              aria-label="Open profile settings"
+            >
+              <Avatar className="size-10">
+                <AvatarImage src={getOptimizedAvatarUrl(user?.avatar, 40)} />
+                <AvatarFallback>{user?.username?.slice(0, 2).toUpperCase() ?? "U"}</AvatarFallback>
+              </Avatar>
+              <span className="text-xs text-center truncate w-full">{user?.username}</span>
+            </button>
+          }
+        />
         <button
           onClick={logout}
           className="w-16 h-16 flex flex-col items-center justify-center gap-1 rounded-lg hover:bg-destructive/10 hover:text-destructive transition-colors"

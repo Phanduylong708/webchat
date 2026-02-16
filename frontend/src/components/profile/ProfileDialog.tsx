@@ -20,7 +20,7 @@ const ALLOWED_AVATAR_MIME_TYPES = new Set(["image/jpeg", "image/png", "image/web
 const INVALID_FILE_TYPE_MESSAGE = "Invalid file type. Only JPEG, PNG, and WEBP are allowed.";
 const FILE_TOO_LARGE_MESSAGE = "File too large. Max size is 5MB.";
 
-export function ProfileDialog(): React.JSX.Element | null {
+export function ProfileDialog({ trigger }: { trigger?: React.ReactNode }): React.JSX.Element | null {
   const { user, setCurrentUser } = useAuth();
   const [open, setOpen] = React.useState(false);
   const [draftDisplayName, setDraftDisplayName] = React.useState(user?.username ?? "");
@@ -111,20 +111,22 @@ export function ProfileDialog(): React.JSX.Element | null {
     }
   }
 
+  const defaultTrigger = (
+    <button
+      type="button"
+      className="cursor-pointer rounded-full transition-opacity duration-(--dur-fast) hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar focus-visible:outline-none"
+      aria-label="Open profile settings"
+    >
+      <Avatar className="size-10">
+        <AvatarImage src={getOptimizedAvatarUrl(currentUser.avatar, 40)} />
+        <AvatarFallback>{getAvatarFallback(currentUser.username)}</AvatarFallback>
+      </Avatar>
+    </button>
+  );
+
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger asChild>
-        <button
-          type="button"
-          className="cursor-pointer rounded-full transition-opacity duration-(--dur-fast) hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar focus-visible:outline-none"
-          aria-label="Open profile settings"
-        >
-          <Avatar className="size-10">
-            <AvatarImage src={getOptimizedAvatarUrl(currentUser.avatar, 40)} />
-            <AvatarFallback>{getAvatarFallback(currentUser.username)}</AvatarFallback>
-          </Avatar>
-        </button>
-      </DialogTrigger>
+      <DialogTrigger asChild>{trigger ?? defaultTrigger}</DialogTrigger>
 
       <DialogPortal>
         <DialogOverlay className="bg-(--overlay-dim)!" />
