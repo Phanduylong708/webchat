@@ -6,6 +6,7 @@ import { LogOut } from "lucide-react";
 import { ProfileDialog } from "@/components/profile/ProfileDialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { getOptimizedAvatarUrl } from "@/utils/image.util";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 export default function SideBar(): React.JSX.Element {
   const { user, logout } = useAuth();
@@ -49,6 +50,7 @@ export default function SideBar(): React.JSX.Element {
             </button>
           }
         />
+        <ThemeToggle />
         <button
           onClick={logout}
           className="w-16 h-16 flex flex-col items-center justify-center gap-1 rounded-lg hover:bg-destructive/10 hover:text-destructive transition-colors"

@@ -5,6 +5,7 @@ import { IncomingCallDialog } from "@/components/call/IncomingCallDialog";
 import { useAuth } from "@/hooks/context/useAuth";
 import { Outlet } from "react-router-dom";
 import { Toaster } from "sonner";
+import { ThemeProvider } from "@/components/ThemeProvider";
 import React from "react";
 
 function AppContent() {
@@ -19,15 +20,17 @@ function AppContent() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <SocketProvider>
-        <CallProvider>
-          <IncomingCallDialog />
-          <AppContent />
-        </CallProvider>
-      </SocketProvider>
-      <Toaster position="top-center" richColors duration={3000} />
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <SocketProvider>
+          <CallProvider>
+            <IncomingCallDialog />
+            <AppContent />
+          </CallProvider>
+        </SocketProvider>
+        <Toaster position="top-center" richColors duration={3000} />
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
 
