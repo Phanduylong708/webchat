@@ -28,8 +28,8 @@ export default function MessageItem({
   if (isOwn) {
     return (
       <div className="flex justify-end">
-        <div className="flex flex-col items-end max-w-[70%]">
-          <div className="wrap-break-word whitespace-pre-wrap bg-primary text-primary-foreground px-3 py-2 rounded-tl-2xl rounded-tr-2xl rounded-bl-2xl">
+        <div className="flex flex-col items-end max-w-[70%] min-w-0">
+          <div className="max-w-full wrap-anywhere whitespace-pre-wrap bg-primary text-primary-foreground px-3 py-2 rounded-tl-2xl rounded-tr-2xl rounded-bl-2xl">
             {message.content}
           </div>
           {isLastInGroup && <span className="text-[10px] text-muted-foreground mt-1">{timestamp}</span>}
@@ -52,11 +52,11 @@ export default function MessageItem({
       )}
 
       {/* Content column */}
-      <div className="flex flex-col items-start max-w-[70%]">
+      <div className="flex flex-col items-start max-w-[70%] min-w-0">
         {isFirstInGroup && (
           <span className="text-xs text-muted-foreground mb-1">{message.sender.username}</span>
         )}
-        <div className="wrap-break-word whitespace-pre-wrap bg-muted text-foreground px-3 py-2 rounded-tl-2xl rounded-tr-2xl rounded-br-2xl">
+        <div className="max-w-full wrap-anywhere whitespace-pre-wrap bg-muted text-foreground px-3 py-2 rounded-tl-2xl rounded-tr-2xl rounded-br-2xl">
           {message.content}
         </div>
         {isLastInGroup && <span className="text-[10px] text-muted-foreground mt-1">{timestamp}</span>}
