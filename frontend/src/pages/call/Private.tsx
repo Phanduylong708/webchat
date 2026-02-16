@@ -1,4 +1,5 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { getOptimizedAvatarUrl } from "@/utils/image.util";
 import { MicOff } from "lucide-react";
 import type { User as UserType } from "@/types/chat.type";
 import type { CallStatus, CallParticipant } from "@/types/call.type";
@@ -47,11 +48,7 @@ export function PrivateCallLayout({
           <MediaVideo
             stream={remoteStream}
             playsInline
-            className={
-              isRemoteCamOn && !showWaitingUI
-                ? "w-full h-full object-cover"
-                : "invisible absolute"
-            }
+            className={isRemoteCamOn && !showWaitingUI ? "w-full h-full object-cover" : "invisible absolute"}
             muted={false}
           />
         )}
@@ -61,7 +58,7 @@ export function PrivateCallLayout({
           <div className="flex flex-col items-center gap-6">
             <div className="relative">
               <Avatar className="h-32 w-32 sm:h-40 sm:w-40 border-8 border-zinc-800/50 shadow-inner">
-                <AvatarImage src={displayUser?.avatar ?? undefined} />
+                <AvatarImage src={getOptimizedAvatarUrl(displayUser?.avatar, 160)} />
                 <AvatarFallback className="text-5xl bg-zinc-800 text-zinc-500">
                   {displayName.charAt(0).toUpperCase()}
                 </AvatarFallback>

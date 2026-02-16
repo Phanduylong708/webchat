@@ -5,6 +5,7 @@ import type { Friend } from "@/types/friend.type";
 import formatLastSeen from "@/utils/helper.util";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { getOptimizedAvatarUrl } from "@/utils/image.util";
 import { Button } from "@/components/ui/button";
 import { useFriend } from "@/hooks/context/useFriend";
 import { MessageCircle, UserMinus } from "lucide-react";
@@ -29,7 +30,7 @@ export default function FriendProfile({ friend }: { friend: Friend }): React.JSX
     <Card className="max-w-md mx-auto mt-8">
       <CardContent className="pt-6">
         <Avatar className="size-24 mx-auto">
-          <AvatarImage src={friend.avatar || undefined} alt="Friend's Avatar" />
+          <AvatarImage src={getOptimizedAvatarUrl(friend.avatar, 96)} alt="Friend's Avatar" />
           <AvatarFallback>{friend.username.slice(0, 2).toUpperCase()}</AvatarFallback>
         </Avatar>
         <h2 className="text-2xl font-semibold text-center mt-4">{friend.username}</h2>

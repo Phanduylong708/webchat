@@ -6,6 +6,7 @@ import { Trash2 } from "lucide-react";
 import { Input } from "../ui/input";
 import { ScrollArea } from "../ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
+import { getOptimizedAvatarUrl } from "@/utils/image.util";
 import type { Friend } from "@/types/friend.type";
 import { useFriend } from "@/hooks/context/useFriend";
 import AddFriendDialog from "../friends/AddFriendDialog";
@@ -21,7 +22,7 @@ function FriendItem({ friend }: { friend: Friend }): React.JSX.Element {
       onClick={() => selectFriend(friend.id)}
     >
       <Avatar className="size-10">
-        <AvatarImage src={friend.avatar || undefined} />
+        <AvatarImage src={getOptimizedAvatarUrl(friend.avatar, 40)} />
         <AvatarFallback>{friend.username[0].toUpperCase()}</AvatarFallback>
       </Avatar>
 

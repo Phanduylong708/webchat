@@ -1,5 +1,6 @@
 import { memo } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { getOptimizedAvatarUrl } from "@/utils/image.util";
 import { MicOff } from "lucide-react";
 import type { CallParticipant } from "@/types/call.type";
 import { cn } from "@/lib/utils";
@@ -54,7 +55,7 @@ function ParticipantTileComponent({
       className={cn(
         "relative w-full h-full bg-zinc-900 rounded-xl border overflow-hidden shadow-md group transition-all duration-300",
         compact ? "min-h-[120px]" : "min-h-40",
-        hasError ? "border-red-500/50" : "border-white/5"
+        hasError ? "border-red-500/50" : "border-white/5",
       )}
     >
       {/* Always mount MediaVideo for remote streams to keep audio playing */}
@@ -63,51 +64,39 @@ function ParticipantTileComponent({
           stream={displayStream}
           muted={false}
           playsInline
-          className={cn(
-            "w-full h-full object-cover",
-            !shouldShowRemoteVideo && "invisible absolute"
-          )}
+          className={cn("w-full h-full object-cover", !shouldShowRemoteVideo && "invisible absolute")}
         />
       )}
 
       {/* Self video - only mount when showing */}
       {shouldShowSelfVideo && displayStream && (
-        <MediaVideo
-          stream={displayStream}
-          muted
-          playsInline
-          className="w-full h-full object-cover"
-        />
+        <MediaVideo stream={displayStream} muted playsInline className="w-full h-full object-cover" />
       )}
 
       {/* Avatar fallback when video not shown */}
       {!shouldShowVideo && (
         <div className="w-full h-full flex flex-col items-center justify-center bg-zinc-850 relative">
           <Avatar className={cn("border-4 border-zinc-800 shadow-sm", compact ? "h-12 w-12" : "h-20 w-20")}>
-            <AvatarImage src={participant.avatar ?? undefined} />
+            <AvatarImage src={getOptimizedAvatarUrl(participant.avatar, 80)} />
             <AvatarFallback className="bg-zinc-700 text-zinc-400">
               {participant.username.charAt(0).toUpperCase()}
             </AvatarFallback>
           </Avatar>
-          {hasError && (
-            <span className="mt-2 text-xs text-red-400">{errorState}</span>
-          )}
+          {hasError && <span className="mt-2 text-xs text-red-400">{errorState}</span>}
         </div>
       )}
 
       <div
         className={cn(
           "absolute flex items-center justify-between",
-          compact ? "bottom-2 left-2 right-2" : "bottom-3 left-3 right-3"
+          compact ? "bottom-2 left-2 right-2" : "bottom-3 left-3 right-3",
         )}
       >
         <div className="px-2 py-1 rounded bg-black/60 backdrop-blur-md border border-white/5 flex items-center gap-2 max-w-[85%]">
           <span className="text-xs font-medium text-white truncate">
             {isMe ? "You" : participant.username}
           </span>
-          {audioMuted && (
-            <MicOff className="h-3 w-3 text-zinc-400 shrink-0" />
-          )}
+          {audioMuted && <MicOff className="h-3 w-3 text-zinc-400 shrink-0" />}
         </div>
       </div>
     </div>

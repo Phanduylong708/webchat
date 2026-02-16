@@ -3,6 +3,7 @@ import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { Camera, Pencil, X } from "lucide-react";
 import { useAuth } from "@/hooks/context/useAuth";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { getOptimizedAvatarUrl } from "@/utils/image.util";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { uploadMyAvatarApi } from "@/api/user.api";
@@ -119,7 +120,7 @@ export function ProfileDialog(): React.JSX.Element | null {
           aria-label="Open profile settings"
         >
           <Avatar className="size-9">
-            <AvatarImage src={currentUser.avatar || undefined} />
+            <AvatarImage src={getOptimizedAvatarUrl(currentUser.avatar, 36)} />
             <AvatarFallback>{getAvatarFallback(currentUser.username)}</AvatarFallback>
           </Avatar>
         </button>
@@ -156,7 +157,7 @@ export function ProfileDialog(): React.JSX.Element | null {
             >
               <Avatar className="size-[88px] border border-[var(--border-subtle)]">
                 <AvatarImage
-                  src={currentUser.avatar || undefined}
+                  src={getOptimizedAvatarUrl(currentUser.avatar, 88)}
                   className={cn(
                     "object-cover transition-[filter,transform] duration-[var(--dur-slow)] ease-[var(--ease-out-smooth)]",
                     "group-hover/avatar:blur-[1px]",

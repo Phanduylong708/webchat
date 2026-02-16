@@ -6,17 +6,9 @@ import TypingIndicator from "./TypingIndicator";
 import InfiniteScroll from "react-infinite-scroll-component";
 
 export default function MessageList() {
-  const {
-    messagesByConversation,
-    loadingMessages,
-    loadOlderMessages,
-    pagination,
-    error,
-  } = useMessage();
+  const { messagesByConversation, loadingMessages, loadOlderMessages, pagination, error } = useMessage();
   const { activeConversationId } = useConversation();
-  const paginationInfo = activeConversationId
-    ? pagination.get(activeConversationId)
-    : undefined;
+  const paginationInfo = activeConversationId ? pagination.get(activeConversationId) : undefined;
   const { user } = useAuth();
   if (!activeConversationId) {
     return (
@@ -29,25 +21,17 @@ export default function MessageList() {
   if (loadingMessages) {
     return (
       <div className="flex items-center justify-center h-full">
-        <p className="text-center text-muted-foreground py-8">
-          Loading messages...
-        </p>
+        <p className="text-center text-muted-foreground py-8">Loading messages...</p>
       </div>
     );
   }
 
   if (error && messages.length === 0) {
-    return (
-      <div className="text-center text-destructive py-8">Error: {error}</div>
-    );
+    return <div className="text-center text-destructive py-8">Error: {error}</div>;
   }
 
   if (messages.length === 0) {
-    return (
-      <div className="text-center text-muted-foreground py-8">
-        No messages yet
-      </div>
-    );
+    return <div className="text-center text-muted-foreground py-8">No messages yet</div>;
   }
   return (
     //prettier-ignore
@@ -60,11 +44,22 @@ export default function MessageList() {
         scrollableTarget="scrollableDiv"
         inverse ={true}
       >
-        <div className="space-y-4">
-        {messages.map((message) => {
+        <div className="space-y-1">
+        {messages.map((message, index) => {
           const isOwn = message.senderId === user?.id;
+          const prevMessage = messages[index - 1];
+          const nextMessage = messages[index + 1];
+          const isFirstInGroup = !prevMessage || prevMessage.senderId !== message.senderId;
+          const isLastInGroup = !nextMessage || nextMessage.senderId !== message.senderId;
           return (
-            <MessageItem key={message.id} message={message} isOwn={isOwn} />
+            <div key={message.id} className={isFirstInGroup && index !== 0 ? "pt-3" : ""}>
+              <MessageItem
+                message={message}
+                isOwn={isOwn}
+                isFirstInGroup={isFirstInGroup}
+                isLastInGroup={isLastInGroup}
+              />
+            </div>
           );
         })}
         <TypingIndicator conversationId={activeConversationId} />

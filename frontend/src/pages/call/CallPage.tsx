@@ -5,6 +5,7 @@ import { useAuth } from "@/hooks/context/useAuth";
 import useSocket from "@/hooks/context/useSocket";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { getOptimizedAvatarUrl } from "@/utils/image.util";
 import { callEndReasonMessages } from "@/types/call.type";
 import { CallControls } from "@/components/call/CallControls";
 import { Loader2, AlertCircle, Home } from "lucide-react";
@@ -60,7 +61,7 @@ function LocalPiP(): React.JSX.Element {
       ) : (
         <div className="w-full h-full flex items-center justify-center bg-zinc-850">
           <Avatar className="h-16 w-16 sm:h-20 sm:w-20 border-4 border-zinc-800">
-            <AvatarImage src={user?.avatar ?? undefined} />
+            <AvatarImage src={getOptimizedAvatarUrl(user?.avatar, 80)} />
             <AvatarFallback className="bg-zinc-700 text-zinc-400 text-xl">
               {user?.username?.charAt(0).toUpperCase() ?? "?"}
             </AvatarFallback>

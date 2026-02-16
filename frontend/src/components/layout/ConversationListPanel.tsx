@@ -1,38 +1,29 @@
 import { useConversation } from "@/hooks/context/useConversation";
 import type { ConversationsResponse } from "@/types/chat.type";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
+import { getOptimizedAvatarUrl } from "@/utils/image.util";
 import { Separator } from "../ui/separator";
 import { Input } from "../ui/input";
 import { ScrollArea } from "../ui/scroll-area";
 import CreateGroupDialog from "../chat/CreateGroupDialog";
 
-function ConversationItem({
-  conversation,
-}: {
-  conversation: ConversationsResponse;
-}): React.JSX.Element {
-  const { selectConversation, activeConversationId, onlineUsers } =
-    useConversation();
+function ConversationItem({ conversation }: { conversation: ConversationsResponse }): React.JSX.Element {
+  const { selectConversation, activeConversationId, onlineUsers } = useConversation();
   const isGroup = conversation.type === "GROUP";
   const firstPreview = conversation.previewMembers?.[0];
   const isActive = conversation.id === activeConversationId;
   const otherUser = conversation.otherUser;
 
   const isPrivate = conversation.type === "PRIVATE";
-  const isOnline =
-    isPrivate && otherUser ? onlineUsers.has(otherUser.id) : false;
+  const isOnline = isPrivate && otherUser ? onlineUsers.has(otherUser.id) : false;
 
-  const avatarSrc = isGroup
-    ? firstPreview?.avatar ?? undefined
-    : otherUser?.avatar ?? undefined;
+  const avatarSrc = isGroup ? (firstPreview?.avatar ?? undefined) : (otherUser?.avatar ?? undefined);
 
   const fallback = isGroup
-    ? firstPreview?.username[0].toUpperCase() ?? "G"
-    : otherUser?.username[0].toUpperCase() ?? "U";
+    ? (firstPreview?.username[0].toUpperCase() ?? "G")
+    : (otherUser?.username[0].toUpperCase() ?? "U");
 
-  const title = isGroup
-    ? conversation.title ?? "Unnamed Group"
-    : otherUser?.username ?? "Unknown user";
+  const title = isGroup ? (conversation.title ?? "Unnamed Group") : (otherUser?.username ?? "Unknown user");
   return (
     <div
       className={`group flex items-center gap-3 p-3 rounded-lg border border-transparent cursor-pointer transition-all ${
@@ -43,33 +34,21 @@ function ConversationItem({
       onClick={() => selectConversation(conversation.id)}
     >
       <Avatar className="size-10">
-        <AvatarImage src={avatarSrc} />
+        <AvatarImage src={getOptimizedAvatarUrl(avatarSrc, 40)} />
         <AvatarFallback>{fallback}</AvatarFallback>
       </Avatar>
 
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between">
-          <p
-            className={`font-medium truncate ${
-              isActive ? "text-foreground" : "text-foreground"
-            }`}
-          >
+          <p className={`font-medium truncate ${isActive ? "text-foreground" : "text-foreground"}`}>
             {title}
           </p>
           {isGroup ? (
-            <span
-              className={`text-[10px] uppercase ${
-                isActive ? "text-foreground/80" : "text-primary"
-              }`}
-            >
+            <span className={`text-[10px] uppercase ${isActive ? "text-foreground/80" : "text-primary"}`}>
               Group
             </span>
           ) : (
-            <span
-              className={`text-xs ${
-                isActive ? "text-foreground/80" : "text-muted-foreground"
-              }`}
-            >
+            <span className={`text-xs ${isActive ? "text-foreground/80" : "text-muted-foreground"}`}>
               {/* TODO: online badge */}
               {isOnline ? (
                 <span className="text-green-500">Online</span>
@@ -88,27 +67,20 @@ function ConversationItem({
 }
 
 export default function ConversationListPanel(): React.JSX.Element {
-  const { conversations, loadingConversations, error } =
-    useConversation();
+  const { conversations, loadingConversations, error } = useConversation();
 
   function renderConversationList(): React.JSX.Element {
     if (loadingConversations) {
-      return (
-        <div className="text-center text-muted-foreground py-8">Loading...</div>
-      );
+      return <div className="text-center text-muted-foreground py-8">Loading...</div>;
     }
 
     if (error && conversations.length === 0) {
-      return (
-        <div className="text-center text-destructive py-8">Error: {error}</div>
-      );
+      return <div className="text-center text-destructive py-8">Error: {error}</div>;
     }
 
     if (conversations.length === 0) {
       return (
-        <div className="text-center text-muted-foreground py-8">
-          No conversations yet. Start a new chat!
-        </div>
+        <div className="text-center text-muted-foreground py-8">No conversations yet. Start a new chat!</div>
       );
     }
 
@@ -129,16 +101,11 @@ export default function ConversationListPanel(): React.JSX.Element {
       </div>
       <Separator />
       <div className="p-4">
-        <Input
-          placeholder="Search Conversations..."
-          className="bg-background"
-        />
+        <Input placeholder="Search Conversations..." className="bg-background" />
       </div>
       <Separator />
       <ScrollArea className="flex-1 min-h-0">
-        <div className="p-2 gap-2 flex flex-col">
-          {renderConversationList()}
-        </div>
+        <div className="p-2 gap-2 flex flex-col">{renderConversationList()}</div>
       </ScrollArea>
     </div>
   );

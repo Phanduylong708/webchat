@@ -1,5 +1,6 @@
 import { useMemo, useEffect, useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { getOptimizedAvatarUrl } from "@/utils/image.util";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import type { CallParticipant, CallStatus } from "@/types/call.type";
 import { cn } from "@/lib/utils";
@@ -98,7 +99,7 @@ export function GroupCallLayout({
               {ordered.map((p) => (
                 <div key={p.id} className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/5">
                   <Avatar className="h-8 w-8">
-                    <AvatarImage src={p.avatar ?? undefined} />
+                    <AvatarImage src={getOptimizedAvatarUrl(p.avatar, 32)} />
                     <AvatarFallback className="bg-zinc-700 text-zinc-300 text-xs">
                       {p.username.charAt(0).toUpperCase()}
                     </AvatarFallback>
@@ -166,12 +167,12 @@ function PaginatedGridLayout({
     count <= 1
       ? "grid-cols-1 max-w-4xl mx-auto"
       : count <= 2
-      ? "grid-cols-1 sm:grid-cols-2 max-w-6xl mx-auto"
-      : count <= 4
-      ? "grid-cols-2"
-      : count <= 9
-      ? "grid-cols-2 sm:grid-cols-3"
-      : "grid-cols-3 sm:grid-cols-4"
+        ? "grid-cols-1 sm:grid-cols-2 max-w-6xl mx-auto"
+        : count <= 4
+          ? "grid-cols-2"
+          : count <= 9
+            ? "grid-cols-2 sm:grid-cols-3"
+            : "grid-cols-3 sm:grid-cols-4",
   );
 
   return (
@@ -207,7 +208,7 @@ function PaginatedGridLayout({
             size="icon"
             className={cn(
               "pointer-events-auto h-12 w-12 rounded-full shadow-2xl bg-white",
-              currentPage === 0 && "opacity-0 pointer-events-none"
+              currentPage === 0 && "opacity-0 pointer-events-none",
             )}
             onClick={() => setCurrentPage((p: number) => Math.max(0, p - 1))}
           >
@@ -219,7 +220,7 @@ function PaginatedGridLayout({
             size="icon"
             className={cn(
               "pointer-events-auto h-12 w-12 rounded-full shadow-2xl bg-white",
-              currentPage === totalPages - 1 && "opacity-0 pointer-events-none"
+              currentPage === totalPages - 1 && "opacity-0 pointer-events-none",
             )}
             onClick={() => setCurrentPage((p: number) => Math.min(totalPages - 1, p + 1))}
           >
@@ -236,7 +237,7 @@ function PaginatedGridLayout({
               key={i}
               className={cn(
                 "h-2 w-2 rounded-full transition-all",
-                i === currentPage ? "bg-white w-4" : "bg-white/20"
+                i === currentPage ? "bg-white w-4" : "bg-white/20",
               )}
             />
           ))}

@@ -1,5 +1,6 @@
 import { memo } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { getOptimizedAvatarUrl } from "@/utils/image.util";
 import { MicOff, Monitor } from "lucide-react";
 
 import MediaVideo from "@/components/call/MediaVideo";
@@ -58,9 +59,7 @@ function StageLayoutComponent({
           <div className="absolute bottom-4 left-4 pointer-events-none">
             <div className="px-3 py-1.5 rounded-lg bg-black/60 backdrop-blur-md border border-white/10 flex items-center gap-2">
               <Monitor className="h-3.5 w-3.5 text-blue-400" />
-              <span className="text-sm font-medium text-white truncate max-w-[200px]">
-                {presenterName}
-              </span>
+              <span className="text-sm font-medium text-white truncate max-w-[200px]">{presenterName}</span>
             </div>
           </div>
         )}
@@ -100,7 +99,7 @@ function StripTile({ tile }: StripTileProps): React.JSX.Element {
       ) : (
         <div className="w-full h-full flex items-center justify-center bg-zinc-850">
           <Avatar className="h-10 w-10 lg:h-12 lg:w-12 border-2 border-zinc-800">
-            <AvatarImage src={tile.avatarUrl ?? undefined} />
+            <AvatarImage src={getOptimizedAvatarUrl(tile.avatarUrl, 48)} />
             <AvatarFallback className="bg-zinc-700 text-zinc-400 text-sm">
               {tile.displayName.charAt(0).toUpperCase()}
             </AvatarFallback>
@@ -122,9 +121,7 @@ function StripTile({ tile }: StripTileProps): React.JSX.Element {
           <span className="text-[10px] font-medium text-white truncate">
             {tile.isLocal ? "You" : tile.displayName}
           </span>
-          {tile.isMuted && (
-            <MicOff className="h-2.5 w-2.5 text-zinc-400 shrink-0" />
-          )}
+          {tile.isMuted && <MicOff className="h-2.5 w-2.5 text-zinc-400 shrink-0" />}
         </div>
       </div>
     </div>
