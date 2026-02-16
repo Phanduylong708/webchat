@@ -1,6 +1,7 @@
 import { useConversation } from "@/hooks/context/useConversation";
 import type { ConversationsResponse } from "@/types/chat.type";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
+import { StackedAvatars } from "../ui/stacked-avatars";
 import { getOptimizedAvatarUrl } from "@/utils/image.util";
 import { Separator } from "../ui/separator";
 import { Input } from "../ui/input";
@@ -33,22 +34,30 @@ function ConversationItem({ conversation }: { conversation: ConversationsRespons
       }`}
       onClick={() => selectConversation(conversation.id)}
     >
-      <Avatar className="size-10">
-        <AvatarImage src={getOptimizedAvatarUrl(avatarSrc, 40)} />
-        <AvatarFallback>{fallback}</AvatarFallback>
-      </Avatar>
+      {isGroup ? (
+        <StackedAvatars users={conversation.previewMembers ?? []} size={24} overlap={8} />
+      ) : (
+        <Avatar className="size-10">
+          <AvatarImage src={getOptimizedAvatarUrl(avatarSrc, 40)} />
+          <AvatarFallback>{fallback}</AvatarFallback>
+        </Avatar>
+      )}
 
       <div className="flex-1 min-w-0">
-        <div className="flex items-center justify-between">
-          <p className={`font-medium truncate ${isActive ? "text-foreground" : "text-foreground"}`}>
+        <div className="flex items-center justify-between gap-2">
+          <p
+            className={`font-medium truncate flex-1 min-w-0 ${isActive ? "text-foreground" : "text-foreground"}`}
+          >
             {title}
           </p>
           {isGroup ? (
-            <span className={`text-[10px] uppercase ${isActive ? "text-foreground/80" : "text-primary"}`}>
+            <span
+              className={`text-[10px] uppercase shrink-0 ${isActive ? "text-foreground/80" : "text-primary"}`}
+            >
               Group
             </span>
           ) : (
-            <span className={`text-xs ${isActive ? "text-foreground/80" : "text-muted-foreground"}`}>
+            <span className={`text-xs shrink-0 ${isActive ? "text-foreground/80" : "text-muted-foreground"}`}>
               {/* TODO: online badge */}
               {isOnline ? (
                 <span className="text-green-500">Online</span>

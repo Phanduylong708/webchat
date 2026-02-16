@@ -1,4 +1,15 @@
 /**
+ * Avatar Size Guide (follow Tailwind's 8px spacing scale for consistency):
+ *
+ *   Compact  — size-8  (32px): inline/dense contexts (message bubbles, small tiles)
+ *   Standard — size-10 (40px): list items (conversations, friends, sidebar triggers)
+ *   Featured — size-24 (96px): detail/profile views (profile dialog, friend profile)
+ *
+ * When adding a new avatar, pick the tier that matches the context.
+ * Always pass the CSS display size to getOptimizedAvatarUrl() — it auto-doubles for retina.
+ */
+
+/**
  * Inserts Cloudinary transformation parameters into a Cloudinary URL
  * to fetch a resized avatar instead of the full-resolution original.
  *

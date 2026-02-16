@@ -44,7 +44,7 @@ function ChatPageContent(): React.JSX.Element {
     }
   }, [activeConversationId, fetchMessages]);
   return (
-    <div className="grid grid-cols-[300px_1fr] h-screen">
+    <div className="grid grid-cols-[300px_minmax(0,1fr)] h-screen">
       <ConversationListPanel />
       <MainContentPanel>
         <ChatWindow />

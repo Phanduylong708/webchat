@@ -116,23 +116,23 @@ export function ProfileDialog(): React.JSX.Element | null {
       <DialogTrigger asChild>
         <button
           type="button"
-          className="cursor-pointer rounded-full transition-opacity duration-[var(--dur-fast)] hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar focus-visible:outline-none"
+          className="cursor-pointer rounded-full transition-opacity duration-(--dur-fast) hover:opacity-90 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar focus-visible:outline-none"
           aria-label="Open profile settings"
         >
-          <Avatar className="size-9">
-            <AvatarImage src={getOptimizedAvatarUrl(currentUser.avatar, 36)} />
+          <Avatar className="size-10">
+            <AvatarImage src={getOptimizedAvatarUrl(currentUser.avatar, 40)} />
             <AvatarFallback>{getAvatarFallback(currentUser.username)}</AvatarFallback>
           </Avatar>
         </button>
       </DialogTrigger>
 
       <DialogPortal>
-        <DialogOverlay className="!bg-[var(--overlay-dim)]" />
+        <DialogOverlay className="bg-(--overlay-dim)!" />
         <DialogPrimitive.Content
           className={cn(
-            "bg-[var(--surface-raised)] data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0",
+            "bg-(--surface-raised) data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0",
             "data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed top-1/2 left-1/2 z-50",
-            "w-[340px] max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] overflow-hidden rounded-[14px] border border-[var(--border-subtle)]",
+            "w-[340px] max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] overflow-hidden rounded-[14px] border border-(--border-subtle)",
             "p-0 shadow-lg duration-200 focus:outline-none",
           )}
         >
@@ -140,26 +140,26 @@ export function ProfileDialog(): React.JSX.Element | null {
             <DialogClose asChild>
               <button
                 type="button"
-                className="absolute top-3 right-3 inline-flex size-8 cursor-pointer items-center justify-center rounded-full bg-white/15 text-white transition-colors duration-[var(--dur-fast)] hover:bg-white/25 focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:outline-none"
+                className="absolute top-3 right-3 inline-flex size-8 cursor-pointer items-center justify-center rounded-full bg-white/15 text-white transition-colors duration-(--dur-fast) hover:bg-white/25 focus-visible:ring-2 focus-visible:ring-white/70 focus-visible:outline-none"
               >
                 <X className="size-4" />
               </button>
             </DialogClose>
           </div>
 
-          <div className="absolute left-1/2 top-[56px] -translate-x-1/2">
+          <div className="absolute left-1/2 top-[52px] -translate-x-1/2">
             <div
               className={cn(
-                "group/avatar relative rounded-full bg-[var(--surface-raised)] p-1",
+                "group/avatar relative rounded-full bg-(--surface-raised) p-1",
                 isUploadingAvatar ? "cursor-not-allowed opacity-80" : "cursor-pointer",
               )}
               onClick={openAvatarPicker}
             >
-              <Avatar className="size-[88px] border border-[var(--border-subtle)]">
+              <Avatar className="size-24 border border-(--border-subtle)">
                 <AvatarImage
-                  src={getOptimizedAvatarUrl(currentUser.avatar, 88)}
+                  src={getOptimizedAvatarUrl(currentUser.avatar, 96)}
                   className={cn(
-                    "object-cover transition-[filter,transform] duration-[var(--dur-slow)] ease-[var(--ease-out-smooth)]",
+                    "object-cover transition-[filter,transform] duration-(--dur-slow) ease-(--ease-out-smooth)",
                     "group-hover/avatar:blur-[1px]",
                   )}
                 />
@@ -171,7 +171,7 @@ export function ProfileDialog(): React.JSX.Element | null {
               <div
                 className={cn(
                   "pointer-events-none absolute inset-1 z-10 flex flex-col items-center justify-center rounded-full bg-black/55",
-                  "opacity-0 transition-opacity duration-[var(--dur-slow)] ease-[var(--ease-out-smooth)]",
+                  "opacity-0 transition-opacity duration-(--dur-slow) ease-(--ease-out-smooth)",
                   "group-hover/avatar:opacity-100",
                 )}
               >
@@ -179,7 +179,7 @@ export function ProfileDialog(): React.JSX.Element | null {
                 <span className="mt-1 text-[10px] font-semibold tracking-[0.12em] text-white">CHANGE</span>
               </div>
 
-              <span className="absolute right-[2px] bottom-[2px] z-20 size-[18px] rounded-full border-[3.5px] border-[var(--surface-raised)] bg-[var(--status-online)]" />
+              <span className="absolute right-[2px] bottom-[2px] z-20 size-[18px] rounded-full border-[3.5px] border-(--surface-raised) bg-(--status-online)" />
             </div>
 
             <input
@@ -192,11 +192,11 @@ export function ProfileDialog(): React.JSX.Element | null {
             />
           </div>
 
-          <div className="mx-5 mt-[60px] mb-5 overflow-hidden rounded-[10px] border border-[var(--border-subtle)] bg-[var(--surface-inset)]">
+          <div className="mx-5 mt-[64px] mb-5 overflow-hidden rounded-[10px] border border-(--border-subtle) bg-(--surface-inset)">
             <div
               className={cn(
                 "group/name-row flex cursor-pointer items-center justify-between bg-transparent px-4 py-3",
-                "transition-colors duration-[var(--dur)] ease-[var(--ease-out-smooth)] hover:bg-[var(--surface-raised)]",
+                "transition-colors duration-(--dur) ease-(--ease-out-smooth) hover:bg-(--surface-raised)",
               )}
               onClick={() => {
                 if (!editingField) {
@@ -213,7 +213,7 @@ export function ProfileDialog(): React.JSX.Element | null {
                     onChange={(event) => setEditValue(event.target.value)}
                     onBlur={handleEditInputBlur}
                     onFocus={(event) => event.currentTarget.select()}
-                    className="mt-1 h-8 border-[var(--border-subtle)] bg-[var(--surface-raised)] px-2 text-sm"
+                    className="mt-1 h-8 border-(--border-subtle) bg-(--surface-raised) px-2 text-sm"
                   />
                 ) : (
                   <p className="truncate text-sm font-medium">{draftDisplayName}</p>
@@ -222,19 +222,19 @@ export function ProfileDialog(): React.JSX.Element | null {
               <Pencil
                 className={cn(
                   "text-muted-foreground size-4 shrink-0 opacity-0",
-                  "transition-opacity duration-[var(--dur)] ease-[var(--ease-out-smooth)]",
+                  "transition-opacity duration-(--dur) ease-(--ease-out-smooth)",
                   "group-hover/name-row:opacity-100",
                   editingField === "displayName" && "opacity-40",
                 )}
               />
             </div>
 
-            <div className="h-px bg-[var(--border-subtle)]" />
+            <div className="h-px bg-(--border-subtle)" />
 
             <div
               className={cn(
                 "group/email-row flex cursor-pointer items-center justify-between px-4 py-3",
-                "transition-colors duration-[var(--dur)] ease-[var(--ease-out-smooth)] hover:bg-[var(--surface-raised)]",
+                "transition-colors duration-(--dur) ease-(--ease-out-smooth) hover:bg-(--surface-raised)",
               )}
               onClick={() => {
                 if (!editingField) {
@@ -251,7 +251,7 @@ export function ProfileDialog(): React.JSX.Element | null {
                     onChange={(event) => setEditValue(event.target.value)}
                     onBlur={handleEditInputBlur}
                     onFocus={(event) => event.currentTarget.select()}
-                    className="mt-1 h-8 border-[var(--border-subtle)] bg-[var(--surface-raised)] px-2 text-sm"
+                    className="mt-1 h-8 border-(--border-subtle) bg-(--surface-raised) px-2 text-sm"
                   />
                 ) : (
                   <p className="truncate text-sm font-medium">{draftEmail}</p>
@@ -260,7 +260,7 @@ export function ProfileDialog(): React.JSX.Element | null {
               <Pencil
                 className={cn(
                   "text-muted-foreground size-4 shrink-0 opacity-0",
-                  "transition-opacity duration-[var(--dur)] ease-[var(--ease-out-smooth)]",
+                  "transition-opacity duration-(--dur) ease-(--ease-out-smooth)",
                   "group-hover/email-row:opacity-100",
                   editingField === "email" && "opacity-40",
                 )}

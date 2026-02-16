@@ -13,6 +13,8 @@ import {
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { getOptimizedAvatarUrl } from "@/utils/image.util";
 import { UserPlus } from "lucide-react";
 import { getConversationsDetails } from "@/api/conversation.api";
 import type { User } from "@/types/chat.type";
@@ -21,9 +23,7 @@ interface AddMemberDialogProps {
   conversationId: number;
 }
 
-export default function AddMemberDialog({
-  conversationId,
-}: AddMemberDialogProps): React.JSX.Element {
+export default function AddMemberDialog({ conversationId }: AddMemberDialogProps): React.JSX.Element {
   const [isOpen, setIsOpen] = useState(false);
   const [selectedFriendId, setSelectedFriendId] = useState<number | null>(null); // Single select
   const [currentMembers, setCurrentMembers] = useState<User[]>([]); // Members trong group
@@ -57,7 +57,7 @@ export default function AddMemberDialog({
   const safeFriends = friends ?? [];
   const safeMembers = currentMembers ?? [];
   const availableFriends = safeFriends.filter(
-    (friend) => !safeMembers.some((member) => member.id === friend.id)
+    (friend) => !safeMembers.some((member) => member.id === friend.id),
   );
 
   function handleSelectFriend(friendId: number | null) {
@@ -69,10 +69,7 @@ export default function AddMemberDialog({
     if (!selectedFriendId) return;
     setLocalError(null);
 
-    const { success, message } = await addMember(
-      conversationId,
-      selectedFriendId
-    );
+    const { success, message } = await addMember(conversationId, selectedFriendId);
 
     if (success) {
       // Success: close dialog, reset
@@ -102,17 +99,13 @@ export default function AddMemberDialog({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Add member</DialogTitle>
-          <DialogDescription>
-            Select one friend to add to this group.
-          </DialogDescription>
+          <DialogDescription>Select one friend to add to this group.</DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <ScrollArea className="h-48 border rounded-md p-2">
             {isLoadingMembers ? (
-              <p className="text-sm text-muted-foreground py-6 text-center">
-                Loading members...
-              </p>
+              <p className="text-sm text-muted-foreground py-6 text-center">Loading members...</p>
             ) : availableFriends.length === 0 ? (
               <p className="text-sm text-muted-foreground py-6 text-center">
                 All friends are already in this group.
@@ -121,24 +114,21 @@ export default function AddMemberDialog({
               availableFriends.map((friend) => (
                 <div
                   key={friend.id}
-                  className={`flex items-center space-x-2 p-2 rounded-md cursor-pointer ${
-                    selectedFriendId === friend.id
-                      ? "bg-primary/10"
-                      : "hover:bg-accent/50"
+                  className={`flex items-center gap-3 p-2 rounded-md cursor-pointer ${
+                    selectedFriendId === friend.id ? "bg-primary/10" : "hover:bg-accent/50"
                   }`}
                 >
                   <Checkbox
                     id={`friend-${friend.id}`}
                     checked={selectedFriendId === friend.id}
-                    onCheckedChange={(checked) =>
-                      handleSelectFriend(checked ? friend.id : null)
-                    }
+                    onCheckedChange={(checked) => handleSelectFriend(checked ? friend.id : null)}
                     className="border-foreground/30 data-[state=checked]:bg-primary data-[state=checked]:border-primary"
                   />
-                  <label
-                    htmlFor={`friend-${friend.id}`}
-                    className="cursor-pointer flex-1"
-                  >
+                  <Avatar className="size-8 shrink-0">
+                    <AvatarImage src={getOptimizedAvatarUrl(friend.avatar, 32)} />
+                    <AvatarFallback className="text-xs">{friend.username[0].toUpperCase()}</AvatarFallback>
+                  </Avatar>
+                  <label htmlFor={`friend-${friend.id}`} className="cursor-pointer flex-1 text-sm">
                     {friend.username}
                   </label>
                 </div>
@@ -146,9 +136,7 @@ export default function AddMemberDialog({
             )}
           </ScrollArea>
 
-          {localError && (
-            <p className="text-sm text-destructive">{localError}</p>
-          )}
+          {localError && <p className="text-sm text-destructive">{localError}</p>}
 
           <DialogFooter>
             <Button type="submit" disabled={!selectedFriendId}>
