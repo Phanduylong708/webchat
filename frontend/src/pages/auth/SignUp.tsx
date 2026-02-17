@@ -21,11 +21,11 @@ function SignUp(): React.JSX.Element {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-100 p-4">
-      <div className="w-full max-w-md rounded-lg bg-white p-8 shadow-md">
+    <div className="flex min-h-screen items-center justify-center bg-background p-4">
+      <div className="w-full max-w-md rounded-lg bg-card p-8 shadow-md">
         <div className="mb-5   text-center">
           <h1 className="text-2xl font-bold">Sign Up</h1>
-          <p className="text-sm text-gray-600">Create a new account</p>
+          <p className="text-sm text-muted-foreground">Create a new account</p>
         </div>
         <form className="space-y-4" onSubmit={handleSubmit}>
           <Field>
@@ -66,7 +66,7 @@ function SignUp(): React.JSX.Element {
               onChange={(e) => setPassword(e.target.value)}
             />
           </Field>
-          <Button variant="link" asChild className="text-sm text-blue-500 mb-0">
+          <Button variant="link" asChild className="text-sm mb-0">
             <Link to="/login" className=" ">
               Already have an account? Log in
             </Link>
@@ -75,9 +75,7 @@ function SignUp(): React.JSX.Element {
             {loading ? "Creating..." : "Create Account"}
           </Button>
 
-          {error && (
-            <p className="text-red-600 text-sm text-center mt-1">{error}</p>
-          )}
+          {error && <p className="text-destructive text-sm text-center mt-1">{error}</p>}
         </form>
       </div>
     </div>

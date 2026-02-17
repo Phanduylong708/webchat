@@ -20,13 +20,11 @@ function LoginPage(): React.JSX.Element {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-100 p-4">
-      <div className="w-full max-w-md rounded-lg bg-white p-8 shadow-md">
+    <div className="flex min-h-screen items-center justify-center bg-background p-4">
+      <div className="w-full max-w-md rounded-lg bg-card p-8 shadow-md">
         <div className="mb-5 text-center">
           <h1 className="text-2xl font-bold">Login</h1>
-          <p className="text-sm text-gray-600">
-            Enter your credentials to access
-          </p>
+          <p className="text-sm text-muted-foreground">Enter your credentials to access</p>
         </div>
 
         <form className="space-y-4" onSubmit={handleSubmit}>
@@ -69,9 +67,7 @@ function LoginPage(): React.JSX.Element {
             {loading ? "Logging in..." : "Login"}
           </Button>
 
-          {error && (
-            <div className="text-red-600 text-sm text-center mt-1">{error}</div>
-          )}
+          {error && <div className="text-destructive text-sm text-center mt-1">{error}</div>}
         </form>
       </div>
     </div>
