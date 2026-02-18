@@ -23,7 +23,22 @@ async function getMessages(conversationId, userId, before, limit) {
     where,
     orderBy: { id: "desc" }, // Order messages by ID in descending order
     take: limit + 1, // Fetch one extra message to determine if there are more messages
-    include: { sender: { select: { id: true, username: true, avatar: true } } }, // Include sender details
+    include: {
+      sender: { select: { id: true, username: true, avatar: true } },
+      attachments: {
+        select: {
+          id: true,
+          url: true,
+          publicId: true,
+          mimeType: true,
+          sizeBytes: true,
+          width: true,
+          height: true,
+          originalFileName: true,
+          createdAt: true,
+        },
+      },
+    },
   });
 
   const hasMore = messages.length > limit; // Check if there are more messages to fetch
