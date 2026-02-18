@@ -1,12 +1,9 @@
 import { v2 as cloudinary } from "cloudinary";
 
-const requiredCloudinaryEnvKeys = [
-  "CLOUDINARY_CLOUD_NAME",
-  "CLOUDINARY_API_KEY",
-  "CLOUDINARY_API_SECRET",
-];
+const requiredCloudinaryEnvKeys = ["CLOUDINARY_CLOUD_NAME", "CLOUDINARY_API_KEY", "CLOUDINARY_API_SECRET"];
 
 const CLOUDINARY_AVATAR_FOLDER = "webchat/avatars";
+const CLOUDINARY_MEDIA_FOLDER = "webchat/chat-media";
 
 let isCloudinaryConfigured = false;
 
@@ -21,9 +18,7 @@ function ensureCloudinaryConfigured() {
 
   const missingEnvKeys = getMissingCloudinaryEnvKeys();
   if (missingEnvKeys.length > 0) {
-    throw new Error(
-      `Missing Cloudinary environment variables: ${missingEnvKeys.join(", ")}`
-    );
+    throw new Error(`Missing Cloudinary environment variables: ${missingEnvKeys.join(", ")}`);
   }
 
   cloudinary.config({
@@ -36,4 +31,4 @@ function ensureCloudinaryConfigured() {
   return cloudinary;
 }
 
-export { cloudinary, ensureCloudinaryConfigured, CLOUDINARY_AVATAR_FOLDER };
+export { cloudinary, ensureCloudinaryConfigured, CLOUDINARY_AVATAR_FOLDER, CLOUDINARY_MEDIA_FOLDER };
