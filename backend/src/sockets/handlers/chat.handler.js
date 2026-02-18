@@ -2,108 +2,128 @@ import { findOrCreatePrivateConversation } from "../../api/services/conversation
 import { prisma } from "../../shared/prisma.js";
 import { verifyMembership } from "../helpers/helpers.js";
 import { getConversationRoom, getUserRoom } from "../helpers/helpers.js";
+import {
+  parseSendMessagePayload,
+  ackError,
+  validateAttachmentsPreflight,
+} from "../helpers/chat-message.util.js";
 
 async function handleChatMessage(io, socket) {
-  // Listen for incoming chat messages
   socket.on("sendMessage", async (payload, callback) => {
     try {
-      if (typeof callback !== "function") {
-        return;
-      }
+      if (typeof callback !== "function") return;
 
-      const { conversationId, recipientId, content } = payload ?? {}; // Id of conversation, recipient, and message content
-      // ambiguous payload check
-      if (conversationId && recipientId) {
-        return callback({
-          success: false,
-          error: "Cannot specify both conversationId and recipientId.",
-        });
-      }
-      // as least one identifier check
-      if (!conversationId && !recipientId) {
-        return callback({
-          success: false,
-          error: "Must specify either conversationId or recipientId.",
-        });
-      }
-      //validate content. Trim whitespace and check if empty
-      if (!content || content.trim().length === 0) {
-        return callback({
-          success: false,
-          error: "Message content cannot be empty.",
-        });
-      }
+      // ── Parse & validate payload ──────────────────────────────────────────
+      const parsed = parseSendMessagePayload(payload);
+      if (!parsed.ok) return callback(parsed.error);
 
-      const currentUserId = socket.data.user.id; // Authenticated user ID from socket
-      let currentConversationId = conversationId; // Initialize conversation ID
-      // If recipientId is provided, find or create private conversation
-      if (recipientId) {
+      const { conversationId, recipientId, trimmedContent, hasContent, attachmentIds, hasAttachments } =
+        parsed.data;
+
+      const currentUserId = socket.data.user.id;
+      let currentConversationId = conversationId;
+
+      // ── Resolve conversation ──────────────────────────────────────────────
+      if (recipientId !== null) {
         try {
-          const privateConversationId = await findOrCreatePrivateConversation(
-            // find or create private conversation if needed
-            currentUserId,
-            recipientId
-          );
-          currentConversationId = privateConversationId; // Set current conversation ID to the private conversation ID
-          io.in(getUserRoom(recipientId)).socketsJoin(
-            getConversationRoom(currentConversationId)
-          );
+          const privateConversationId = await findOrCreatePrivateConversation(currentUserId, recipientId);
+          currentConversationId = privateConversationId;
+          io.in(getUserRoom(recipientId)).socketsJoin(getConversationRoom(currentConversationId));
         } catch (err) {
           console.error("Error finding/creating private conversation:", err);
-          return callback({ success: false, error: err.message });
-        }
-      }
-      // if conversationId exists (user claim to be member), must verify membership
-      if (conversationId) {
-        const isMember = await verifyMembership(
-          currentUserId,
-          currentConversationId
-        );
-        if (!isMember) {
-          return callback({
-            success: false,
-            error: "You are not a member of this conversation.",
-          });
+          return callback(ackError("CONVERSATION_ERROR", err.message));
         }
       }
 
-      // Create new message in the database
+      if (conversationId !== null) {
+        const isMember = await verifyMembership(currentUserId, currentConversationId);
+        if (!isMember) {
+          return callback(ackError("NOT_A_MEMBER", "You are not a member of this conversation."));
+        }
+      }
+
+      // ── Pre-flight attachment validation ──────────────────────────────────
+      if (hasAttachments) {
+        const preflightError = await validateAttachmentsPreflight(attachmentIds, currentUserId);
+        if (preflightError) return callback(preflightError);
+      }
+
+      // ── Atomic transaction ────────────────────────────────────────────────
       const message = await prisma.$transaction(async (tx) => {
+        const messageType = hasAttachments ? "IMAGE" : "TEXT";
+
         const result = await tx.message.create({
-          // create message
           data: {
             conversationId: currentConversationId,
             senderId: currentUserId,
-            content,
-            messageType: "TEXT",
+            content: hasContent ? trimmedContent : null,
+            messageType,
           },
           include: {
             sender: { select: { id: true, username: true, avatar: true } },
           },
         });
+
+        if (hasAttachments) {
+          // TOCTOU guard: re-validate inside transaction with strict conditions
+          const updateResult = await tx.messageAttachment.updateMany({
+            where: {
+              id: { in: attachmentIds },
+              uploadedByUserId: currentUserId,
+              status: "PENDING",
+              messageId: null,
+            },
+            data: { messageId: result.id, status: "ATTACHED" },
+          });
+
+          if (updateResult.count !== attachmentIds.length) {
+            throw Object.assign(
+              new Error("Attachment conflict: one or more attachments were already used."),
+              { code: "ATTACHMENT_CONFLICT" },
+            );
+          }
+
+          result.attachments = await tx.messageAttachment.findMany({
+            where: { messageId: result.id },
+            select: {
+              id: true,
+              url: true,
+              publicId: true,
+              mimeType: true,
+              sizeBytes: true,
+              width: true,
+              height: true,
+              originalFileName: true,
+              createdAt: true,
+            },
+          });
+        } else {
+          result.attachments = [];
+        }
+
         await tx.conversation.update({
-          // update conversation's updatedAt for sort getConversations
           where: { id: currentConversationId },
           data: { updatedAt: new Date() },
         });
+
         return result;
       });
 
-      //ensure sender joined room
+      // ── Broadcast + ack ───────────────────────────────────────────────────
       socket.join(getConversationRoom(currentConversationId));
-      // Broadcast the new message to all members in the conversation room except sender
-      socket
-        .to(getConversationRoom(currentConversationId))
-        .emit("newMessage", message);
-      // Acknowledge successful message sending
+      socket.to(getConversationRoom(currentConversationId)).emit("newMessage", message);
       callback({ success: true, message });
     } catch (error) {
       console.error("Error handling sendMessage:", error);
-      callback({ success: false, error: "Internal server error." });
+      if (error.code === "ATTACHMENT_CONFLICT") {
+        return callback(ackError("ATTACHMENT_CONFLICT", error.message));
+      }
+      callback(ackError("INTERNAL_ERROR", "Internal server error."));
     }
   });
 
-  //typing indicator
+  // ── Typing indicators ───────────────────────────────────────────────────
+
   socket.on("typing:start", async (payload) => {
     try {
       const conversationId = parseInt(payload.conversationId, 10);
@@ -113,15 +133,11 @@ async function handleChatMessage(io, socket) {
       }
       const currentUserId = socket.data.user.id;
       const currentUsername = socket.data.user.username;
-      // Verify membership
       const isMember = await verifyMembership(currentUserId, conversationId);
       if (!isMember) {
-        console.warn(
-          `User ${currentUserId} is not a member of conversation ${conversationId}`
-        );
+        console.warn(`User ${currentUserId} is not a member of conversation ${conversationId}`);
         return;
       }
-      // Broadcast typing event to other members in the conversation room
       socket.to(getConversationRoom(conversationId)).emit("userTyping", {
         userId: currentUserId,
         username: currentUsername,
@@ -133,7 +149,6 @@ async function handleChatMessage(io, socket) {
     }
   });
 
-  // typing stop
   socket.on("typing:stop", async (payload) => {
     try {
       const conversationId = parseInt(payload.conversationId, 10);
@@ -143,15 +158,11 @@ async function handleChatMessage(io, socket) {
       }
       const currentUserId = socket.data.user.id;
       const currentUsername = socket.data.user.username;
-      // Verify membership
       const isMember = await verifyMembership(currentUserId, conversationId);
       if (!isMember) {
-        console.warn(
-          `User ${currentUserId} is not a member of conversation ${conversationId}`
-        );
+        console.warn(`User ${currentUserId} is not a member of conversation ${conversationId}`);
         return;
       }
-      // Broadcast typing event to other members in the conversation room
       socket.to(getConversationRoom(conversationId)).emit("userTyping", {
         userId: currentUserId,
         username: currentUsername,
