@@ -10,6 +10,26 @@ export interface User {
   avatar: string | null;
 }
 
+export type MessageType = "TEXT" | "IMAGE" | "VIDEO" | "FILE";
+
+export interface AttachmentItem {
+  id: number;
+  url: string;
+  publicId: string;
+  mimeType: string;
+  sizeBytes: number;
+  width: number | null;
+  height: number | null;
+  originalFileName: string | null;
+  createdAt: string;
+  status?: "PENDING" | "ATTACHED";
+}
+
+export interface SendMessageInput {
+  conversationId: number;
+  content?: string;
+  attachmentIds?: number[];
+}
 
 export interface ConversationsResponse {
   id: number;
@@ -20,9 +40,12 @@ export interface ConversationsResponse {
   previewMembers?: User[];
   lastMessage: {
     id: number;
-    content: string;
+    content: string | null;
+    messageType: MessageType;
+    previewText: string;
     createdAt: string;
     sender: User;
+    attachments?: Pick<AttachmentItem, "mimeType">[];
   } | null;
 }
 
@@ -39,9 +62,11 @@ export interface Messages {
   id: number;
   conversationId: number;
   senderId: number;
-  content: string;
+  content: string | null;
+  messageType: MessageType;
   createdAt: string;
   sender: User;
+  attachments: AttachmentItem[];
 }
 
 
@@ -73,7 +98,6 @@ export interface MessageState {
 
 export interface MessageContextValue extends MessageState {
   fetchMessages(conversationId: number): Promise<void>;
-  sendMessage(conversationId: number, content: string): Promise<void>;
+  sendMessage(payload: SendMessageInput): Promise<void>;
   loadOlderMessages(conversationId: number): Promise<void>;
-  // loadOlderMessages(conversationId: number): Promise<void>; //TODO
 }
