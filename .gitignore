@@ -58,8 +58,9 @@ draft.md
 *.png
 docs/*
 frontend/docs/*
-.agent/*
 .codex/*
+.agent/*
+backups/
 
 # Whitelisted files
 !LLM_HANDOFF.md

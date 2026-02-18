@@ -5,6 +5,7 @@
 - **NEVER make assumptions** about requirements, implementation details, or user intent, etc.
 - If context is missing or unclear, **ASK before proceeding**.
 - When in doubt, ask. Don't guess.
+- Do not run destructive commands without asking for permission and explain. (eg: drop database (this can kill an entire system), delete files, etc.)
 
 ## CRITICAL: Code Change Approval Required
 
