@@ -1,6 +1,23 @@
 import { prisma } from "../../shared/prisma.js";
 import { createHTTPError } from "../../shared/utils/error.util.js";
 
+/**
+ * Derive a preview-text key from a last message.
+ * Returns content if present; otherwise a mime-family key ("image"/"video"/"file").
+ */
+function derivePreviewText(message) {
+  if (message.content && message.content.trim().length > 0) {
+    return message.content;
+  }
+  const firstAttachment = message.attachments?.[0];
+  if (firstAttachment?.mimeType) {
+    if (firstAttachment.mimeType.startsWith("image/")) return "image";
+    if (firstAttachment.mimeType.startsWith("video/")) return "video";
+    return "file";
+  }
+  return "";
+}
+
 async function getConversations(userId) {
   const memberships = await prisma.conversationMember.findMany({
     where: { userId },
@@ -18,9 +35,14 @@ async function getConversations(userId) {
             select: {
               id: true,
               content: true,
+              messageType: true,
               createdAt: true,
               senderId: true,
               sender: { select: { id: true, username: true, avatar: true } },
+              attachments: {
+                take: 1,
+                select: { mimeType: true },
+              },
             },
           },
         },
@@ -32,14 +54,18 @@ async function getConversations(userId) {
   const conversations = memberships.map(({ conversation }) => {
     // Get the latest message for preview
     // Assumes `conversation.messages` is sorted by createdAt DESC (newest first)
-    const lastMessage = conversation.messages[0] || null;
+    const rawLastMessage = conversation.messages[0] || null;
+    const lastMessage = rawLastMessage
+      ? {
+          ...rawLastMessage,
+          previewText: derivePreviewText(rawLastMessage),
+        }
+      : null;
 
     // If this is a PRIVATE conversation (1-on-1 chat)
     if (conversation.type === "PRIVATE") {
       // Find the other participant (exclude the current user)
-      const otherMember = conversation.members.find(
-        (member) => member.userId !== userId
-      );
+      const otherMember = conversation.members.find((member) => member.userId !== userId);
 
       // Extract that user's profile if found
       const otherUser = otherMember ? otherMember.user : null;
@@ -155,7 +181,7 @@ async function createGroupConversation(userId, title, memberIds) {
     // at least 2 members besides the creator
     throw createHTTPError(
       400,
-      "At least two valid member IDs (excluding the creator) are required to create a group conversation"
+      "At least two valid member IDs (excluding the creator) are required to create a group conversation",
     );
   }
 
@@ -230,9 +256,7 @@ async function addMemberToGroup(conversationId, currentUserId, newUserId) {
   }
 
   //check if new user is already a member
-  const isAlreadyMember = conversation.members.some(
-    (member) => member.userId === newUserId
-  );
+  const isAlreadyMember = conversation.members.some((member) => member.userId === newUserId);
   if (isAlreadyMember) {
     throw createHTTPError(409, "User is already a member of the conversation");
   }
@@ -246,10 +270,7 @@ async function addMemberToGroup(conversationId, currentUserId, newUserId) {
   });
 
   //fetch new conversation
-  const updatedConversation = await getConversationDetails(
-    conversationId,
-    currentUserId
-  );
+  const updatedConversation = await getConversationDetails(conversationId, currentUserId);
 
   return {
     conversationId,
@@ -296,10 +317,7 @@ async function findOrCreatePrivateConversation(userId, recipientId) {
   // function for lazy connection (1-on-1 chat)
   //validate if not self
   if (userId === recipientId) {
-    throw createHTTPError(
-      400,
-      "Cannot create private conversation with yourself"
-    );
+    throw createHTTPError(400, "Cannot create private conversation with yourself");
   }
   // check if recipient exists
   const recipient = await prisma.user.findUnique({
