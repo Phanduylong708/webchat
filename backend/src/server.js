@@ -10,6 +10,8 @@ import { friendRoutes } from "./api/routes/friend.routes.js";
 import { userRoutes } from "./api/routes/user.routes.js";
 import { conversationRoute } from "./api/routes/conversation.routes.js";
 import { messageRoute } from "./api/routes/message.routes.js";
+import { mediaRoutes } from "./api/routes/media.routes.js";
+import { cleanupStalePendingAttachments } from "./api/services/media.service.js";
 
 dotenv.config();
 
@@ -30,6 +32,7 @@ app.use("/api/friends", friendRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/conversations", conversationRoute);
 app.use("/api/messages", messageRoute);
+app.use("/api/media", mediaRoutes);
 // eslint-disable-next-line no-unused-vars
 app.use((err, req, res, next) => {
   console.log("=== ERROR MIDDLEWARE TRIGGERED ===");
@@ -44,4 +47,17 @@ app.use((err, req, res, next) => {
 
 httpServer.listen(process.env.PORT || 3000, () => {
   console.log(`Server is running on port ${process.env.PORT || 3000}`);
+
+  // Non-blocking startup cleanup for stale pending attachments
+  cleanupStalePendingAttachments()
+    .then(({ deletedCount, cloudErrors }) => {
+      if (deletedCount > 0) {
+        console.log(
+          `[startup-cleanup] Removed ${deletedCount} stale pending attachment(s) (cloud errors: ${cloudErrors})`,
+        );
+      }
+    })
+    .catch((error) => {
+      console.warn("[startup-cleanup] Failed to clean stale attachments:", error.message);
+    });
 });
