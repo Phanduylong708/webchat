@@ -4,7 +4,12 @@ import { getMessages } from "@/api/message.api";
 import useSocket from "@/hooks/context/useSocket";
 import { useAuth } from "@/hooks/context/useAuth";
 import { useMessageSockets } from "@/hooks/sockets/useMessageSockets";
-import { addMessageToMap, replaceMessageInMap, updateOptimisticInMap } from "@/utils/message.utils";
+import {
+  addMessageToMap,
+  removeMessageFromMap,
+  replaceMessageInMap,
+  updateOptimisticInMap,
+} from "@/utils/message.utils";
 import { MessageContext } from "./messageContext";
 
 interface SendMessageAck {
@@ -102,11 +107,10 @@ function MessageProvider({ children }: { children: React.ReactNode }): JSX.Eleme
 
           if (ack.success && ack.message) {
             setMessagesByConversation((prev) => {
-              // Revoke blob URL before discarding the optimistic message
               const msgs = prev.get(conversationId);
               const old = msgs?.find((m) => m.id === tempId);
-              if (old && "_optimistic" in old && old._previewUrl) {
-                URL.revokeObjectURL(old._previewUrl);
+              if (old && "_optimistic" in old && old._previewUrl?.startsWith("blob:")) {
+                queueMicrotask(() => URL.revokeObjectURL(old._previewUrl!));
               }
               return replaceMessageInMap(prev, conversationId, tempId, ack.message!);
             });
@@ -218,6 +222,20 @@ function MessageProvider({ children }: { children: React.ReactNode }): JSX.Eleme
     [],
   );
 
+  // Remove a failed optimistic message (discard action). Revokes blob URL if present.
+  const removeOptimisticMessage = useCallback((conversationId: number, messageId: number) => {
+    // Capture blob URL before state update (keep updater pure)
+    setMessagesByConversation((prev) => {
+      const msgs = prev.get(conversationId);
+      const old = msgs?.find((m) => m.id === messageId);
+      if (old && "_optimistic" in old && old._previewUrl?.startsWith("blob:")) {
+        // Schedule revoke for after state update (side-effect outside render)
+        queueMicrotask(() => URL.revokeObjectURL(old._previewUrl!));
+      }
+      return removeMessageFromMap(prev, conversationId, messageId);
+    });
+  }, []);
+
   const value = useMemo(
     () => ({
       messagesByConversation,
@@ -230,6 +248,7 @@ function MessageProvider({ children }: { children: React.ReactNode }): JSX.Eleme
       loadOlderMessages,
       insertOptimisticMessage,
       updateOptimistic,
+      removeOptimisticMessage,
     }),
     [
       messagesByConversation,
@@ -242,6 +261,7 @@ function MessageProvider({ children }: { children: React.ReactNode }): JSX.Eleme
       loadOlderMessages,
       insertOptimisticMessage,
       updateOptimistic,
+      removeOptimisticMessage,
     ],
   );
 

@@ -51,8 +51,11 @@ export default function MessageList() {
           const nextMessage = messages[index + 1];
           const isFirstInGroup = !prevMessage || prevMessage.senderId !== message.senderId;
           const isLastInGroup = !nextMessage || nextMessage.senderId !== message.senderId;
+          const stableKey = "_stableKey" in message
+            ? String(message._stableKey)
+            : String(message.id);
           return (
-            <div key={message.id} className={isFirstInGroup && index !== 0 ? "pt-3" : ""}>
+            <div key={stableKey} className={isFirstInGroup && index !== 0 ? "pt-3" : ""}>
               <MessageItem
                 message={message}
                 isOwn={isOwn}

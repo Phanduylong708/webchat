@@ -115,4 +115,5 @@ export interface MessageContextValue extends MessageState {
   loadOlderMessages(conversationId: number): Promise<void>;
   insertOptimisticMessage(message: OptimisticMessage): void;
   updateOptimistic(conversationId: number, messageId: number, patch: Partial<Pick<OptimisticMeta, "_status" | "_progress">>): void;
+  removeOptimisticMessage(conversationId: number, messageId: number): void;
 }

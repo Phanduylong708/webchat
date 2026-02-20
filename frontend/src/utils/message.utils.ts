@@ -28,6 +28,7 @@ export function removeMessageFromMap(
 }
 
 // Replaces a temp/optimistic message with the server-acknowledged message.
+// Carries `_stableKey` from the old ID so React can keep the same DOM node.
 export function replaceMessageInMap(
   map: Map<number, DisplayMessage[]>,
   conversationId: number,
@@ -36,7 +37,11 @@ export function replaceMessageInMap(
 ): Map<number, DisplayMessage[]> {
   const updated = new Map(map);
   const messages = updated.get(conversationId) || [];
-  const replaced = messages.map((m) => (m.id === oldId ? newMessage : m));
+  const replaced = messages.map((m) =>
+    m.id === oldId
+      ? Object.assign({}, newMessage, { _stableKey: oldId })
+      : m
+  );
   updated.set(conversationId, replaced);
   return updated;
 }
