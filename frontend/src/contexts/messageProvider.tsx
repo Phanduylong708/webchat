@@ -41,7 +41,7 @@ function MessageProvider({ children }: { children: React.ReactNode }): JSX.Eleme
         throw new Error("User not authenticated");
       }
 
-      const { conversationId, attachmentIds } = payload;
+      const { conversationId, attachmentIds, _optimisticId } = payload;
       const trimmedContent = payload.content?.trim() || null;
       const hasAttachment = attachmentIds && attachmentIds.length > 0;
 
@@ -50,24 +50,29 @@ function MessageProvider({ children }: { children: React.ReactNode }): JSX.Eleme
         throw new Error("Message must have content or attachments");
       }
 
-      const tempMessage: OptimisticMessage = {
-        id: -Date.now(),
-        conversationId,
-        content: trimmedContent,
-        messageType: hasAttachment ? "IMAGE" : "TEXT",
-        senderId: user.id,
-        sender: {
-          id: user.id,
-          username: user.username,
-          avatar: user.avatar || null,
-        },
-        attachments: [],
-        createdAt: new Date().toISOString(),
-        _optimistic: true,
-        _status: "sending",
-      };
+      // If caller already inserted an optimistic message (media flow), reuse its ID.
+      // Otherwise create a new temp message (text-only flow).
+      const tempId = _optimisticId ?? -Date.now();
 
-      setMessagesByConversation((prev) => addMessageToMap(prev, conversationId, tempMessage));
+      if (!_optimisticId) {
+        const tempMessage: OptimisticMessage = {
+          id: tempId,
+          conversationId,
+          content: trimmedContent,
+          messageType: hasAttachment ? "IMAGE" : "TEXT",
+          senderId: user.id,
+          sender: {
+            id: user.id,
+            username: user.username,
+            avatar: user.avatar || null,
+          },
+          attachments: [],
+          createdAt: new Date().toISOString(),
+          _optimistic: true,
+          _status: "sending",
+        };
+        setMessagesByConversation((prev) => addMessageToMap(prev, conversationId, tempMessage));
+      }
 
       // Build the socket payload — only include fields that have values
       const socketPayload: Record<string, unknown> = { conversationId };
@@ -83,7 +88,7 @@ function MessageProvider({ children }: { children: React.ReactNode }): JSX.Eleme
           if (settled) return;
           settled = true;
           setMessagesByConversation((prev) =>
-            updateOptimisticInMap(prev, conversationId, tempMessage.id, {
+            updateOptimisticInMap(prev, conversationId, tempId, {
               _status: "failed",
             }),
           );
@@ -96,13 +101,19 @@ function MessageProvider({ children }: { children: React.ReactNode }): JSX.Eleme
           settled = true;
 
           if (ack.success && ack.message) {
-            setMessagesByConversation((prev) =>
-              replaceMessageInMap(prev, conversationId, tempMessage.id, ack.message!),
-            );
+            setMessagesByConversation((prev) => {
+              // Revoke blob URL before discarding the optimistic message
+              const msgs = prev.get(conversationId);
+              const old = msgs?.find((m) => m.id === tempId);
+              if (old && "_optimistic" in old && old._previewUrl) {
+                URL.revokeObjectURL(old._previewUrl);
+              }
+              return replaceMessageInMap(prev, conversationId, tempId, ack.message!);
+            });
             resolve();
           } else {
             setMessagesByConversation((prev) =>
-              updateOptimisticInMap(prev, conversationId, tempMessage.id, {
+              updateOptimisticInMap(prev, conversationId, tempId, {
                 _status: "failed",
               }),
             );
@@ -190,6 +201,23 @@ function MessageProvider({ children }: { children: React.ReactNode }): JSX.Eleme
     [loadingOlderByConversation, messagesByConversation],
   );
 
+  // Insert an optimistic message into the list (for media flow before upload).
+  const insertOptimisticMessage = useCallback((message: OptimisticMessage) => {
+    setMessagesByConversation((prev) => addMessageToMap(prev, message.conversationId, message));
+  }, []);
+
+  // Patch an optimistic message's client-only metadata (progress, status).
+  const updateOptimistic = useCallback(
+    (
+      conversationId: number,
+      messageId: number,
+      patch: Partial<Pick<import("@/types/chat.type").OptimisticMeta, "_status" | "_progress">>,
+    ) => {
+      setMessagesByConversation((prev) => updateOptimisticInMap(prev, conversationId, messageId, patch));
+    },
+    [],
+  );
+
   const value = useMemo(
     () => ({
       messagesByConversation,
@@ -200,6 +228,8 @@ function MessageProvider({ children }: { children: React.ReactNode }): JSX.Eleme
       fetchMessages,
       sendMessage,
       loadOlderMessages,
+      insertOptimisticMessage,
+      updateOptimistic,
     }),
     [
       messagesByConversation,
@@ -210,6 +240,8 @@ function MessageProvider({ children }: { children: React.ReactNode }): JSX.Eleme
       fetchMessages,
       sendMessage,
       loadOlderMessages,
+      insertOptimisticMessage,
+      updateOptimistic,
     ],
   );
 

@@ -29,6 +29,7 @@ export interface SendMessageInput {
   conversationId: number;
   content?: string;
   attachmentIds?: number[];
+  _optimisticId?: number; // If set, reuse existing optimistic message instead of creating a new one
 }
 
 export interface ConversationsResponse {
@@ -112,4 +113,6 @@ export interface MessageContextValue extends MessageState {
   fetchMessages(conversationId: number): Promise<void>;
   sendMessage(payload: SendMessageInput): Promise<void>;
   loadOlderMessages(conversationId: number): Promise<void>;
+  insertOptimisticMessage(message: OptimisticMessage): void;
+  updateOptimistic(conversationId: number, messageId: number, patch: Partial<Pick<OptimisticMeta, "_status" | "_progress">>): void;
 }
