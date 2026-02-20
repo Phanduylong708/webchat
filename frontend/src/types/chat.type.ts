@@ -69,6 +69,18 @@ export interface Messages {
   attachments: AttachmentItem[];
 }
 
+// Client-only metadata for optimistic (unsent/in-flight/failed) messages.
+// Discriminant: "_optimistic" — check with `if ("_optimistic" in message)`.
+export interface OptimisticMeta {
+  _optimistic: true;
+  _status: "sending" | "failed";
+  _previewUrl?: string;   // URL.createObjectURL for local image preview
+  _progress?: number;     // upload progress 0–100
+}
+
+export type OptimisticMessage = Messages & OptimisticMeta;
+export type DisplayMessage = Messages | OptimisticMessage;
+
 
 export interface ConversationState {
   conversations: ConversationsResponse[];
@@ -89,7 +101,7 @@ export interface ConversationContextValue extends ConversationState {
 }
 
 export interface MessageState {
-  messagesByConversation: Map<number, Messages[]>; // cache messages per conversation
+  messagesByConversation: Map<number, DisplayMessage[]>; // cache messages per conversation
   pagination: Map<number, { nextCursor: number | null; hasMore: boolean }>; // meta for infinite scroll
   loadingMessages: boolean;
   loadingOlderByConversation: Set<number>;

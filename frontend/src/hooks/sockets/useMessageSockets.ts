@@ -1,10 +1,10 @@
 import { useEffect } from "react";
 import type { Socket } from "socket.io-client";
-import type { Messages } from "@/types/chat.type";
+import type { DisplayMessage } from "@/types/chat.type";
 import { addMessageToMap } from "@/utils/message.utils";
 
 type MessageSetter = React.Dispatch<
-  React.SetStateAction<Map<number, Messages[]>>
+  React.SetStateAction<Map<number, DisplayMessage[]>>
 >;
 
 interface UseMessageSocketsParams {
@@ -19,7 +19,7 @@ export function useMessageSockets({
 }: UseMessageSocketsParams): void {
   useEffect(() => {
     if (!socket) return;
-    function handleNewMessage(message: Messages) {
+    function handleNewMessage(message: DisplayMessage) {
       setMessagesByConversation((prev) =>
         addMessageToMap(prev, message.conversationId, message)
       );

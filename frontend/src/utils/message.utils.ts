@@ -1,11 +1,11 @@
-import type { Messages } from "@/types/chat.type";
+import type { Messages, DisplayMessage } from "@/types/chat.type";
 
 // Appends a message to the existing conversation history while cloning Maps for immutability.
 export function addMessageToMap(
-  map: Map<number, Messages[]>,
+  map: Map<number, DisplayMessage[]>,
   conversationId: number,
-  message: Messages
-): Map<number, Messages[]> {
+  message: DisplayMessage
+): Map<number, DisplayMessage[]> {
   const updated = new Map(map);
   const existing = updated.get(conversationId) || [];
   updated.set(conversationId, [...existing, message]);
@@ -14,10 +14,10 @@ export function addMessageToMap(
 
 // Removes a specific message (temporary or real) from the conversation cache.
 export function removeMessageFromMap(
-  map: Map<number, Messages[]>,
+  map: Map<number, DisplayMessage[]>,
   conversationId: number,
   messageId: string | number
-): Map<number, Messages[]> {
+): Map<number, DisplayMessage[]> {
   const updated = new Map(map);
   const messages = updated.get(conversationId) || [];
   updated.set(
@@ -29,14 +29,38 @@ export function removeMessageFromMap(
 
 // Replaces a temp/optimistic message with the server-acknowledged message.
 export function replaceMessageInMap(
-  map: Map<number, Messages[]>,
+  map: Map<number, DisplayMessage[]>,
   conversationId: number,
   oldId: string | number,
   newMessage: Messages
-): Map<number, Messages[]> {
+): Map<number, DisplayMessage[]> {
   const updated = new Map(map);
   const messages = updated.get(conversationId) || [];
   const replaced = messages.map((m) => (m.id === oldId ? newMessage : m));
   updated.set(conversationId, replaced);
+  return updated;
+}
+
+// Updates an optimistic message's metadata in-place (e.g. mark as failed).
+// No-op if conversation or message not found.
+export function updateOptimisticInMap(
+  map: Map<number, DisplayMessage[]>,
+  conversationId: number,
+  messageId: number,
+  patch: Partial<Pick<import("@/types/chat.type").OptimisticMeta, "_status" | "_progress">>
+): Map<number, DisplayMessage[]> {
+  const messages = map.get(conversationId);
+  if (!messages) return map;
+
+  const hasTarget = messages.some((m) => m.id === messageId && "_optimistic" in m);
+  if (!hasTarget) return map;
+
+  const updated = new Map(map);
+  updated.set(
+    conversationId,
+    messages.map((m) =>
+      m.id === messageId && "_optimistic" in m ? { ...m, ...patch } : m
+    )
+  );
   return updated;
 }
