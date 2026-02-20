@@ -43,3 +43,34 @@ export function getAvatarFallback(username: string): string {
   return username.slice(0, 2).toUpperCase();
 }
 
+/**
+ * Message Image Optimization
+ *
+ * DB stores the original Cloudinary URL.
+ * Rendering uses a transformed URL for performance:
+ *   - "bubble": chat thumbnail — constrained width, auto quality/format/DPR
+ *   - "full":   lightbox / detail view — larger, higher quality
+ *
+ * Non-Cloudinary URLs are returned unchanged.
+ *
+ * Caveats:
+ *   - Assumes the URL has no existing transforms (Phase A returns clean upload URLs).
+ *     If the URL already contains transforms, Cloudinary will chain them.
+ *   - Signed URLs would be invalidated by transform insertion; not an issue
+ *     currently since Phase A uses unsigned secure_url.
+ */
+
+type MessageImageMode = "bubble" | "full";
+
+const MESSAGE_IMAGE_TRANSFORMS: Record<MessageImageMode, string> = {
+  bubble: "w_400,c_limit,f_auto,q_auto,dpr_auto",
+  full: "w_1200,c_limit,f_auto,q_auto,dpr_auto",
+};
+
+export function getOptimizedMessageImageUrl(
+  url: string,
+  mode: MessageImageMode
+): string {
+  if (!url.includes("/upload/")) return url;
+  return url.replace("/upload/", `/upload/${MESSAGE_IMAGE_TRANSFORMS[mode]}/`);
+}
