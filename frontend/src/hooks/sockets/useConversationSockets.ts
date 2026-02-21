@@ -25,6 +25,22 @@ interface UseConversationSocketsParams {
   setSystemMessages: SystemMessageSetter;
 }
 
+function derivePreviewText(message: Messages): string {
+  const text = message.content?.trim();
+  if (text) return text;
+
+  switch (message.messageType) {
+    case "IMAGE":
+      return "image";
+    case "VIDEO":
+      return "video";
+    case "FILE":
+      return "file";
+    default:
+      return "";
+  }
+}
+
 /**
  * Centralizes all socket listeners that impact conversation state.
  * Keeps ConversationProvider lean by encapsulating subscriptions here.
@@ -47,11 +63,16 @@ export function useConversationSockets({
         if (!conversation) return prev;
 
         // Construct a lightweight lastMessage preview for the sidebar.
+        const previewText = derivePreviewText(message);
+
         const newLastMessage = {
           id: message.id,
           content: message.content,
+          messageType: message.messageType,
+          previewText,
           createdAt: message.createdAt,
           sender: message.sender,
+          attachments: message.attachments?.map((a) => ({ mimeType: a.mimeType })),
         };
 
         // Update matching conversation, keep others untouched.

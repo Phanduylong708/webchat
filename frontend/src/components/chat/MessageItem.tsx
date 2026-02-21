@@ -42,7 +42,7 @@ function ImageBubble({ message }: { message: DisplayMessage }) {
   }
 
   return (
-    <div className="relative overflow-hidden rounded-lg max-w-[280px]">
+    <div className="relative overflow-hidden rounded-lg max-w-[480px]">
       <img
         src={src}
         alt="Attached image"

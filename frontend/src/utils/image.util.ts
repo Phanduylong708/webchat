@@ -63,7 +63,7 @@ export function getAvatarFallback(username: string): string {
 type MessageImageMode = "bubble" | "full";
 
 const MESSAGE_IMAGE_TRANSFORMS: Record<MessageImageMode, string> = {
-  bubble: "w_400,c_limit,f_auto,q_auto,dpr_auto",
+  bubble: "w_600,c_limit,f_auto,q_auto,dpr_auto",
   full: "w_1200,c_limit,f_auto,q_auto,dpr_auto",
 };
 

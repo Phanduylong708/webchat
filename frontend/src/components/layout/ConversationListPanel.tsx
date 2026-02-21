@@ -8,6 +8,16 @@ import { Input } from "../ui/input";
 import { ScrollArea } from "../ui/scroll-area";
 import CreateGroupDialog from "../chat/CreateGroupDialog";
 
+const PREVIEW_DISPLAY: Record<string, string> = {
+  image: "Photo",
+  video: "Video",
+  file: "File",
+};
+
+function formatPreviewText(preview: string): string {
+  const normalized = preview.trim().toLowerCase();
+  return PREVIEW_DISPLAY[normalized] ?? preview;
+}
 function ConversationItem({ conversation }: { conversation: ConversationsResponse }): React.JSX.Element {
   const { selectConversation, activeConversationId, onlineUsers } = useConversation();
   const isGroup = conversation.type === "GROUP";
@@ -70,7 +80,9 @@ function ConversationItem({ conversation }: { conversation: ConversationsRespons
           ) : null}
         </div>
         <p className="text-xs text-muted-foreground truncate">
-          {conversation.lastMessage?.content ?? "No messages yet."}
+          {conversation.lastMessage
+            ? formatPreviewText(conversation.lastMessage.previewText)
+            : "No messages yet."}
         </p>
       </div>
     </div>
