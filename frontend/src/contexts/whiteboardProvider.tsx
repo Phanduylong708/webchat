@@ -23,9 +23,6 @@ export function WhiteboardProvider({ ...props }: WhiteboardProviderProps): React
   const [objects, setObjects] = useState<Record<ObjectID, SerializedObject>>({});
   const [userColors, setUserColors] = useState<Record<UserID, string>>({});
 
-  const [undoStack, setUndoStack] = useState<unknown[]>([]);
-  const [redoStack, setRedoStack] = useState<unknown[]>([]);
-
   const objectsRef = useRef(objects); // to access latest objects in callbacks
   useEffect(() => {
     // keep ref updated
@@ -179,14 +176,6 @@ export function WhiteboardProvider({ ...props }: WhiteboardProviderProps): React
     [canSync, socket, callId, onStaleAck],
   );
 
-  const undo = useCallback(() => {
-    // Stub - will be implemented in Phase 2b
-  }, []);
-
-  const redo = useCallback(() => {
-    // Stub - will be implemented in Phase 2b
-  }, []);
-
   const value = useMemo<WhiteboardContextValue>(
     () => ({
       isActive,
@@ -211,11 +200,6 @@ export function WhiteboardProvider({ ...props }: WhiteboardProviderProps): React
       emitAdd,
       emitUpdate,
       emitDelete,
-
-      undo,
-      redo,
-      canUndo: undoStack.length > 0,
-      canRedo: redoStack.length > 0,
     }),
     [
       isActive,
@@ -237,10 +221,6 @@ export function WhiteboardProvider({ ...props }: WhiteboardProviderProps): React
       emitAdd,
       emitUpdate,
       emitDelete,
-      undo,
-      redo,
-      undoStack.length,
-      redoStack.length,
     ],
   );
 

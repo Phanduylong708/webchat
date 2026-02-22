@@ -103,11 +103,6 @@ export interface WhiteboardContextValue {
   emitAdd: (object: SerializedObject) => void;
   emitUpdate: (objectId: ObjectID, patch: ObjectPatch) => void;
   emitDelete: (objectId: ObjectID) => void;
-
-  undo: () => void;
-  redo: () => void;
-  canUndo: boolean;
-  canRedo: boolean;
 }
 
 // useWhiteboardSync types below
