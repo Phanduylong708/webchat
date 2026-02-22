@@ -1,8 +1,10 @@
+import { useMemo } from "react";
 import type { DisplayMessage } from "@/types/chat.type";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { getOptimizedAvatarUrl, getAvatarFallback, getOptimizedMessageImageUrl } from "@/utils/image.util";
 import { useMessage } from "@/hooks/context/useMessage";
 import { Loader2, AlertCircle, X } from "lucide-react";
+import { getEmojiSizing, renderTwemojiTokens, tokenizeEmojiContent } from "@/utils/emoji.util";
 
 interface MessageItemProps {
   message: DisplayMessage;
@@ -94,14 +96,36 @@ function FailedActions({ message }: { message: DisplayMessage }) {
 
 function MessageContent({ message, bubbleClassName }: { message: DisplayMessage; bubbleClassName: string }) {
   const hasImage = message.messageType === "IMAGE" || (isOptimistic(message) && message._previewUrl);
-  const hasText = message.content && message.content.length > 0;
+  const rawText = message.content ?? "";
+  const hasText = rawText.length > 0;
+
+  const { tokens, isAllEmoji, sizePx } = useMemo(() => {
+    if (!hasText) {
+      return { tokens: [], isAllEmoji: false, sizePx: null as number | null };
+    }
+
+    const tokenized = tokenizeEmojiContent(rawText);
+    const sizing = getEmojiSizing(tokenized);
+
+    return {
+      tokens: tokenized,
+      isAllEmoji: sizing.isAllEmoji,
+      sizePx: sizing.sizePx,
+    };
+  }, [rawText, hasText]);
+
+  const textNodes = hasText ? renderTwemojiTokens(tokens, { sizePx: isAllEmoji ? sizePx : null }) : null;
 
   return (
     <>
       {hasImage && <ImageBubble message={message} />}
       {hasText && (
-        <div className={`max-w-full wrap-anywhere whitespace-pre-wrap ${bubbleClassName}`}>
-          {message.content}
+        <div
+          className={`max-w-full wrap-anywhere whitespace-pre-wrap ${bubbleClassName} ${
+            isAllEmoji ? "text-center" : ""
+          }`}
+        >
+          {textNodes}
         </div>
       )}
     </>
