@@ -5,8 +5,7 @@ import { StackedAvatars } from "@/components/ui/stacked-avatars";
 import { getOptimizedAvatarUrl, getAvatarFallback } from "@/utils/image.util";
 import MessageList from "./MessageList";
 import ChatInput from "./ChatInput";
-import AddMemberDialog from "./AddMemberDialog";
-import LeaveGroupDialog from "./LeaveGroupDialog";
+import GroupMembersDialog from "./GroupMembersDialog";
 import { CallButton } from "@/components/call/CallButton";
 
 function ChatWindow(): React.JSX.Element {
@@ -75,12 +74,7 @@ function ChatWindow(): React.JSX.Element {
           <div className="shrink-0 ml-4 flex items-center gap-2">
             <CallButton conversationId={activeConversations.id} />
             {/* group buttons only on group chat */}
-            {showGroupButtons && (
-              <>
-                <AddMemberDialog conversationId={activeConversations.id} />
-                <LeaveGroupDialog conversationId={activeConversations.id} />
-              </>
-            )}
+            {showGroupButtons && <GroupMembersDialog conversationId={activeConversations.id} />}
           </div>
         </div>
       </div>
