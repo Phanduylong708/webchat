@@ -96,7 +96,7 @@ export default function GroupMembersDialog({ conversationId }: GroupMembersDialo
   return (
     <Dialog open={isOpen} onOpenChange={handleOpen}>
       <DialogTrigger asChild>
-        <Button size="icon" variant="outline" aria-label="Group members">
+        <Button size="icon" variant="outline" aria-label="Group members" className="cursor-pointer">
           <Users className="size-4" />
         </Button>
       </DialogTrigger>
@@ -153,7 +153,7 @@ export default function GroupMembersDialog({ conversationId }: GroupMembersDialo
                       <Button
                         size="sm"
                         variant="outline"
-                        className="shrink-0 h-7 px-2 text-xs border-destructive/50 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                        className="shrink-0 h-7 px-2 text-xs border-destructive/50 text-destructive hover:bg-destructive/10 hover:text-destructive cursor-pointer"
                         disabled={isRemoving}
                         onClick={() => void handleRemove(member.id)}
                       >
@@ -173,7 +173,7 @@ export default function GroupMembersDialog({ conversationId }: GroupMembersDialo
         <AddMemberDialog
           conversationId={conversationId}
           trigger={
-            <Button variant="outline" className="w-full">
+            <Button variant="outline" className="w-full cursor-pointer">
               + Add Member
             </Button>
           }
@@ -194,7 +194,7 @@ export default function GroupMembersDialog({ conversationId }: GroupMembersDialo
           <AlertDialogTrigger asChild>
             <Button
               variant="outline"
-              className="w-full border-destructive/50 text-destructive hover:bg-destructive/10 hover:text-destructive"
+              className="w-full border-destructive/50 text-destructive hover:bg-destructive/10 hover:text-destructive cursor-pointer"
             >
               Leave Group
             </Button>
@@ -212,7 +212,7 @@ export default function GroupMembersDialog({ conversationId }: GroupMembersDialo
               <AlertDialogAction
                 onClick={() => void handleLeave()}
                 disabled={isLeavingGroup}
-                className="bg-destructive hover:bg-destructive/90"
+                className="bg-destructive hover:bg-destructive/90 cursor-pointer"
               >
                 {isLeavingGroup ? "Leaving…" : "Leave"}
               </AlertDialogAction>
