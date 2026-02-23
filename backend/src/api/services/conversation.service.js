@@ -313,6 +313,45 @@ async function leaveGroup(conversationId, userId) {
   };
 }
 
+async function removeMember(conversationId, currentUserId, targetUserId) {
+  if (targetUserId === currentUserId) {
+    throw createHTTPError(400, "You cannot remove yourself");
+  }
+
+  const membership = await prisma.conversationMember.findUnique({
+    where: { userId_conversationId: { userId: targetUserId, conversationId } },
+    include: {
+      conversation: { select: { type: true, creatorId: true } },
+      user: { select: { id: true, username: true, avatar: true } },
+    },
+  });
+
+  let conversationMeta = membership?.conversation;
+  if (!conversationMeta) {
+    conversationMeta = await prisma.conversation.findUnique({
+      where: { id: conversationId },
+      select: { type: true, creatorId: true },
+    });
+    if (!conversationMeta) throw createHTTPError(404, "Conversation not found");
+  }
+
+  if (conversationMeta.type !== "GROUP") {
+    throw createHTTPError(400, "Cannot remove members from a private conversation");
+  }
+  if (conversationMeta.creatorId !== currentUserId) {
+    throw createHTTPError(403, "Only the group creator can remove members");
+  }
+  if (!membership) {
+    throw createHTTPError(404, "User is not a member");
+  }
+
+  await prisma.conversationMember.delete({
+    where: { userId_conversationId: { userId: targetUserId, conversationId } },
+  });
+
+  return membership.user;
+}
+
 async function findOrCreatePrivateConversation(userId, recipientId) {
   // function for lazy connection (1-on-1 chat)
   //validate if not self
@@ -376,5 +415,6 @@ export {
   createGroupConversation,
   addMemberToGroup,
   leaveGroup,
+  removeMember,
   findOrCreatePrivateConversation,
 };
