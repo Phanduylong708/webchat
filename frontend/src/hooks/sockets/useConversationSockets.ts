@@ -1,4 +1,5 @@
 import { useEffect, type Dispatch, type SetStateAction } from "react";
+import { toast } from "sonner";
 import type { Socket } from "socket.io-client";
 import type {
   ConversationsDetail,
@@ -16,6 +17,8 @@ type OnlineUsersSetter = Dispatch<SetStateAction<Set<number>>>;
 type TypingSetter = Dispatch<SetStateAction<Map<number, Map<number, string>>>>;
 type SystemMessageSetter = Dispatch<SetStateAction<Map<number, string>>>;
 
+type ActiveConversationSetter = Dispatch<SetStateAction<number | null>>;
+
 interface UseConversationSocketsParams {
   socket: Socket | null;
   currentUserId: number | null;
@@ -23,6 +26,7 @@ interface UseConversationSocketsParams {
   setOnlineUsers: OnlineUsersSetter;
   setTypingByConversation: TypingSetter;
   setSystemMessages: SystemMessageSetter;
+  setActiveConversationId: ActiveConversationSetter;
 }
 
 function derivePreviewText(message: Messages): string {
@@ -52,6 +56,7 @@ export function useConversationSockets({
   setOnlineUsers,
   setTypingByConversation,
   setSystemMessages,
+  setActiveConversationId,
 }: UseConversationSocketsParams): void {
   // Update conversation list preview (last message + ordering) when a new message arrives.
   useEffect(() => {
@@ -278,4 +283,27 @@ export function useConversationSockets({
       socket.off("memberLeft", handleMemberLeft);
     };
   }, [socket, setConversations, setSystemMessages]);
+
+  // Remove the conversation and notify the user when they are kicked from a group.
+  useEffect(() => {
+    if (!socket) return;
+    function handleYouWereKicked(payload: { conversationId: number }) {
+      let groupTitle = "the group";
+      setConversations((prev) => {
+        const conversation = prev.find((c) => c.id === payload.conversationId);
+        if (conversation?.type === "GROUP" && conversation.title) {
+          groupTitle = conversation.title;
+        }
+        return prev.filter((c) => c.id !== payload.conversationId);
+      });
+      setActiveConversationId((prev) =>
+        prev === payload.conversationId ? null : prev
+      );
+      toast.info(`You were removed from ${groupTitle}`);
+    }
+    socket.on("youWereKicked", handleYouWereKicked);
+    return () => {
+      socket.off("youWereKicked", handleYouWereKicked);
+    };
+  }, [socket, setConversations, setActiveConversationId]);
 }

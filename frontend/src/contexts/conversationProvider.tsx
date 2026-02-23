@@ -45,6 +45,7 @@ function ConversationProvider({children}: {children: React.ReactNode}): JSX.Elem
       setOnlineUsers,
       setTypingByConversation,
       setSystemMessages,
+      setActiveConversationId,
     });
 
    async function fetchConversations(): Promise<void> {
