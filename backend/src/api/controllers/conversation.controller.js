@@ -4,14 +4,12 @@ import {
   createGroupConversation,
   addMemberToGroup,
   leaveGroup,
+  removeMember,
   findOrCreatePrivateConversation,
 } from "../services/conversation.service.js";
 import { parseId } from "../../shared/utils/parse.util.js";
 import { sendSuccess } from "../../shared/utils/response.util.js";
-import {
-  getUserRoom,
-  getConversationRoom,
-} from "../../sockets/helpers/helpers.js";
+import { getUserRoom, getConversationRoom } from "../../sockets/helpers/helpers.js";
 import { createHTTPError } from "../../shared/utils/error.util.js";
 async function getConversationsController(req, res, next) {
   try {
@@ -29,15 +27,9 @@ async function getConversationsController(req, res, next) {
 
 async function getConversationDetailsController(req, res, next) {
   try {
-    const conversationId = parseId(
-      req.params.conversationId,
-      "conversation ID"
-    );
+    const conversationId = parseId(req.params.conversationId, "conversation ID");
     const currentUserId = req.user.id;
-    const conversationDetails = await getConversationDetails(
-      conversationId,
-      currentUserId
-    );
+    const conversationDetails = await getConversationDetails(conversationId, currentUserId);
     return sendSuccess(res, {
       statusCode: 200,
       data: { conversation: conversationDetails },
@@ -56,11 +48,7 @@ async function createGroupConversationController(req, res, next) {
     if (!io) {
       throw createHTTPError(500, "Socket server not initialized");
     }
-    const conversation = await createGroupConversation(
-      currentUserId,
-      title,
-      memberIds
-    );
+    const conversation = await createGroupConversation(currentUserId, title, memberIds);
 
     const conversationRoom = getConversationRoom(conversation.id);
     const processedUserIds = new Set();
@@ -87,7 +75,7 @@ async function addMemberToGroupController(req, res, next) {
     const conversationIdParam = parseId(
       // helper to validate and parse ID params
       req.params.conversationId,
-      "conversation ID"
+      "conversation ID",
     );
     const io = req.io;
     if (!io) {
@@ -99,12 +87,10 @@ async function addMemberToGroupController(req, res, next) {
     const { conversationId, conversation, member } = await addMemberToGroup(
       conversationIdParam,
       currentUserId,
-      userId
+      userId,
     );
 
-    io.in(getUserRoom(member.id)).socketsJoin(
-      getConversationRoom(conversationId)
-    );
+    io.in(getUserRoom(member.id)).socketsJoin(getConversationRoom(conversationId));
     io.to(getConversationRoom(conversationId)).emit("memberAdded", {
       conversationId,
       member,
@@ -123,19 +109,14 @@ async function addMemberToGroupController(req, res, next) {
 
 async function leaveGroupController(req, res, next) {
   try {
-    const conversationId = parseId(
-      req.params.conversationId,
-      "conversation ID"
-    );
+    const conversationId = parseId(req.params.conversationId, "conversation ID");
     const io = req.io;
     if (!io) {
       throw createHTTPError(500, "Socket server not initialized");
     }
     const currentUserId = req.user.id;
     const { user } = await leaveGroup(conversationId, currentUserId);
-    io.in(getUserRoom(currentUserId)).socketsLeave(
-      getConversationRoom(conversationId)
-    );
+    io.in(getUserRoom(currentUserId)).socketsLeave(getConversationRoom(conversationId));
     io.to(getConversationRoom(conversationId)).emit("memberLeft", {
       conversationId,
       userId: currentUserId,
@@ -144,6 +125,35 @@ async function leaveGroupController(req, res, next) {
     return sendSuccess(res, {
       statusCode: 200,
       message: "Left group conversation successfully",
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+async function removeMemberController(req, res, next) {
+  try {
+    const conversationId = parseId(req.params.conversationId, "conversation ID");
+    const targetUserId = parseId(req.params.userId, "user ID");
+    const currentUserId = req.user.id;
+    const io = req.io;
+    if (!io) {
+      throw createHTTPError(500, "Socket server not initialized");
+    }
+
+    const removedUser = await removeMember(conversationId, currentUserId, targetUserId);
+
+    io.in(getUserRoom(removedUser.id)).socketsLeave(getConversationRoom(conversationId));
+    io.to(getUserRoom(removedUser.id)).emit("youWereKicked", { conversationId });
+    io.to(getConversationRoom(conversationId)).emit("memberLeft", {
+      conversationId,
+      userId: removedUser.id,
+      user: removedUser,
+    });
+
+    return sendSuccess(res, {
+      statusCode: 200,
+      message: "Member removed successfully",
     });
   } catch (error) {
     next(error);
@@ -159,15 +169,9 @@ async function startPrivateConversationController(req, res, next) {
       throw createHTTPError(500, "Socket server not initialized");
     }
 
-    const conversationId = await findOrCreatePrivateConversation(
-      currentUserId,
-      recipientId
-    );
+    const conversationId = await findOrCreatePrivateConversation(currentUserId, recipientId);
 
-    const conversation = await getConversationDetails(
-      conversationId,
-      currentUserId
-    );
+    const conversation = await getConversationDetails(conversationId, currentUserId);
 
     const conversationRoom = getConversationRoom(conversationId);
     const currentUserRoom = getUserRoom(currentUserId);
@@ -195,5 +199,6 @@ export {
   createGroupConversationController,
   addMemberToGroupController,
   leaveGroupController,
+  removeMemberController,
   startPrivateConversationController,
 };
