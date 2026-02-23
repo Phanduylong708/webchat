@@ -1,13 +1,11 @@
 import { useEffect, useState, type JSX } from "react";
-import type {
-  ConversationsResponse,
-  ConversationContextValue,
-} from "@/types/chat.type";
+import type { ConversationsResponse, ConversationContextValue } from "@/types/chat.type";
 import {
   getConversations,
   createGroupApi,
   addMemberApi,
   leaveGroupApi,
+  removeMemberApi,
 } from "@/api/conversation.api";
 import useSocket from "@/hooks/context/useSocket";
 import { useAuth } from "@/hooks/context/useAuth";
@@ -120,6 +118,20 @@ function ConversationProvider({children}: {children: React.ReactNode}): JSX.Elem
       }
     }
 
+    async function removeMember(conversationId: number, userId: number): Promise<{ success: boolean; message?: string }> {
+      setError(null);
+      try {
+        await removeMemberApi(conversationId, userId);
+        // No optimistic update — socket events (memberLeft / youWereKicked) drive state
+        return { success: true };
+      } catch (error) {
+        console.error("Error removing member:", error);
+        const message = getErrorMessage(error, "Failed to remove member");
+        setError(message);
+        return { success: false, message };
+      }
+    }
+
     const value: ConversationContextValue = {
       conversations,
       activeConversationId,
@@ -133,6 +145,7 @@ function ConversationProvider({children}: {children: React.ReactNode}): JSX.Elem
       createGroup,
       addMember,
       leaveGroup,
+      removeMember,
     };
     return <ConversationContext.Provider value={value}>{children}</ConversationContext.Provider>;
 }

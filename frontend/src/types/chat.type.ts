@@ -99,7 +99,9 @@ export interface ConversationContextValue extends ConversationState {
   createGroup: (title: string, memberIds: number[]) => Promise<{ success: boolean; message?: string }>;
   addMember: (conversationId: number, userId: number) => Promise<{ success: boolean; message?: string }>;
   leaveGroup: (conversationId: number) => Promise<{success: boolean; message?: string }>;
+  removeMember: (conversationId: number, userId: number) => Promise<{ success: boolean; message?: string }>;
 }
+
 
 export interface MessageState {
   messagesByConversation: Map<number, DisplayMessage[]>; // cache messages per conversation
