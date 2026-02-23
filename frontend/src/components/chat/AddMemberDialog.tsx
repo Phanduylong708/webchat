@@ -21,9 +21,15 @@ import type { User } from "@/types/chat.type";
 
 interface AddMemberDialogProps {
   conversationId: number;
+  trigger?: React.ReactNode;
+  onSuccess?: () => void;
 }
 
-export default function AddMemberDialog({ conversationId }: AddMemberDialogProps): React.JSX.Element {
+export default function AddMemberDialog({
+  conversationId,
+  trigger,
+  onSuccess,
+}: AddMemberDialogProps): React.JSX.Element {
   const [isOpen, setIsOpen] = useState(false);
   const [selectedFriendId, setSelectedFriendId] = useState<number | null>(null); // Single select
   const [currentMembers, setCurrentMembers] = useState<User[]>([]); // Members trong group
@@ -75,6 +81,7 @@ export default function AddMemberDialog({ conversationId }: AddMemberDialogProps
       // Success: close dialog, reset
       setIsOpen(false);
       setSelectedFriendId(null);
+      onSuccess?.();
     } else {
       // Error: show message
       setLocalError(message || "Failed to add member");
@@ -92,9 +99,11 @@ export default function AddMemberDialog({ conversationId }: AddMemberDialogProps
       }}
     >
       <DialogTrigger asChild>
-        <Button size="icon" variant="outline">
-          <UserPlus />
-        </Button>
+        {trigger ?? (
+          <Button size="icon" variant="outline">
+            <UserPlus />
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
