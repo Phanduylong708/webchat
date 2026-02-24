@@ -1,4 +1,5 @@
 import * as fabric from "fabric";
+import type { TComplexPathData } from "fabric";
 import type { PartialSerializedObject, ShapeToolType, ObjectPatch, SerializedObject } from "@/types/whiteboard.type";
 import { DEFAULT_STROKE_WIDTH, DEFAULT_FONT_SIZE, DEFAULT_FONT_FAMILY, DEFAULT_TEXT_WIDTH } from "./whiteboard.config";
 
@@ -257,7 +258,8 @@ export function deserializeToFabric(obj: SerializedObject): fabric.FabricObject 
       );
       break;
     case "path":
-      fabricObj = new fabric.Path(obj.path, {
+      if (!obj.path) throw new Error("Path object is missing path data");
+      fabricObj = new fabric.Path(obj.path as unknown as TComplexPathData, {
         ...commonProps,
         width: obj.width,
         height: obj.height,
