@@ -1,5 +1,4 @@
-import React, { useState } from "react";
-import { useFriend } from "@/hooks/context/useFriend";
+import React, { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -12,13 +11,44 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Plus } from "lucide-react";
+import { useAddFriendMutation } from "@/hooks/queries/friends";
 
-export default function AddFriendDialog(): React.JSX.Element {
+interface AddFriendDialogProps {
+  onFriendAdded: (friendId: number) => void;
+}
+
+export default function AddFriendDialog({
+  onFriendAdded,
+}: AddFriendDialogProps): React.JSX.Element {
   const [isOpen, setIsOpen] = useState(false);
   const [username, setUsername] = useState("");
   const [localError, setLocalError] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const { error, addFriend } = useFriend();
+  const addFriendMutation = useAddFriendMutation();
+  const mutationErrorMessage = useMemo(() => {
+    const error = addFriendMutation.error;
+    if (!error) {
+      return null;
+    }
+    if (error instanceof Error) {
+      return error.message;
+    }
+    if (
+      typeof error === "object" &&
+      error !== null &&
+      "message" in error &&
+      typeof (error as { message?: unknown }).message === "string"
+    ) {
+      return (error as { message?: string }).message ?? null;
+    }
+    return String(error);
+  }, [addFriendMutation.error]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      setLocalError(null);
+      addFriendMutation.reset();
+    }
+  }, [addFriendMutation, isOpen]);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -28,17 +58,14 @@ export default function AddFriendDialog(): React.JSX.Element {
       return;
     }
     setLocalError(null);
-    setIsSubmitting(true);
     try {
-      const { success, message } = await addFriend(trimmed);
-      if (!success) {
-        setLocalError(message || error);
-      } else {
-        setIsOpen(false);
-        setUsername("");
-      }
-    } finally {
-      setIsSubmitting(false);
+      const friend = await addFriendMutation.mutateAsync(trimmed);
+      onFriendAdded(friend.id);
+      setUsername("");
+      setIsOpen(false);
+    } catch (err) {
+      // message handled via mutationErrorMessage
+      console.error(err);
     }
   }
 
@@ -63,16 +90,18 @@ export default function AddFriendDialog(): React.JSX.Element {
               onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                 setUsername(e.target.value)
               }
-              disabled={isSubmitting}
+              disabled={addFriendMutation.isPending}
             ></Input>
           </div>
-          {localError && (
-            <div className="text-sm text-destructive">{localError}</div>
+          {(localError || mutationErrorMessage) && (
+            <div className="text-sm text-destructive">
+              {localError || mutationErrorMessage}
+            </div>
           )}
 
           <DialogFooter>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Adding..." : "Add Friend"}
+            <Button type="submit" disabled={addFriendMutation.isPending}>
+              {addFriendMutation.isPending ? "Adding..." : "Add Friend"}
             </Button>
           </DialogFooter>
         </form>

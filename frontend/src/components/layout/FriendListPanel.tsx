@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React from "react";
 import formatLastSeen from "@/utils/helper.util";
 import { Button } from "../ui/button";
 import { Separator } from "../ui/separator";
@@ -8,29 +8,35 @@ import { ScrollArea } from "../ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { getOptimizedAvatarUrl, getAvatarFallback } from "@/utils/image.util";
 import type { Friend } from "@/types/friend.type";
-import { useFriend } from "@/hooks/context/useFriend";
 import AddFriendDialog from "../friends/AddFriendDialog";
 import RemoveFriendDialog from "../friends/RemoveFriendDialog";
+
 interface FriendListPanelProps {
+  friends: Friend[];
+  isLoading: boolean;
+  error: Error | null;
+  refetch: () => void;
   selectedFriendId: number | null;
   onSelectFriendId: (friendId: number) => void;
+  onClearSelection: () => void;
 }
 
 function FriendItem({
   friend,
   isSelected,
   onSelect,
+  onRemoved,
 }: {
   friend: Friend;
   isSelected: boolean;
   onSelect: (friendId: number) => void;
+  onRemoved: () => void;
 }): React.JSX.Element {
-  
   return (
     <div
       className={`group flex items-center gap-3 p-3 rounded-lg border border-border cursor-pointer transition-all ${
         isSelected
-          ? "bg-accent border-accent-foreground/30"
+          ? "bg-accent border-accent-foreground/40"
           : "bg-background hover:bg-accent hover:border-accent-foreground/20"
       }`}
       onClick={() => onSelect(friend.id)}
@@ -69,6 +75,7 @@ function FriendItem({
               <Trash2 size={16} />
             </button>
           }
+          onRemove={onRemoved}
         />
       </div>
     </div>
@@ -76,26 +83,25 @@ function FriendItem({
 }
 
 export default function FriendListPanel({
+  friends,
+  isLoading,
+  error,
+  refetch,
   selectedFriendId,
   onSelectFriendId,
+  onClearSelection,
 }: FriendListPanelProps): React.JSX.Element {
-  const { friends, loading, error, fetchFriends } = useFriend();
+  const errorMessage = error?.message ?? null;
 
-  useEffect(() => {
-    fetchFriends();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  //helper component to render friend list
   function renderFriendList(): React.JSX.Element {
-    if (loading) {
+    if (isLoading) {
       return <div className="text-center text-muted-foreground py-8">Loading...</div>;
     }
 
-    if (error && friends.length === 0) {
+    if (errorMessage && friends.length === 0) {
       return (
         <div className="text-center text-muted-foreground py-8">
-          <Button onClick={fetchFriends}>Error: {error}. Retry</Button>
+          <Button onClick={refetch}>Error: {errorMessage}. Retry</Button>
         </div>
       );
     }
@@ -112,6 +118,11 @@ export default function FriendListPanel({
             friend={friend}
             isSelected={friend.id === selectedFriendId}
             onSelect={onSelectFriendId}
+            onRemoved={() => {
+              if (friend.id === selectedFriendId) {
+                onClearSelection();
+              }
+            }}
           />
         ))}
       </>
@@ -122,7 +133,7 @@ export default function FriendListPanel({
     <div className="h-full flex flex-col bg-muted border-r border-border">
       <div className="p-4 flex items-center justify-between">
         <h2 className="text-xl font-semibold">Friends</h2>
-        <AddFriendDialog />
+        <AddFriendDialog onFriendAdded={onSelectFriendId} />
       </div>
       <Separator />
       <div className="p-4">

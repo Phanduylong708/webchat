@@ -3,21 +3,14 @@ import FriendListPanel from "@/components/layout/FriendListPanel";
 import MainContentPanel from "@/components/layout/MainContentPanel";
 import FriendProfile from "@/components/friends/FriendProfile";
 import EmptyState from "@/components/friends/EmptyState";
-import { FriendProvider } from "@/contexts/friendContext";
-import { useFriend } from "@/hooks/context/useFriend";
 import { useSearchParams } from "react-router-dom";
+import { useFriendsQuery } from "@/hooks/queries/friends";
+import type { Friend } from "@/types/friend.type";
 
 export default function FriendPage(): React.JSX.Element {
-  return (
-    <FriendProvider>
-      <FriendPageContent />
-    </FriendProvider>
-  );
-}
-
-function FriendPageContent(): React.JSX.Element {
-  const { selectedFriend, selectFriend } = useFriend();
+  const friendsQuery = useFriendsQuery();
   const [searchParams, setSearchParams] = useSearchParams();
+  const friends = friendsQuery.data ?? [];
 
   const friendIdParam = searchParams.get("friendId");
   const friendIdFromUrl = useMemo(() => {
@@ -25,12 +18,13 @@ function FriendPageContent(): React.JSX.Element {
       return null;
     }
     const parsed = Number(friendIdParam);
-    if (Number.isNaN(parsed)) {
+    if (!Number.isInteger(parsed) || parsed <= 0) {
       return null;
     }
     return parsed;
   }, [friendIdParam]);
 
+  // Clear invalid friendId formats immediately
   useEffect(() => {
     if (friendIdParam && friendIdFromUrl === null) {
       setSearchParams((prev) => {
@@ -38,17 +32,17 @@ function FriendPageContent(): React.JSX.Element {
         next.delete("friendId");
         return next;
       }, { replace: true });
-      return;
     }
+  }, [friendIdFromUrl, friendIdParam, setSearchParams]);
 
-    if (friendIdFromUrl !== null && selectedFriend?.id !== friendIdFromUrl) {
-      selectFriend(friendIdFromUrl);
+  const selectedFriend: Friend | null = useMemo(() => {
+    if (!friendIdFromUrl || !friendsQuery.data) {
+      return null;
     }
-
-    if (friendIdFromUrl === null && selectedFriend) {
-      selectFriend(null);
-    }
-  }, [friendIdFromUrl, friendIdParam, selectedFriend, selectFriend, setSearchParams]);
+    return (
+      friendsQuery.data.find((friend) => friend.id === friendIdFromUrl) ?? null
+    );
+  }, [friendIdFromUrl, friendsQuery.data]);
 
   const handleSelectFriend = useCallback(
     (friendId: number) => {
@@ -75,8 +69,15 @@ function FriendPageContent(): React.JSX.Element {
   return (
     <div className="grid grid-cols-[300px_1fr] h-screen">
       <FriendListPanel
+        friends={friends}
+        isLoading={friendsQuery.isLoading}
+        error={friendsQuery.error ?? null}
+        refetch={() => {
+          void friendsQuery.refetch();
+        }}
         selectedFriendId={selectedFriend?.id ?? null}
         onSelectFriendId={handleSelectFriend}
+        onClearSelection={handleClearSelection}
       />
       <MainContentPanel>
         {selectedFriend ? (

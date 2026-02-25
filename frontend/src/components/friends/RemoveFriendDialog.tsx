@@ -1,5 +1,4 @@
-import React, { useState } from "react";
-import { useFriend } from "@/hooks/context/useFriend";
+import React, { useEffect, useState } from "react";
 import type { Friend } from "@/types/friend.type";
 import {
   AlertDialog,
@@ -12,6 +11,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { useRemoveFriendMutation } from "@/hooks/queries/friends";
 
 interface RemoveFriendDialogProps {
   friend: Friend;
@@ -24,35 +24,45 @@ export default function RemoveFriendDialog({
   trigger,
   onRemove,
 }: RemoveFriendDialogProps): React.JSX.Element {
-  // TODO: States
   const [isOpen, setIsOpen] = useState(false);
-  const [isRemoving, setIsRemoving] = useState(false);
-  const [localError, setLocalError] = useState<string | null>(null);
-  const { removeFriend } = useFriend();
-  // TODO: useFriend hook
+  const removeFriendMutation = useRemoveFriendMutation();
+
+  useEffect(() => {
+    if (!isOpen) {
+      removeFriendMutation.reset();
+    }
+  }, [isOpen, removeFriendMutation]);
+
+  const mutationErrorMessage = (() => {
+    const error = removeFriendMutation.error;
+    if (!error) return null;
+    if (error instanceof Error) return error.message;
+    if (
+      typeof error === "object" &&
+      error !== null &&
+      "message" in error &&
+      typeof (error as { message?: unknown }).message === "string"
+    ) {
+      return (error as { message?: string }).message ?? null;
+    }
+    return String(error);
+  })();
+
   async function handleRemove() {
     try {
-      setIsRemoving(true);
-      const { success, message } = await removeFriend(friend.id);
-      if (!success) {
-        setLocalError(message ?? "Failed to remove friend. Please try again.");
-        return;
-      }
+      await removeFriendMutation.mutateAsync(friend.id);
       onRemove?.();
-      setLocalError(null);
       setIsOpen(false);
-    } finally {
-      setIsRemoving(false);
+    } catch (err) {
+      // Swallow error so dialog stays open; message shown via mutationErrorMessage
+      console.error(err);
     }
   }
-  // TODO: handleRemove
-  // TODO: JSX
   return (
     <AlertDialog
       open={isOpen}
       onOpenChange={(open) => {
         setIsOpen(open);
-        if (!open) setLocalError(null);
       }}
     >
       <AlertDialogTrigger asChild>{trigger}</AlertDialogTrigger>
@@ -64,17 +74,20 @@ export default function RemoveFriendDialog({
             list?
           </AlertDialogDescription>
         </AlertDialogHeader>
-        {localError && (
+        {mutationErrorMessage && (
           <p className="text-destructive text-center mb-2 text-sm">
-            {localError}
+            {mutationErrorMessage}
           </p>
         )}
         <AlertDialogFooter>
           <AlertDialogCancel onClick={() => setIsOpen(false)}>
             Cancel
           </AlertDialogCancel>
-          <AlertDialogAction onClick={handleRemove} disabled={isRemoving}>
-            {isRemoving ? "Removing..." : "Remove"}
+          <AlertDialogAction
+            onClick={handleRemove}
+            disabled={removeFriendMutation.isPending}
+          >
+            {removeFriendMutation.isPending ? "Removing..." : "Remove"}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

@@ -7,7 +7,6 @@ import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { getOptimizedAvatarUrl } from "@/utils/image.util";
 import { Button } from "@/components/ui/button";
-import { useFriend } from "@/hooks/context/useFriend";
 import { MessageCircle, UserMinus } from "lucide-react";
 import RemoveFriendDialog from "./RemoveFriendDialog";
 import { startPrivateChatApi } from "@/api/conversation.api";
@@ -18,7 +17,6 @@ interface FriendProfileProps {
 }
 
 export default function FriendProfile({ friend, onClearSelection }: FriendProfileProps): React.JSX.Element {
-  const { selectFriend } = useFriend();
   const navigate = useNavigate();
 
   async function handleSendMessage(): Promise<void> {
@@ -61,7 +59,6 @@ export default function FriendProfile({ friend, onClearSelection }: FriendProfil
             </Button>
           }
           onRemove={() => {
-            selectFriend(null);
             onClearSelection?.();
           }}
         ></RemoveFriendDialog>
