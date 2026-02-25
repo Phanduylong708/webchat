@@ -70,6 +70,34 @@ async function getFriends(currentUserId) {
   return friends;
 }
 
+async function getFriendsOnlineStatus(currentUserId) {
+  const friendship = await prisma.friendship.findMany({
+    where: {
+      OR: [{ userId1: currentUserId }, { userId2: currentUserId }],
+    },
+    include: {
+      user1: {
+        select: {
+          id: true,
+          isOnline: true,
+          lastSeen: true,
+        },
+      },
+      user2: {
+        select: {
+          id: true,
+          isOnline: true,
+          lastSeen: true,
+        },
+      },
+    },
+  });
+
+  return friendship.map((friend) => {
+    return friend.userId1 === currentUserId ? friend.user2 : friend.user1;
+  });
+}
+
 async function removeFriend(currentUserId, friendId) {
   const userId1 = Math.min(currentUserId, friendId);
   const userId2 = Math.max(currentUserId, friendId);
@@ -88,4 +116,4 @@ async function removeFriend(currentUserId, friendId) {
   return true;
 }
 
-export { addFriend, getFriends, removeFriend };
+export { addFriend, getFriends, getFriendsOnlineStatus, removeFriend };

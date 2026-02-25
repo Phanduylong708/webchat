@@ -1,13 +1,21 @@
 import { prisma } from "../../shared/prisma.js";
-import { getFriends } from "../../api/services/friend.service.js";
+import { getFriendsOnlineStatus } from "../../api/services/friend.service.js";
 import { joinUserConversations, getUserRoom } from "../helpers/helpers.js";
 
 async function handleStatus(io, socket) {
   const user = socket.data.user; // get authenticated user from socket data
   const userRoom = getUserRoom(user.id); // room for the user to track multiple connections
-  const friends = await getFriends(user.id); // fetch user's friends
+  const friends = await getFriendsOnlineStatus(user.id); // fetch minimal friend online state
   socket.join(userRoom); // join user's personal room
   await joinUserConversations(io, socket, user.id); // Join conversation rooms
+
+  socket.emit("friendsOnlineStatus", {
+    statuses: friends.map((friend) => ({
+      userId: friend.id,
+      isOnline: friend.isOnline,
+      lastSeen: friend.lastSeen ?? null,
+    })),
+  });
 
   const room = io.sockets.adapter.rooms.get(userRoom); // Get the room for the user
   const isFirstConnection = room && room.size === 1; // Check if this is the first connection for the user
