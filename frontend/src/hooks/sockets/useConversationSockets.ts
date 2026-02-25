@@ -13,7 +13,6 @@ import {
 } from "@/utils/conversation.utils";
 
 type ConversationSetter = Dispatch<SetStateAction<ConversationsResponse[]>>;
-type OnlineUsersSetter = Dispatch<SetStateAction<Set<number>>>;
 type TypingSetter = Dispatch<SetStateAction<Map<number, Map<number, string>>>>;
 type SystemMessageSetter = Dispatch<SetStateAction<Map<number, string>>>;
 
@@ -23,7 +22,6 @@ interface UseConversationSocketsParams {
   socket: Socket | null;
   currentUserId: number | null;
   setConversations: ConversationSetter;
-  setOnlineUsers: OnlineUsersSetter;
   setTypingByConversation: TypingSetter;
   setSystemMessages: SystemMessageSetter;
   setActiveConversationId: ActiveConversationSetter;
@@ -53,7 +51,6 @@ export function useConversationSockets({
   socket,
   currentUserId,
   setConversations,
-  setOnlineUsers,
   setTypingByConversation,
   setSystemMessages,
   setActiveConversationId,
@@ -101,33 +98,6 @@ export function useConversationSockets({
       socket.off("newMessage", handleConversationPreviewUpdate);
     };
   }, [socket, setConversations]);
-
-  // Track friend online/offline status to surface presence in UI.
-  useEffect(() => {
-    if (!socket) return;
-    function handleOnline(payload: { userId: number }) {
-      setOnlineUsers((prev) => {
-        const updated = new Set(prev);
-        updated.add(payload.userId);
-        return updated;
-      });
-    }
-
-    function handleOffline(payload: { userId: number }) {
-      setOnlineUsers((prev) => {
-        const updated = new Set(prev);
-        updated.delete(payload.userId);
-        return updated;
-      });
-    }
-
-    socket.on("friendOnline", handleOnline);
-    socket.on("friendOffline", handleOffline);
-    return () => {
-      socket.off("friendOnline", handleOnline);
-      socket.off("friendOffline", handleOffline);
-    };
-  }, [socket, setOnlineUsers]);
 
   // Maintain typing indicators for each conversation.
   useEffect(() => {

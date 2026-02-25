@@ -1,4 +1,4 @@
-import { useEffect, useState, type JSX } from "react";
+import { useEffect, useMemo, useState, type JSX } from "react";
 import type { ConversationsResponse, ConversationContextValue } from "@/types/chat.type";
 import {
   getConversations,
@@ -30,19 +30,31 @@ function ConversationProvider({children}: {children: React.ReactNode}): JSX.Elem
     const [activeConversationId, setActiveConversationId] = useState<number | null>(null);
     // prettier-ignore
     const [loadingConversations, setLoadingConversations] = useState<boolean>(false);
-    const [onlineUsers, setOnlineUsers] = useState<Set<number>>(new Set());
     const [typingByConversation, setTypingByConversation] = useState<Map<number, Map<number, string>>>(new Map());
     const [systemMessages, setSystemMessages] = useState<Map<number, string>>(new Map());
     // prettier-ignore
     const [error, setError] = useState<string | null>(null);
 
-    const {socket} = useSocket();
+    const {socket, isConnected, presenceByUserId} = useSocket();
     const { user } = useAuth();
+
+    const onlineUsers = useMemo(() => {
+      if (!isConnected) {
+        return new Set<number>();
+      }
+
+      const online = new Set<number>();
+      presenceByUserId.forEach((entry, userId) => {
+        if (entry.isOnline) {
+          online.add(userId);
+        }
+      });
+      return online;
+    }, [isConnected, presenceByUserId]);
     useConversationSockets({ 
       socket,
       currentUserId: user?.id ?? null,
       setConversations,
-      setOnlineUsers,
       setTypingByConversation,
       setSystemMessages,
       setActiveConversationId,

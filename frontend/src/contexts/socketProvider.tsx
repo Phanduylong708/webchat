@@ -8,6 +8,7 @@ import {
 import { useAuth } from "@/hooks/context/useAuth";
 import { getToken } from "@/utils/localStorage.util";
 import { SocketContext } from "./socketContext";
+import type { PresenceEntry } from "@/types/socket.type";
 
 function SocketProvider({
   children,
@@ -16,6 +17,9 @@ function SocketProvider({
 }): React.JSX.Element {
   const [isConnected, setIsConnected] = useState<boolean>(false); // connection status
   const [error, setError] = useState<string | null>(null); // error state
+  const [presenceByUserId, setPresenceByUserId] = useState<
+    Map<number, PresenceEntry>
+  >(() => new Map());
   const socketInstance = getSocket(); // get the singleton socket instance
   const { user } = useAuth(); // get the authenticated user
 
@@ -28,8 +32,62 @@ function SocketProvider({
       }
     } else {
       disconnectSocket();
+      setPresenceByUserId(new Map());
     }
   }, [user]);
+
+  // Track friend online/offline status globally.
+  useEffect(() => {
+    if (!socketInstance) return;
+
+    function normalizeLastSeen(value: unknown): string | null {
+      if (value === null || value === undefined) return null;
+      if (typeof value === "string") return value;
+      if (value instanceof Date) return value.toISOString();
+      return String(value);
+    }
+
+    function handleFriendsOnlineStatus(payload: {
+      statuses: Array<{ userId: number; isOnline: boolean; lastSeen?: unknown }>;
+    }) {
+      setPresenceByUserId(() => {
+        const next = new Map<number, PresenceEntry>();
+        for (const status of payload.statuses) {
+          next.set(status.userId, {
+            isOnline: status.isOnline,
+            lastSeen: normalizeLastSeen(status.lastSeen),
+          });
+        }
+        return next;
+      });
+    }
+
+    function handleFriendOnline(payload: { userId: number }) {
+      setPresenceByUserId((prev) => {
+        const next = new Map(prev);
+        next.set(payload.userId, { isOnline: true, lastSeen: null });
+        return next;
+      });
+    }
+
+    function handleFriendOffline(payload: { userId: number; lastSeen?: unknown }) {
+      const lastSeen = normalizeLastSeen(payload.lastSeen);
+      setPresenceByUserId((prev) => {
+        const next = new Map(prev);
+        next.set(payload.userId, { isOnline: false, lastSeen });
+        return next;
+      });
+    }
+
+    socketInstance.on("friendsOnlineStatus", handleFriendsOnlineStatus);
+    socketInstance.on("friendOnline", handleFriendOnline);
+    socketInstance.on("friendOffline", handleFriendOffline);
+    return () => {
+      socketInstance.off("friendsOnlineStatus", handleFriendsOnlineStatus);
+      socketInstance.off("friendOnline", handleFriendOnline);
+      socketInstance.off("friendOffline", handleFriendOffline);
+    };
+  }, [socketInstance]);
 
   // Listen for connection events
   useEffect(() => {
@@ -50,6 +108,7 @@ function SocketProvider({
     const handleDisconnect = () => {
       setIsConnected(false);
       setError(null);
+      setPresenceByUserId(new Map());
     };
     socketInstance.on("disconnect", handleDisconnect);
     // Handle connection errors
@@ -71,6 +130,7 @@ function SocketProvider({
     socket: socketInstance,
     isConnected,
     error,
+    presenceByUserId,
   };
   return (
     <SocketContext.Provider value={contextValue}>

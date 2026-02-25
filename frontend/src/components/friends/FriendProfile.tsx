@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { MessageCircle, UserMinus } from "lucide-react";
 import RemoveFriendDialog from "./RemoveFriendDialog";
 import { startPrivateChatApi } from "@/api/conversation.api";
+import useSocket from "@/hooks/context/useSocket";
 
 interface FriendProfileProps {
   friend: Friend;
@@ -17,7 +18,12 @@ interface FriendProfileProps {
 }
 
 export default function FriendProfile({ friend, onClearSelection }: FriendProfileProps): React.JSX.Element {
+  const { isConnected, presenceByUserId } = useSocket();
   const navigate = useNavigate();
+
+  const presence = isConnected ? presenceByUserId.get(friend.id) : undefined;
+  const displayIsOnline = presence?.isOnline ?? friend.isOnline;
+  const displayLastSeen = presence?.lastSeen ?? friend.lastSeen;
 
   async function handleSendMessage(): Promise<void> {
     try {
@@ -37,11 +43,11 @@ export default function FriendProfile({ friend, onClearSelection }: FriendProfil
           <AvatarFallback>{friend.username.slice(0, 2).toUpperCase()}</AvatarFallback>
         </Avatar>
         <h2 className="text-2xl font-semibold text-center mt-4">{friend.username}</h2>
-        {friend.isOnline ? (
+        {displayIsOnline ? (
           <p className="text-sm text-green-500 text-center">Online</p>
         ) : (
           <p className="text-sm text-muted-foreground text-center">
-            Last seen {formatLastSeen(friend.lastSeen)}
+            Last seen {formatLastSeen(displayLastSeen)}
           </p>
         )}
       </CardContent>

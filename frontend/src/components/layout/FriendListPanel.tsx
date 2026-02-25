@@ -10,6 +10,7 @@ import { getOptimizedAvatarUrl, getAvatarFallback } from "@/utils/image.util";
 import type { Friend } from "@/types/friend.type";
 import AddFriendDialog from "../friends/AddFriendDialog";
 import RemoveFriendDialog from "../friends/RemoveFriendDialog";
+import useSocket from "@/hooks/context/useSocket";
 
 interface FriendListPanelProps {
   friends: Friend[];
@@ -23,11 +24,15 @@ interface FriendListPanelProps {
 
 function FriendItem({
   friend,
+  displayIsOnline,
+  displayLastSeen,
   isSelected,
   onSelect,
   onRemoved,
 }: {
   friend: Friend;
+  displayIsOnline: boolean;
+  displayLastSeen: string | null;
   isSelected: boolean;
   onSelect: (friendId: number) => void;
   onRemoved: () => void;
@@ -48,7 +53,7 @@ function FriendItem({
         </Avatar>
         <span
           className={`absolute bottom-0 right-0 size-2.5 rounded-full border-2 border-background ${
-            friend.isOnline ? "bg-green-500" : "bg-muted-foreground/30"
+            displayIsOnline ? "bg-green-500" : "bg-muted-foreground/30"
           }`}
         />
       </div>
@@ -56,10 +61,10 @@ function FriendItem({
       <div className="flex-1 min-w-0">
         <p className="font-medium truncate">{friend.username}</p>
         <p className="text-xs text-muted-foreground">
-          {friend.isOnline ? (
+          {displayIsOnline ? (
             <span className="text-green-500">Online</span>
           ) : (
-            <span>Last seen {formatLastSeen(friend.lastSeen)}</span>
+            <span>Last seen {formatLastSeen(displayLastSeen)}</span>
           )}
         </p>
       </div>
@@ -92,6 +97,7 @@ export default function FriendListPanel({
   onClearSelection,
 }: FriendListPanelProps): React.JSX.Element {
   const errorMessage = error?.message ?? null;
+  const { isConnected, presenceByUserId } = useSocket();
 
   function renderFriendList(): React.JSX.Element {
     if (isLoading) {
@@ -112,19 +118,27 @@ export default function FriendListPanel({
 
     return (
       <>
-        {friends.map((friend) => (
-          <FriendItem
-            key={friend.id}
-            friend={friend}
-            isSelected={friend.id === selectedFriendId}
-            onSelect={onSelectFriendId}
-            onRemoved={() => {
-              if (friend.id === selectedFriendId) {
-                onClearSelection();
-              }
-            }}
-          />
-        ))}
+        {friends.map((friend) => {
+          const presence = isConnected ? presenceByUserId.get(friend.id) : undefined;
+          const displayIsOnline = presence?.isOnline ?? friend.isOnline;
+          const displayLastSeen = presence?.lastSeen ?? friend.lastSeen;
+
+          return (
+            <FriendItem
+              key={friend.id}
+              friend={friend}
+              displayIsOnline={displayIsOnline}
+              displayLastSeen={displayLastSeen}
+              isSelected={friend.id === selectedFriendId}
+              onSelect={onSelectFriendId}
+              onRemoved={() => {
+                if (friend.id === selectedFriendId) {
+                  onClearSelection();
+                }
+              }}
+            />
+          );
+        })}
       </>
     );
   }
