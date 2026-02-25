@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { useConversation } from "@/hooks/context/useConversation";
-import { useFriend } from "@/hooks/context/useFriend";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -18,6 +17,7 @@ import { getOptimizedAvatarUrl, getAvatarFallback } from "@/utils/image.util";
 import { UserPlus } from "lucide-react";
 import { getConversationsDetails } from "@/api/conversation.api";
 import type { User } from "@/types/chat.type";
+import { useFriendsQuery } from "@/hooks/queries/friends";
 
 interface AddMemberDialogProps {
   conversationId: number;
@@ -36,12 +36,11 @@ export default function AddMemberDialog({
   const [isLoadingMembers, setIsLoadingMembers] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
   const { addMember } = useConversation();
-  const { friends, fetchFriends } = useFriend();
+  const friendsQuery = useFriendsQuery();
+  const friends = friendsQuery.data ?? [];
 
   useEffect(() => {
     if (isOpen) {
-      // Fetch friends list
-      fetchFriends();
       async function loadMembers() {
         setIsLoadingMembers(true);
         setLocalError(null);
@@ -58,11 +57,10 @@ export default function AddMemberDialog({
 
       void loadMembers();
     }
-  }, [isOpen, conversationId, fetchFriends]);
+  }, [isOpen, conversationId]);
 
-  const safeFriends = friends ?? [];
   const safeMembers = currentMembers ?? [];
-  const availableFriends = safeFriends.filter(
+  const availableFriends = friends.filter(
     (friend) => !safeMembers.some((member) => member.id === friend.id),
   );
 
@@ -113,8 +111,15 @@ export default function AddMemberDialog({
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <ScrollArea className="h-48 border rounded-md p-2">
-            {isLoadingMembers ? (
-              <p className="text-sm text-muted-foreground py-6 text-center">Loading members...</p>
+            {isLoadingMembers || friendsQuery.isLoading ? (
+              <p className="text-sm text-muted-foreground py-6 text-center">Loading...</p>
+            ) : friendsQuery.error && friends.length === 0 ? (
+              <div className="text-sm text-muted-foreground py-6 text-center space-y-2">
+                <p>Error loading friends.</p>
+                <Button type="button" variant="outline" onClick={() => void friendsQuery.refetch()}>
+                  Retry
+                </Button>
+              </div>
             ) : availableFriends.length === 0 ? (
               <p className="text-sm text-muted-foreground py-6 text-center">
                 All friends are already in this group.

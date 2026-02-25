@@ -1,6 +1,5 @@
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { useConversation } from "@/hooks/context/useConversation";
-import { useFriend } from "@/hooks/context/useFriend";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -17,6 +16,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { getOptimizedAvatarUrl, getAvatarFallback } from "@/utils/image.util";
 import { Plus } from "lucide-react";
+import { useFriendsQuery } from "@/hooks/queries/friends";
 
 export default function CreateGroupDialog(): React.JSX.Element {
   const [isOpen, setIsOpen] = useState(false);
@@ -24,15 +24,10 @@ export default function CreateGroupDialog(): React.JSX.Element {
   const [selectedFriendIds, setSelectedFriendIds] = useState<number[]>([]);
   const [localError, setLocalError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { friends, fetchFriends } = useFriend();
+  const friendsQuery = useFriendsQuery();
+  const friends = friendsQuery.data ?? [];
   const { createGroup } = useConversation();
   const isValid = title.trim() !== "" && selectedFriendIds.length >= 2;
-
-  useEffect(() => {
-    if (isOpen) {
-      fetchFriends();
-    }
-  }, [isOpen, fetchFriends]);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -94,7 +89,16 @@ export default function CreateGroupDialog(): React.JSX.Element {
             <label className="text-sm font-medium">Select Friends</label>
 
             <ScrollArea className="h-48 border rounded-md p-2 mt-2">
-              {friends.length === 0 ? (
+              {friendsQuery.isLoading ? (
+                <p className="text-sm text-muted-foreground text-center py-8">Loading...</p>
+              ) : friendsQuery.error && friends.length === 0 ? (
+                <div className="text-sm text-muted-foreground text-center py-8 space-y-2">
+                  <p>Error loading friends.</p>
+                  <Button type="button" variant="outline" onClick={() => void friendsQuery.refetch()}>
+                    Retry
+                  </Button>
+                </div>
+              ) : friends.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-8">No friends available</p>
               ) : (
                 friends.map((friend) => (
