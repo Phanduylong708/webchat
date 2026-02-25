@@ -4,6 +4,7 @@ import "./index.css";
 import App from "./App.tsx";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import { Navigate } from "react-router-dom";
+import { QueryClientProvider } from "@tanstack/react-query";
 import LoginPage from "./pages/auth/LoginPage.tsx";
 import SignUp from "./pages/auth/SignUp.tsx";
 import HomePage from "./pages/home/HomePage.tsx";
@@ -12,6 +13,7 @@ import FriendsPage from "./pages/home/FriendsPage.tsx";
 import ChatPage from "./pages/chat/ChatPage.tsx";
 import CallPage from "./pages/call/CallPage.tsx";
 import WhiteboardTestPage from "./pages/dev/WhiteboardTestPage.tsx";
+import { queryClient } from "./lib/queryClient.ts";
 
 const router = createBrowserRouter([
   {
@@ -57,6 +59,8 @@ const router = createBrowserRouter([
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <RouterProvider router={router} />
+    <QueryClientProvider client={queryClient}>
+      <RouterProvider router={router} />
+    </QueryClientProvider>
   </StrictMode>
 );
