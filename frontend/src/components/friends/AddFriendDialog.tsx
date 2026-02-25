@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -17,9 +17,7 @@ interface AddFriendDialogProps {
   onFriendAdded: (friendId: number) => void;
 }
 
-export default function AddFriendDialog({
-  onFriendAdded,
-}: AddFriendDialogProps): React.JSX.Element {
+export default function AddFriendDialog({ onFriendAdded }: AddFriendDialogProps): React.JSX.Element {
   const [isOpen, setIsOpen] = useState(false);
   const [username, setUsername] = useState("");
   const [localError, setLocalError] = useState<string | null>(null);
@@ -43,12 +41,16 @@ export default function AddFriendDialog({
     return String(error);
   }, [addFriendMutation.error]);
 
-  useEffect(() => {
-    if (!isOpen) {
-      setLocalError(null);
-      addFriendMutation.reset();
-    }
-  }, [addFriendMutation, isOpen]);
+  const handleOpenChange = useCallback(
+    (open: boolean) => {
+      setIsOpen(open);
+      if (!open) {
+        setLocalError(null);
+        addFriendMutation.reset();
+      }
+    },
+    [addFriendMutation]
+  );
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -62,7 +64,7 @@ export default function AddFriendDialog({
       const friend = await addFriendMutation.mutateAsync(trimmed);
       onFriendAdded(friend.id);
       setUsername("");
-      setIsOpen(false);
+      handleOpenChange(false);
     } catch (err) {
       // message handled via mutationErrorMessage
       console.error(err);
@@ -70,7 +72,7 @@ export default function AddFriendDialog({
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
         <Button size="icon" variant="ghost" className="bg-background">
           <Plus size={20} />
@@ -87,16 +89,12 @@ export default function AddFriendDialog({
             <Input
               placeholder="Enter username"
               value={username}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                setUsername(e.target.value)
-              }
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setUsername(e.target.value)}
               disabled={addFriendMutation.isPending}
             ></Input>
           </div>
           {(localError || mutationErrorMessage) && (
-            <div className="text-sm text-destructive">
-              {localError || mutationErrorMessage}
-            </div>
+            <div className="text-sm text-destructive">{localError || mutationErrorMessage}</div>
           )}
 
           <DialogFooter>

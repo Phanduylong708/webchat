@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useState } from "react";
 import type { Friend } from "@/types/friend.type";
 import {
   AlertDialog,
@@ -27,11 +27,15 @@ export default function RemoveFriendDialog({
   const [isOpen, setIsOpen] = useState(false);
   const removeFriendMutation = useRemoveFriendMutation();
 
-  useEffect(() => {
-    if (!isOpen) {
-      removeFriendMutation.reset();
-    }
-  }, [isOpen, removeFriendMutation]);
+  const handleOpenChange = useCallback(
+    (open: boolean) => {
+      setIsOpen(open);
+      if (!open) {
+        removeFriendMutation.reset();
+      }
+    },
+    [removeFriendMutation]
+  );
 
   const mutationErrorMessage = (() => {
     const error = removeFriendMutation.error;
@@ -52,7 +56,7 @@ export default function RemoveFriendDialog({
     try {
       await removeFriendMutation.mutateAsync(friend.id);
       onRemove?.();
-      setIsOpen(false);
+      handleOpenChange(false);
     } catch (err) {
       // Swallow error so dialog stays open; message shown via mutationErrorMessage
       console.error(err);
@@ -61,32 +65,24 @@ export default function RemoveFriendDialog({
   return (
     <AlertDialog
       open={isOpen}
-      onOpenChange={(open) => {
-        setIsOpen(open);
-      }}
+      onOpenChange={handleOpenChange}
     >
       <AlertDialogTrigger asChild>{trigger}</AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Remove Friend</AlertDialogTitle>
           <AlertDialogDescription>
-            Are you sure you want to remove {friend.username} from your friends
-            list?
+            Are you sure you want to remove {friend.username} from your friends list?
           </AlertDialogDescription>
         </AlertDialogHeader>
         {mutationErrorMessage && (
-          <p className="text-destructive text-center mb-2 text-sm">
-            {mutationErrorMessage}
-          </p>
+          <p className="text-destructive text-center mb-2 text-sm">{mutationErrorMessage}</p>
         )}
         <AlertDialogFooter>
-          <AlertDialogCancel onClick={() => setIsOpen(false)}>
+          <AlertDialogCancel onClick={() => handleOpenChange(false)}>
             Cancel
           </AlertDialogCancel>
-          <AlertDialogAction
-            onClick={handleRemove}
-            disabled={removeFriendMutation.isPending}
-          >
+          <AlertDialogAction onClick={handleRemove} disabled={removeFriendMutation.isPending}>
             {removeFriendMutation.isPending ? "Removing..." : "Remove"}
           </AlertDialogAction>
         </AlertDialogFooter>
