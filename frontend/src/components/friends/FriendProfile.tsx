@@ -12,7 +12,12 @@ import { MessageCircle, UserMinus } from "lucide-react";
 import RemoveFriendDialog from "./RemoveFriendDialog";
 import { startPrivateChatApi } from "@/api/conversation.api";
 
-export default function FriendProfile({ friend }: { friend: Friend }): React.JSX.Element {
+interface FriendProfileProps {
+  friend: Friend;
+  onClearSelection?: () => void;
+}
+
+export default function FriendProfile({ friend, onClearSelection }: FriendProfileProps): React.JSX.Element {
   const { selectFriend } = useFriend();
   const navigate = useNavigate();
 
@@ -55,7 +60,10 @@ export default function FriendProfile({ friend }: { friend: Friend }): React.JSX
               Remove Friend
             </Button>
           }
-          onRemove={() => selectFriend(null)}
+          onRemove={() => {
+            selectFriend(null);
+            onClearSelection?.();
+          }}
         ></RemoveFriendDialog>
       </CardFooter>
     </Card>

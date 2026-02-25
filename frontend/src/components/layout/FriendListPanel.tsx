@@ -11,15 +11,29 @@ import type { Friend } from "@/types/friend.type";
 import { useFriend } from "@/hooks/context/useFriend";
 import AddFriendDialog from "../friends/AddFriendDialog";
 import RemoveFriendDialog from "../friends/RemoveFriendDialog";
-function FriendItem({ friend }: { friend: Friend }): React.JSX.Element {
-  const { selectFriend } = useFriend();
+interface FriendListPanelProps {
+  selectedFriendId: number | null;
+  onSelectFriendId: (friendId: number) => void;
+}
 
+function FriendItem({
+  friend,
+  isSelected,
+  onSelect,
+}: {
+  friend: Friend;
+  isSelected: boolean;
+  onSelect: (friendId: number) => void;
+}): React.JSX.Element {
+  
   return (
     <div
-      className="group flex items-center gap-3 p-3 rounded-lg bg-background border
-  border-border hover:bg-accent hover:border-accent-foreground/20 cursor-pointer
-  transition-all"
-      onClick={() => selectFriend(friend.id)}
+      className={`group flex items-center gap-3 p-3 rounded-lg border border-border cursor-pointer transition-all ${
+        isSelected
+          ? "bg-accent border-accent-foreground/30"
+          : "bg-background hover:bg-accent hover:border-accent-foreground/20"
+      }`}
+      onClick={() => onSelect(friend.id)}
     >
       <div className="relative shrink-0">
         <Avatar className="size-10">
@@ -61,7 +75,10 @@ function FriendItem({ friend }: { friend: Friend }): React.JSX.Element {
   );
 }
 
-export default function FriendListPanel(): React.JSX.Element {
+export default function FriendListPanel({
+  selectedFriendId,
+  onSelectFriendId,
+}: FriendListPanelProps): React.JSX.Element {
   const { friends, loading, error, fetchFriends } = useFriend();
 
   useEffect(() => {
@@ -90,7 +107,12 @@ export default function FriendListPanel(): React.JSX.Element {
     return (
       <>
         {friends.map((friend) => (
-          <FriendItem key={friend.id} friend={friend} />
+          <FriendItem
+            key={friend.id}
+            friend={friend}
+            isSelected={friend.id === selectedFriendId}
+            onSelect={onSelectFriendId}
+          />
         ))}
       </>
     );
