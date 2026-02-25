@@ -1,5 +1,4 @@
 import { ConversationProvider } from "@/contexts/conversationProvider";
-import { FriendProvider } from "@/contexts/friendContext";
 import { MessageProvider } from "@/contexts/messageProvider";
 import { useEffect, useRef } from "react";
 import { useLocation } from "react-router-dom";
@@ -11,13 +10,11 @@ import MainContentPanel from "@/components/layout/MainContentPanel";
 
 export default function ChatPage(): React.JSX.Element {
   return (
-    <FriendProvider>
-      <ConversationProvider>
-        <MessageProvider>
-          <ChatPageContent />
-        </MessageProvider>
-      </ConversationProvider>
-    </FriendProvider>
+    <ConversationProvider>
+      <MessageProvider>
+        <ChatPageContent />
+      </MessageProvider>
+    </ConversationProvider>
   );
 }
 

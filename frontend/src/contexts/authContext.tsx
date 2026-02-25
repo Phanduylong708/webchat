@@ -7,6 +7,7 @@ import type {
 } from "@/types/auth.type";
 import { removeToken, saveToken, getToken } from "@/utils/localStorage.util";
 import { loginUser, registerUser, getCurrentUser } from "@/api/auth.api";
+import { queryClient } from "../lib/queryClient";
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -22,6 +23,8 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
     setError(null);
     removeToken();
+    void queryClient.cancelQueries();
+    queryClient.clear();
   }
 
   async function login(credentials: LoginRequest): Promise<boolean> {
