@@ -1,8 +1,10 @@
+import { useCallback, useEffect, useState } from "react";
 import { useConversation } from "@/hooks/context/useConversation";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { StackedAvatars } from "@/components/ui/stacked-avatars";
 import { getOptimizedAvatarUrl, getAvatarFallback } from "@/utils/image.util";
+import type { DisplayMessage } from "@/types/chat.type";
 import MessageList from "./MessageList";
 import ChatInput from "./ChatInput";
 import GroupMembersDialog from "./GroupMembersDialog";
@@ -27,6 +29,38 @@ function ChatWindow(): React.JSX.Element {
   }
 
   const systemMessage = activeConversations ? systemMessages.get(activeConversations.id) : undefined;
+
+  const [editTarget, setEditTarget] = useState<{
+    conversationId: number;
+    messageId: number;
+    messageType: "TEXT" | "IMAGE";
+    initialContent: string | null;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!activeConversationId) return;
+    if (editTarget && editTarget.conversationId !== activeConversationId) {
+      setEditTarget(null);
+    }
+  }, [activeConversationId, editTarget]);
+
+  const handleRequestEdit = useCallback((message: DisplayMessage) => {
+    if (message.messageType !== "TEXT" && message.messageType !== "IMAGE") return;
+    setEditTarget({
+      conversationId: message.conversationId,
+      messageId: message.id,
+      messageType: message.messageType,
+      initialContent: message.content,
+    });
+  }, []);
+
+  const handleCancelEdit = useCallback(() => {
+    setEditTarget(null);
+  }, []);
+
+  const handleSaveEdit = useCallback(async (_draft: string) => {
+    // Wired in Task 9.
+  }, []);
 
   // Build avatar(s) for the header
   const previewMembers = activeConversations.previewMembers ?? [];
@@ -79,12 +113,17 @@ function ChatWindow(): React.JSX.Element {
         </div>
       </div>
       <Separator />
-      <MessageList /> {/* message list */}
+      <MessageList onRequestEdit={handleRequestEdit} editingMessageId={editTarget?.messageId ?? null} /> {/* message list */}
       {/* system message, eg: typing indicator */}
       {systemMessage && (
         <div className="bg-muted px-4 py-2 text-xs text-muted-foreground">{systemMessage}</div>
       )}
-      <ChatInput conversationId={activeConversations.id} /> {/* chat input */}
+      <ChatInput
+        conversationId={activeConversations.id}
+        editTarget={editTarget}
+        onCancelEdit={handleCancelEdit}
+        onSaveEdit={handleSaveEdit}
+      />
     </div>
   );
 }

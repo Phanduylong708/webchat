@@ -12,6 +12,8 @@ interface MessageItemProps {
   isOwn: boolean;
   isFirstInGroup: boolean;
   isLastInGroup: boolean;
+  isEditing?: boolean;
+  onRequestEdit?: (message: DisplayMessage) => void;
 }
 
 // ── Helpers ──
@@ -158,6 +160,8 @@ export default function MessageItem({
   isOwn,
   isFirstInGroup,
   isLastInGroup,
+  isEditing = false,
+  onRequestEdit,
 }: MessageItemProps): React.JSX.Element {
   const timestamp = new Date(message.createdAt).toLocaleTimeString("en-US", {
     hour: "2-digit",
@@ -178,11 +182,19 @@ export default function MessageItem({
     return (
       <div className="flex justify-end">
         <div className="flex flex-col items-end max-w-[70%] min-w-0">
-          <MessageActionsMenu message={message} enabled={canEdit}>
-            <MessageContent
-              message={message}
-              bubbleClassName="bg-primary text-primary-foreground px-3 py-2 rounded-tl-2xl rounded-tr-2xl rounded-bl-2xl"
-            />
+          <MessageActionsMenu message={message} enabled={canEdit} onEdit={onRequestEdit}>
+            <div
+              className={
+                isEditing
+                  ? "rounded-[18px] ring-2 ring-ring/20 ring-offset-2 ring-offset-background"
+                  : ""
+              }
+            >
+              <MessageContent
+                message={message}
+                bubbleClassName="bg-primary text-primary-foreground px-3 py-2 rounded-tl-2xl rounded-tr-2xl rounded-bl-2xl"
+              />
+            </div>
           </MessageActionsMenu>
           {isFailed && <FailedActions message={message} />}
           {isLastInGroup && (

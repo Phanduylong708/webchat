@@ -1,11 +1,17 @@
 import { useMessage } from "@/hooks/context/useMessage";
 import { useConversation } from "@/hooks/context/useConversation";
 import { useAuth } from "@/hooks/context/useAuth";
+import type { DisplayMessage } from "@/types/chat.type";
 import MessageItem from "./MessageItem";
 import TypingIndicator from "./TypingIndicator";
 import InfiniteScroll from "react-infinite-scroll-component";
 
-export default function MessageList() {
+type Props = {
+  onRequestEdit?: (message: DisplayMessage) => void;
+  editingMessageId?: number | null;
+};
+
+export default function MessageList({ onRequestEdit, editingMessageId = null }: Props) {
   const { messagesByConversation, loadingMessages, loadOlderMessages, pagination, error } = useMessage();
   const { activeConversationId } = useConversation();
   const paginationInfo = activeConversationId ? pagination.get(activeConversationId) : undefined;
@@ -61,6 +67,8 @@ export default function MessageList() {
                 isOwn={isOwn}
                 isFirstInGroup={isFirstInGroup}
                 isLastInGroup={isLastInGroup}
+                isEditing={editingMessageId === message.id}
+                onRequestEdit={onRequestEdit}
               />
             </div>
           );

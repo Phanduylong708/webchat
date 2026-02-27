@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Textarea } from "../ui/textarea";
-import { Send, Paperclip, ImagePlus, X, Smile } from "lucide-react";
+import { Check, Send, Paperclip, ImagePlus, X, Smile } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import EmojiPicker, { Theme, type EmojiClickData } from "emoji-picker-react";
 import { useTheme } from "next-themes";
@@ -11,6 +11,7 @@ import { uploadMediaApi } from "@/api/media.api";
 import type { OptimisticMessage } from "@/types/chat.type";
 import { toast } from "sonner";
 import { insertTextAtCaret } from "@/utils/caret.util";
+import { getEditSaveState } from "@/utils/edit-mode.util";
 
 const ALLOWED_MIME_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
@@ -109,6 +110,7 @@ function AttachmentMenu({ onSelectImage, disabled }: { onSelectImage: () => void
       <PopoverTrigger asChild>
         <button
           type="button"
+          aria-label="Attach"
           disabled={disabled}
           className="size-[44px] flex items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-50 transition-colors shrink-0"
         >
@@ -134,8 +136,22 @@ function AttachmentMenu({ onSelectImage, disabled }: { onSelectImage: () => void
 
 // ── Main Component ──
 
+type EditTarget = {
+  conversationId: number;
+  messageId: number;
+  messageType: "TEXT" | "IMAGE";
+  initialContent: string | null;
+};
+
+type Props = {
+  conversationId: number;
+  editTarget?: EditTarget | null;
+  onCancelEdit?: () => void;
+  onSaveEdit?: (draft: string) => Promise<void>;
+};
+
 //prettier-ignore
-export default function ChatInput({conversationId}: {conversationId: number;}): React.JSX.Element {
+export default function ChatInput({conversationId, editTarget = null, onCancelEdit, onSaveEdit}: Props): React.JSX.Element {
 
   const [inputValue, setInputValue] = useState<string>("");
   const [isSending, setIsSending] = useState<boolean>(false);
@@ -162,6 +178,24 @@ export default function ChatInput({conversationId}: {conversationId: number;}): 
     detachSelectedForSubmit,
   } = useAttachmentSelection();
 
+  const isEditing = editTarget !== null;
+  const editSaveState = useMemo(() => {
+    if (!editTarget) return null;
+    return getEditSaveState({
+      messageType: editTarget.messageType,
+      oldContent: editTarget.initialContent,
+      draft: inputValue,
+    });
+  }, [editTarget, inputValue]);
+
+  // Enter edit mode: clear draft + attachments, set textarea to initial content
+  useEffect(() => {
+    if (!editTarget) return;
+    setInputValue(editTarget.initialContent ?? "");
+    clearSelectedFile();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editTarget?.conversationId, editTarget?.messageId]);
+
   // ── Typing indicator ──
   function handleInputChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
     setInputValue(e.target.value);
@@ -181,6 +215,11 @@ export default function ChatInput({conversationId}: {conversationId: number;}): 
   }
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if (isEditing && e.key === "Escape") {
+      e.preventDefault();
+      handleCancelEdit();
+      return;
+    }
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSubmit();
@@ -221,6 +260,7 @@ export default function ChatInput({conversationId}: {conversationId: number;}): 
       },
       attachments: [],
       createdAt: new Date().toISOString(),
+      editedAt: null,
       _optimistic: true,
       _status: "sending",
       _previewUrl: previewUrl ?? undefined,
@@ -244,6 +284,27 @@ export default function ChatInput({conversationId}: {conversationId: number;}): 
       typingTimeoutRef.current = null;
     }
     isCurrentlyTypingRef.current = false;
+  }
+
+  function handleCancelEdit() {
+    if (!isEditing) return;
+    stopTyping();
+    setInputValue("");
+    clearSelectedFile();
+    onCancelEdit?.();
+  }
+
+  async function handleSaveEdit() {
+    if (!editTarget || !onSaveEdit) return;
+    if (editSaveState?.disabled) return;
+
+    setIsSending(true);
+    try {
+      await onSaveEdit(inputValue);
+      handleCancelEdit();
+    } finally {
+      setIsSending(false);
+    }
   }
 
   async function handleMediaSend(trimmed: string, file: File) {
@@ -286,6 +347,10 @@ export default function ChatInput({conversationId}: {conversationId: number;}): 
 
   // ── Submit: orchestrates media or text flow ──
   async function handleSubmit() {
+    if (isEditing) {
+      await handleSaveEdit();
+      return;
+    }
     const trimmed = inputValue.trim();
     if ((!trimmed && !selectedFile) || isSending || !user) return;
 
@@ -334,6 +399,7 @@ export default function ChatInput({conversationId}: {conversationId: number;}): 
     }, 0);
   }, [inputValue]);
 
+  const canSave = Boolean(editTarget) && Boolean(onSaveEdit) && Boolean(editSaveState) && !editSaveState!.disabled && !isSending;
   const canSend = (inputValue.trim().length > 0 || selectedFile !== null) && !isSending;
 
   return (
@@ -368,6 +434,27 @@ export default function ChatInput({conversationId}: {conversationId: number;}): 
           <span className="text-xs text-muted-foreground truncate max-w-[200px]">
             {selectedFile.name}
           </span>
+        </div>
+      )}
+
+      {isEditing && (
+        <div className="mb-2 flex items-center justify-between gap-3 rounded-xl border border-border/50 bg-muted/30 px-3 py-2">
+          <div className="min-w-0">
+            <div className="text-xs font-medium">
+              {editTarget.messageType === "IMAGE" ? "Editing caption" : "Editing message"}
+            </div>
+            <div className="text-[11px] text-muted-foreground truncate">
+              {editTarget.initialContent ?? ""}
+            </div>
+          </div>
+          <button
+            type="button"
+            aria-label="Cancel edit"
+            onClick={handleCancelEdit}
+            className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors shrink-0"
+          >
+            <X className="size-4" />
+          </button>
         </div>
       )}
 
@@ -418,16 +505,23 @@ export default function ChatInput({conversationId}: {conversationId: number;}): 
           />
 
           {/* Attachment popover — right side inside container */}
-          <AttachmentMenu onSelectImage={openFilePicker} disabled={isSending} />
+          <AttachmentMenu
+            onSelectImage={() => {
+              if (isEditing) return;
+              openFilePicker();
+            }}
+            disabled={isSending || isEditing}
+          />
         </div>
 
         {/* Send button — outside container, visually aligned */}
         <button
           type="submit"
-          disabled={!canSend}
+          aria-label={isEditing ? "Save edit" : "Send"}
+          disabled={isEditing ? !canSave : !canSend}
           className="size-[44px] flex items-center justify-center bg-primary text-primary-foreground rounded-full shrink-0 disabled:opacity-40 hover:bg-primary/90 active:scale-95 transition-all"
         >
-          <Send className="size-[18px]" />
+          {isEditing ? <Check className="size-[18px]" /> : <Send className="size-[18px]" />}
         </button>
       </form>
     </div>
