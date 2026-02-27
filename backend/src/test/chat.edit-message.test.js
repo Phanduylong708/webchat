@@ -65,6 +65,34 @@ describe("chat.handler editMessage", () => {
     });
   });
 
+  it("should reject invalid messageId", async () => {
+    await mockSocket._trigger(
+      "editMessage",
+      { conversationId: 1, messageId: "abc", content: "hi" },
+      mockCallback
+    );
+
+    expect(mockCallback).toHaveBeenCalledWith({
+      success: false,
+      code: "INVALID_MESSAGE_ID",
+      error: "messageId must be a valid positive integer.",
+    });
+  });
+
+  it("should reject invalid content type", async () => {
+    await mockSocket._trigger(
+      "editMessage",
+      { conversationId: 1, messageId: 1, content: null },
+      mockCallback
+    );
+
+    expect(mockCallback).toHaveBeenCalledWith({
+      success: false,
+      code: "INVALID_CONTENT",
+      error: "content must be a string (can be empty).",
+    });
+  });
+
   it("should reject when not a member", async () => {
     verifyMembership.mockResolvedValue(false);
 
@@ -195,7 +223,7 @@ describe("chat.handler editMessage", () => {
     expect(prisma.message.update).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { id: 10 },
-        data: expect.objectContaining({ content: null }),
+        data: expect.objectContaining({ content: null, editedAt: expect.any(Date) }),
       })
     );
     expect(mockIo.to).toHaveBeenCalledWith("conversation_1");
@@ -231,6 +259,12 @@ describe("chat.handler editMessage", () => {
       mockCallback
     );
 
+    expect(prisma.message.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 10 },
+        data: expect.objectContaining({ content: "hello", editedAt: expect.any(Date) }),
+      })
+    );
     expect(mockIo._mockEmit).toHaveBeenCalledWith("messageUpdated", updated);
     expect(mockCallback).toHaveBeenCalledWith({ success: true, message: updated });
   });
