@@ -5,6 +5,7 @@ import { getOptimizedAvatarUrl, getAvatarFallback, getOptimizedMessageImageUrl }
 import { useMessage } from "@/hooks/context/useMessage";
 import { Loader2, AlertCircle, X } from "lucide-react";
 import { getEmojiSizing, renderTwemojiTokens, tokenizeEmojiContent } from "@/utils/emoji.util";
+import MessageActionsMenu from "./MessageActionsMenu";
 
 interface MessageItemProps {
   message: DisplayMessage;
@@ -17,6 +18,24 @@ interface MessageItemProps {
 
 function isOptimistic(msg: DisplayMessage): msg is import("@/types/chat.type").OptimisticMessage {
   return "_optimistic" in msg;
+}
+
+function isWithinEditWindow(createdAt: string, windowMs = 5 * 60 * 1000): boolean {
+  const t = new Date(createdAt).getTime();
+  if (!Number.isFinite(t)) return false;
+  return Date.now() - t <= windowMs;
+}
+
+function EditedMark() {
+  return (
+    <span
+      aria-hidden="true"
+      className="inline-block size-1.5 rounded-full"
+      style={{
+        backgroundImage: "var(--signature-gradient)",
+      }}
+    />
+  );
 }
 
 // ── Image Bubble ──
@@ -146,18 +165,38 @@ export default function MessageItem({
   });
 
   const isFailed = isOptimistic(message) && message._status === "failed";
+  const isEdited = Boolean(message.editedAt);
+
+  const canEdit =
+    isOwn &&
+    !isOptimistic(message) &&
+    (message.messageType === "TEXT" || message.messageType === "IMAGE") &&
+    isWithinEditWindow(message.createdAt);
 
   // ── Own messages: right-aligned, no avatar ──
   if (isOwn) {
     return (
       <div className="flex justify-end">
         <div className="flex flex-col items-end max-w-[70%] min-w-0">
-          <MessageContent
-            message={message}
-            bubbleClassName="bg-primary text-primary-foreground px-3 py-2 rounded-tl-2xl rounded-tr-2xl rounded-bl-2xl"
-          />
+          <MessageActionsMenu message={message} enabled={canEdit}>
+            <MessageContent
+              message={message}
+              bubbleClassName="bg-primary text-primary-foreground px-3 py-2 rounded-tl-2xl rounded-tr-2xl rounded-bl-2xl"
+            />
+          </MessageActionsMenu>
           {isFailed && <FailedActions message={message} />}
-          {isLastInGroup && <span className="text-[10px] text-muted-foreground mt-1">{timestamp}</span>}
+          {isLastInGroup && (
+            <span className="text-[10px] text-muted-foreground mt-1">
+              {timestamp}
+              {isEdited && (
+                <span className="inline-flex items-center gap-1">
+                  <span className="mx-1">·</span>
+                  <EditedMark />
+                  <span>edited</span>
+                </span>
+              )}
+            </span>
+          )}
         </div>
       </div>
     );
@@ -185,7 +224,18 @@ export default function MessageItem({
           message={message}
           bubbleClassName="bg-muted text-foreground px-3 py-2 rounded-tl-2xl rounded-tr-2xl rounded-br-2xl"
         />
-        {isLastInGroup && <span className="text-[10px] text-muted-foreground mt-1">{timestamp}</span>}
+        {isLastInGroup && (
+          <span className="text-[10px] text-muted-foreground mt-1">
+            {timestamp}
+            {isEdited && (
+              <span className="inline-flex items-center gap-1">
+                <span className="mx-1">·</span>
+                <EditedMark />
+                <span>edited</span>
+              </span>
+            )}
+          </span>
+        )}
       </div>
     </div>
   );
