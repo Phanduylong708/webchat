@@ -34,9 +34,8 @@ describe("ChatInput edit mode", () => {
     const onCancelEdit = vi.fn();
     const onSaveEdit = vi.fn(async () => {});
 
-    const AnyChatInput = ChatInput as unknown as any;
     render(
-      <AnyChatInput
+      <ChatInput
         conversationId={1}
         editTarget={{
           conversationId: 1,

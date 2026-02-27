@@ -13,22 +13,6 @@ import { CallButton } from "@/components/call/CallButton";
 function ChatWindow(): React.JSX.Element {
   const { conversations, activeConversationId, onlineUsers, systemMessages } = useConversation();
   const activeConversations = conversations.find((c) => c.id === activeConversationId);
-  const isGroup = activeConversations?.type === "GROUP";
-  const isOnline = activeConversations?.otherUser ? onlineUsers.has(activeConversations.otherUser.id) : false;
-  const title = isGroup ? activeConversations.title : activeConversations?.otherUser?.username;
-  const statusText = isGroup ? `${activeConversations.memberCount} members` : isOnline ? "Online" : "Offline";
-
-  const showGroupButtons = isGroup;
-
-  if (!activeConversations) {
-    return (
-      <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
-        <p className="text-lg">Select a conversation to start chatting</p>
-      </div>
-    );
-  }
-
-  const systemMessage = activeConversations ? systemMessages.get(activeConversations.id) : undefined;
 
   const [editTarget, setEditTarget] = useState<{
     conversationId: number;
@@ -59,8 +43,25 @@ function ChatWindow(): React.JSX.Element {
   }, []);
 
   const handleSaveEdit = useCallback(async (_draft: string) => {
-    // Wired in Task 9.
+    void _draft;
+    // Wired in Task 9
   }, []);
+
+  if (!activeConversations) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
+        <p className="text-lg">Select a conversation to start chatting</p>
+      </div>
+    );
+  }
+
+  const isGroup = activeConversations.type === "GROUP";
+  const isOnline = activeConversations.otherUser ? onlineUsers.has(activeConversations.otherUser.id) : false;
+  const title = isGroup ? activeConversations.title : activeConversations.otherUser?.username;
+  const statusText = isGroup ? `${activeConversations.memberCount} members` : isOnline ? "Online" : "Offline";
+
+  const showGroupButtons = isGroup;
+  const systemMessage = systemMessages.get(activeConversations.id);
 
   // Build avatar(s) for the header
   const previewMembers = activeConversations.previewMembers ?? [];
