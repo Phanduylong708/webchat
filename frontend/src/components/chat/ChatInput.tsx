@@ -302,6 +302,13 @@ export default function ChatInput({conversationId, editTarget = null, onCancelEd
     try {
       await onSaveEdit(inputValue);
       handleCancelEdit();
+    } catch (error) {
+      const message =
+        error && typeof error === "object" && "message" in error
+          ? String((error as { message?: unknown }).message ?? "Edit failed")
+          : "Edit failed";
+      toast.error(message);
+      console.error("Edit failed:", error);
     } finally {
       setIsSending(false);
     }

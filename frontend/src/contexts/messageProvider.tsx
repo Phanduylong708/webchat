@@ -73,6 +73,7 @@ function MessageProvider({ children }: { children: React.ReactNode }): JSX.Eleme
           },
           attachments: [],
           createdAt: new Date().toISOString(),
+          editedAt: null,
           _optimistic: true,
           _status: "sending",
         };
