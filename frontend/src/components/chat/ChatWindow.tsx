@@ -42,11 +42,6 @@ function ChatWindow(): React.JSX.Element {
     setEditTarget(null);
   }, []);
 
-  const handleSaveEdit = useCallback(async (_draft: string) => {
-    void _draft;
-    // Wired in Task 9
-  }, []);
-
   if (!activeConversations) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
@@ -123,7 +118,6 @@ function ChatWindow(): React.JSX.Element {
         conversationId={activeConversations.id}
         editTarget={editTarget}
         onCancelEdit={handleCancelEdit}
-        onSaveEdit={handleSaveEdit}
       />
     </div>
   );

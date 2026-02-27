@@ -1,7 +1,9 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import ChatInput from "./ChatInput";
+
+const toastErrorMock = vi.fn();
 
 vi.mock("next-themes", () => ({
   useTheme: () => ({ theme: "light" }),
@@ -27,7 +29,16 @@ vi.mock("@/api/media.api", () => ({
   uploadMediaApi: vi.fn(),
 }));
 
-afterEach(() => cleanup());
+vi.mock("sonner", () => ({
+  toast: {
+    error: (...args: unknown[]) => toastErrorMock(...args),
+  },
+}));
+
+afterEach(() => {
+  cleanup();
+  toastErrorMock.mockClear();
+});
 
 describe("ChatInput edit mode", () => {
   it("shows edit bar, disables attachments, and enables Save only when not noop", async () => {
@@ -67,5 +78,31 @@ describe("ChatInput edit mode", () => {
 
     fireEvent.click(screen.getByLabelText("Cancel edit"));
     expect(onCancelEdit).toHaveBeenCalled();
+  });
+
+  it("keeps edit mode and shows toast when save fails without socket", async () => {
+    render(
+      <ChatInput
+        conversationId={1}
+        editTarget={{
+          conversationId: 1,
+          messageId: 10,
+          messageType: "TEXT",
+          initialContent: "hello",
+        }}
+      />
+    );
+
+    const textarea = screen.getByPlaceholderText("Type your message..") as HTMLTextAreaElement;
+    const saveBtn = screen.getByLabelText("Save edit") as HTMLButtonElement;
+
+    fireEvent.change(textarea, { target: { value: "hello!" } });
+    fireEvent.click(saveBtn);
+
+    await waitFor(() => {
+      expect(toastErrorMock).toHaveBeenCalled();
+    });
+    expect(screen.getByText("Editing message")).toBeTruthy();
+    expect(textarea.value).toBe("hello!");
   });
 });

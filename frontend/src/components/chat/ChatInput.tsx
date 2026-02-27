@@ -150,6 +150,15 @@ type Props = {
   onSaveEdit?: (draft: string) => Promise<void>;
 };
 
+type EditMessageAck = {
+  success: boolean;
+  message?: unknown;
+  error?: string;
+  code?: string;
+};
+
+const EDIT_ACK_TIMEOUT_MS = 12_000;
+
 //prettier-ignore
 export default function ChatInput({conversationId, editTarget = null, onCancelEdit, onSaveEdit}: Props): React.JSX.Element {
 
@@ -295,12 +304,46 @@ export default function ChatInput({conversationId, editTarget = null, onCancelEd
   }
 
   async function handleSaveEdit() {
-    if (!editTarget || !onSaveEdit) return;
+    if (!editTarget) return;
     if (editSaveState?.disabled) return;
 
     setIsSending(true);
     try {
-      await onSaveEdit(inputValue);
+      if (onSaveEdit) {
+        await onSaveEdit(inputValue);
+      } else {
+        if (!socket || !socket.connected) {
+          throw new Error("Socket is not connected");
+        }
+
+        const payload = {
+          conversationId: editTarget.conversationId,
+          messageId: editTarget.messageId,
+          content: inputValue,
+        };
+
+        await new Promise<void>((resolve, reject) => {
+          let settled = false;
+          const timer = setTimeout(() => {
+            if (settled) return;
+            settled = true;
+            reject(new Error("Edit timed out - no server acknowledgement"));
+          }, EDIT_ACK_TIMEOUT_MS);
+
+          socket.emit("editMessage", payload, (ack?: EditMessageAck) => {
+            clearTimeout(timer);
+            if (settled) return;
+            settled = true;
+
+            if (ack?.success) {
+              resolve();
+              return;
+            }
+
+            reject(new Error(ack?.error || "Edit failed"));
+          });
+        });
+      }
       handleCancelEdit();
     } catch (error) {
       const message =
@@ -371,6 +414,11 @@ export default function ChatInput({conversationId, editTarget = null, onCancelEd
       stopTyping();
       clearSelectedFile();
     } catch (error) {
+      const message =
+        error && typeof error === "object" && "message" in error
+          ? String((error as { message?: unknown }).message ?? "Send failed")
+          : "Send failed";
+      toast.error(message);
       console.error("Send failed:", error);
       // Text-only: input value preserved for retry
       // Media: bubble already marked failed by provider timeout/ack
@@ -406,7 +454,7 @@ export default function ChatInput({conversationId, editTarget = null, onCancelEd
     }, 0);
   }, [inputValue]);
 
-  const canSave = Boolean(editTarget) && Boolean(onSaveEdit) && Boolean(editSaveState) && !editSaveState!.disabled && !isSending;
+  const canSave = Boolean(editTarget) && Boolean(editSaveState) && !editSaveState!.disabled && !isSending;
   const canSend = (inputValue.trim().length > 0 || selectedFile !== null) && !isSending;
 
   return (
