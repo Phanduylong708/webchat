@@ -132,7 +132,13 @@ function parseEditMessagePayload(payload) {
   }
 
   const content = raw.content;
-  const trimmedContent = typeof content === "string" ? content.trim() : "";
+  if (typeof content !== "string") {
+    return {
+      ok: false,
+      error: ackError("INVALID_CONTENT", "content must be a string (can be empty)."),
+    };
+  }
+  const trimmedContent = content.trim();
 
   return {
     ok: true,
