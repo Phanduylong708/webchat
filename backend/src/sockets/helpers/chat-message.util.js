@@ -105,6 +105,41 @@ function parseSendMessagePayload(payload) {
   };
 }
 
+/**
+ * Parse and validate the editMessage payload IDs and content.
+ * Returns { ok, data?, error? }.
+ */
+function parseEditMessagePayload(payload) {
+  const raw = payload ?? {};
+
+  const rawConversationId = raw.conversationId ?? null;
+  const rawMessageId = raw.messageId ?? null;
+
+  const conversationId = parseSocketInt(rawConversationId);
+  const messageId = parseSocketInt(rawMessageId);
+
+  if (conversationId === null) {
+    return {
+      ok: false,
+      error: ackError("INVALID_CONVERSATION_ID", "conversationId must be a valid positive integer."),
+    };
+  }
+  if (messageId === null) {
+    return {
+      ok: false,
+      error: ackError("INVALID_MESSAGE_ID", "messageId must be a valid positive integer."),
+    };
+  }
+
+  const content = raw.content;
+  const trimmedContent = typeof content === "string" ? content.trim() : "";
+
+  return {
+    ok: true,
+    data: { conversationId, messageId, trimmedContent },
+  };
+}
+
 // ── Ack helper ──────────────────────────────────────────────────────────────
 
 /**
@@ -145,4 +180,10 @@ async function validateAttachmentsPreflight(attachmentIds, currentUserId) {
   return null;
 }
 
-export { parseSocketInt, parseSendMessagePayload, ackError, validateAttachmentsPreflight };
+export {
+  parseSocketInt,
+  parseSendMessagePayload,
+  parseEditMessagePayload,
+  ackError,
+  validateAttachmentsPreflight,
+};
