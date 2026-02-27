@@ -99,6 +99,37 @@ export function useConversationSockets({
     };
   }, [socket, setConversations]);
 
+  // Patch sidebar lastMessage preview when a message is edited.
+  // No reordering: edit does not change createdAt.
+  useEffect(() => {
+    if (!socket) return;
+    function handleMessageUpdated(message: Messages) {
+      setConversations((prev) => {
+        return prev.map((c) => {
+          if (c.id !== message.conversationId) return c;
+          if (!c.lastMessage || c.lastMessage.id !== message.id) return c;
+
+          const previewText = derivePreviewText(message);
+          return {
+            ...c,
+            lastMessage: {
+              ...c.lastMessage,
+              content: message.content,
+              messageType: message.messageType,
+              previewText,
+              sender: message.sender,
+              attachments: message.attachments?.map((a) => ({ mimeType: a.mimeType })),
+            },
+          };
+        });
+      });
+    }
+    socket.on("messageUpdated", handleMessageUpdated);
+    return () => {
+      socket.off("messageUpdated", handleMessageUpdated);
+    };
+  }, [socket, setConversations]);
+
   // Maintain typing indicators for each conversation.
   useEffect(() => {
     if (!socket) return;

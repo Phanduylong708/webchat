@@ -1,0 +1,82 @@
+import { useEffect, useState } from "react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { act, cleanup, render } from "@testing-library/react";
+
+import type { DisplayMessage } from "@/types/chat.type";
+import { useMessageSockets } from "./useMessageSockets";
+
+class MockSocket {
+  handlers = new Map<string, (...args: unknown[]) => void>();
+  on = vi.fn((event: string, handler: (...args: unknown[]) => void) => {
+    this.handlers.set(event, handler);
+  });
+  off = vi.fn((event: string, handler: (...args: unknown[]) => void) => {
+    const existing = this.handlers.get(event);
+    if (existing === handler) {
+      this.handlers.delete(event);
+    }
+  });
+  trigger(event: string, ...args: unknown[]) {
+    const handler = this.handlers.get(event);
+    handler?.(...args);
+  }
+}
+
+function makeMessage(overrides: Partial<DisplayMessage> & { id: number; conversationId: number }): DisplayMessage {
+  const base: DisplayMessage = {
+    id: 0,
+    conversationId: 0,
+    senderId: 1,
+    content: "old",
+    messageType: "TEXT",
+    createdAt: "2026-02-27T09:00:00.000Z",
+    editedAt: null,
+    sender: { id: 1, username: "alice", avatar: null },
+    attachments: [],
+  };
+  return { ...base, ...overrides } as DisplayMessage;
+}
+
+afterEach(() => cleanup());
+
+describe("useMessageSockets", () => {
+  it("patches cache on messageUpdated", async () => {
+    const socket = new MockSocket();
+
+    const original = Object.assign(makeMessage({ id: 10, conversationId: 1 }), {
+      _stableKey: "temp-1",
+    }) as DisplayMessage & { _stableKey: string };
+
+    const initial = new Map<number, DisplayMessage[]>([[1, [original]]]);
+    let latest = initial;
+
+    function Harness() {
+      const [state, setState] = useState(initial);
+      useMessageSockets({ socket: socket as unknown as never, setMessagesByConversation: setState });
+      useEffect(() => {
+        latest = state;
+      }, [state]);
+      return null;
+    }
+
+    render(<Harness />);
+    await act(async () => {});
+
+    expect(socket.on).toHaveBeenCalledWith("newMessage", expect.any(Function));
+    expect(socket.on).toHaveBeenCalledWith("messageUpdated", expect.any(Function));
+
+    const updated = makeMessage({
+      id: 10,
+      conversationId: 1,
+      content: "new",
+      editedAt: "2026-02-27T09:10:00.000Z",
+    });
+
+    act(() => {
+      socket.trigger("messageUpdated", updated);
+    });
+
+    expect(latest.get(1)?.[0].content).toBe("new");
+    expect((latest.get(1)?.[0] as unknown as { _stableKey?: string })._stableKey).toBe("temp-1");
+  });
+});

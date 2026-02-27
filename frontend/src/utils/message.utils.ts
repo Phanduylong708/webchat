@@ -69,3 +69,35 @@ export function updateOptimisticInMap(
   );
   return updated;
 }
+
+// Updates a message in the conversation cache (e.g. server edit).
+// No-op if conversation or message not found.
+export function updateMessageInMap(
+  map: Map<number, DisplayMessage[]>,
+  conversationId: number,
+  messageId: number,
+  patchOrNextMessage: DisplayMessage | ((prev: DisplayMessage) => DisplayMessage)
+): Map<number, DisplayMessage[]> {
+  const messages = map.get(conversationId);
+  if (!messages) return map;
+
+  const index = messages.findIndex((m) => m.id === messageId);
+  if (index === -1) return map;
+
+  const prev = messages[index];
+  const next =
+    typeof patchOrNextMessage === "function" ? patchOrNextMessage(prev) : patchOrNextMessage;
+
+  // Preserve the stable key used by MessageList for DOM continuity.
+  const stableKey = "_stableKey" in prev ? (prev as unknown as { _stableKey: unknown })._stableKey : undefined;
+  const merged =
+    stableKey !== undefined && !("_stableKey" in next)
+      ? Object.assign({}, next, { _stableKey: stableKey })
+      : next;
+
+  const updated = new Map(map);
+  const cloned = messages.slice();
+  cloned[index] = merged;
+  updated.set(conversationId, cloned);
+  return updated;
+}
