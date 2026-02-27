@@ -4,6 +4,7 @@ import { verifyMembership } from "../helpers/helpers.js";
 import { getConversationRoom, getUserRoom } from "../helpers/helpers.js";
 import {
   parseSendMessagePayload,
+  parseEditMessagePayload,
   ackError,
   validateAttachmentsPreflight,
 } from "../helpers/chat-message.util.js";
@@ -118,6 +119,89 @@ async function handleChatMessage(io, socket) {
       if (error.code === "ATTACHMENT_CONFLICT") {
         return callback(ackError("ATTACHMENT_CONFLICT", error.message));
       }
+      callback(ackError("INTERNAL_ERROR", "Internal server error."));
+    }
+  });
+
+  socket.on("editMessage", async (payload, callback) => {
+    try {
+      if (typeof callback !== "function") return;
+
+      const parsed = parseEditMessagePayload(payload);
+      if (!parsed.ok) return callback(parsed.error);
+
+      const { conversationId, messageId, trimmedContent } = parsed.data;
+      const currentUserId = socket.data.user.id;
+
+      const isMember = await verifyMembership(currentUserId, conversationId);
+      if (!isMember) {
+        return callback(ackError("NOT_A_MEMBER", "You are not a member of this conversation."));
+      }
+
+      const existing = await prisma.message.findUnique({
+        where: { id: messageId },
+        select: {
+          id: true,
+          conversationId: true,
+          senderId: true,
+          messageType: true,
+          createdAt: true,
+        },
+      });
+
+      if (!existing || existing.conversationId !== conversationId) {
+        return callback(ackError("MESSAGE_NOT_FOUND", "Message not found."));
+      }
+      if (existing.senderId !== currentUserId) {
+        return callback(ackError("NOT_OWNER", "You can only edit your own messages."));
+      }
+
+      const now = new Date();
+      const isExpired = now.getTime() - existing.createdAt.getTime() > 5 * 60 * 1000;
+      if (isExpired) {
+        return callback(ackError("EDIT_WINDOW_EXPIRED", "Edit window has expired."));
+      }
+
+      let nextContent = trimmedContent;
+      if (existing.messageType === "TEXT") {
+        if (trimmedContent.length === 0) {
+          return callback(ackError("INVALID_CONTENT", "Text content cannot be empty."));
+        }
+      } else if (existing.messageType === "IMAGE") {
+        nextContent = trimmedContent.length === 0 ? null : trimmedContent;
+      } else {
+        return callback(ackError("INVALID_CONTENT", "This message type cannot be edited."));
+      }
+
+      const updatedMessage = await prisma.message.update({
+        where: { id: messageId },
+        data: {
+          content: nextContent,
+          editedAt: now,
+        },
+        include: {
+          sender: { select: { id: true, username: true, avatar: true } },
+          attachments: {
+            select: {
+              id: true,
+              url: true,
+              publicId: true,
+              mimeType: true,
+              sizeBytes: true,
+              width: true,
+              height: true,
+              originalFileName: true,
+              createdAt: true,
+            },
+          },
+        },
+      });
+
+      socket.join(getConversationRoom(conversationId));
+      io.to(getConversationRoom(conversationId)).emit("messageUpdated", updatedMessage);
+      callback({ success: true, message: updatedMessage });
+    } catch (error) {
+      console.error("Error handling editMessage:", error);
       callback(ackError("INTERNAL_ERROR", "Internal server error."));
     }
   });
