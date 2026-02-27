@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { MoreHorizontal, PencilLine } from "lucide-react";
 
 import type { DisplayMessage } from "@/types/chat.type";
@@ -18,6 +18,8 @@ export default function MessageActionsMenu({ message, enabled, onEdit, children 
   const timerRef = useRef<number | null>(null);
   const longPressArmedRef = useRef(false);
 
+  const hasActions = typeof onEdit === "function";
+
   const clearTimer = useCallback(() => {
     if (timerRef.current !== null) {
       window.clearTimeout(timerRef.current);
@@ -26,18 +28,27 @@ export default function MessageActionsMenu({ message, enabled, onEdit, children 
     longPressArmedRef.current = false;
   }, []);
 
+  useEffect(() => {
+    return () => {
+      clearTimer();
+    };
+  }, [clearTimer]);
+
   const handlePointerDown = useCallback(
     (e: React.PointerEvent) => {
-      if (!enabled) return;
+      if (!enabled || !hasActions) return;
       if (e.pointerType !== "touch") return;
+
+      clearTimer();
 
       longPressArmedRef.current = true;
       timerRef.current = window.setTimeout(() => {
         if (!longPressArmedRef.current) return;
+        clearTimer();
         setOpen(true);
       }, LONG_PRESS_MS);
     },
-    [enabled]
+    [enabled, hasActions, clearTimer]
   );
 
   const handlePointerCancel = useCallback(() => {
@@ -49,12 +60,18 @@ export default function MessageActionsMenu({ message, enabled, onEdit, children 
     setOpen(false);
   }, [message, onEdit]);
 
-  if (!enabled) {
+  if (!enabled || !hasActions) {
     return <>{children}</>;
   }
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover
+      open={open}
+      onOpenChange={(nextOpen) => {
+        clearTimer();
+        setOpen(nextOpen);
+      }}
+    >
       <PopoverAnchor asChild>
         <div
           className="relative group/message"
