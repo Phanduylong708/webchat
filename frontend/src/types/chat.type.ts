@@ -66,6 +66,7 @@ export interface Messages {
   content: string | null;
   messageType: MessageType;
   createdAt: string;
+  editedAt: string | null;
   sender: User;
   attachments: AttachmentItem[];
 }
