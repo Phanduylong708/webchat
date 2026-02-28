@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Textarea } from "../ui/textarea";
-import { Check, Send, X, Smile } from "lucide-react";
+import { Check, Send, Smile } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import EmojiPicker, { Theme, type EmojiClickData } from "emoji-picker-react";
 import { useTheme } from "next-themes";
@@ -16,6 +16,8 @@ import { emitWithAckTimeout } from "@/utils/socketAck.util";
 import { useAttachmentSelection } from "./chat-input/useAttachmentSelection";
 import { useTypingIndicator } from "./chat-input/useTypingIndicator";
 import AttachmentMenu from "./chat-input/AttachmentMenu";
+import AttachmentPreview from "./chat-input/AttachmentPreview";
+import EditModeBanner from "./chat-input/EditModeBanner";
 
 // ── Main Component ──
 
@@ -318,49 +320,14 @@ export default function ChatInput({conversationId, editTarget = null, onCancelEd
       />
 
       {/* File preview — above the composer */}
-      {previewUrl && selectedFile && (
-        <div className="mb-2 flex items-center gap-2">
-          <div className="relative">
-            <img
-              src={previewUrl}
-              alt={selectedFile.name}
-              className="h-16 w-16 rounded-lg object-cover border border-border"
-            />
-            <button
-              type="button"
-              onClick={clearSelectedFile}
-              disabled={isSending}
-              className="absolute -top-1.5 -right-1.5 size-5 flex items-center justify-center rounded-full bg-destructive text-destructive-foreground text-xs disabled:opacity-50"
-            >
-              <X className="size-3" />
-            </button>
-          </div>
-          <span className="text-xs text-muted-foreground truncate max-w-[200px]">
-            {selectedFile.name}
-          </span>
-        </div>
-      )}
+      <AttachmentPreview
+        previewUrl={previewUrl}
+        selectedFile={selectedFile}
+        isSending={isSending}
+        onClear={clearSelectedFile}
+      />
 
-      {isEditing && (
-        <div className="mb-2 flex items-center justify-between gap-3 rounded-xl border border-border/50 bg-muted/30 px-3 py-2">
-          <div className="min-w-0">
-            <div className="text-xs font-medium">
-              {editTarget.messageType === "IMAGE" ? "Editing caption" : "Editing message"}
-            </div>
-            <div className="text-[11px] text-muted-foreground truncate">
-              {editTarget.initialContent ?? ""}
-            </div>
-          </div>
-          <button
-            type="button"
-            aria-label="Cancel edit"
-            onClick={handleCancelEdit}
-            className="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors shrink-0"
-          >
-            <X className="size-4" />
-          </button>
-        </div>
-      )}
+      <EditModeBanner editTarget={editTarget} onCancelEdit={handleCancelEdit} />
 
       {/* Composer row */}
       <form className="flex items-end gap-2" onSubmit={handleFormSubmit}>
