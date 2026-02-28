@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Textarea } from "../ui/textarea";
-import { Check, Send, Paperclip, ImagePlus, X, Smile } from "lucide-react";
+import { Check, Send, X, Smile } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import EmojiPicker, { Theme, type EmojiClickData } from "emoji-picker-react";
 import { useTheme } from "next-themes";
@@ -12,127 +12,10 @@ import type { OptimisticMessage } from "@/types/chat.type";
 import { toast } from "sonner";
 import { insertTextAtCaret } from "@/utils/caret.util";
 import { getEditSaveState } from "@/utils/edit-mode.util";
-
-const ALLOWED_MIME_TYPES = ["image/jpeg", "image/png", "image/webp"];
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB
-
-type DetachedAttachment = {
-  file: File | null;
-  previewUrl: string | null;
-};
-
-function useAttachmentSelection() {
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const previewUrlRef = useRef<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    previewUrlRef.current = previewUrl;
-  }, [previewUrl]);
-
-  useEffect(() => {
-    return () => {
-      if (previewUrlRef.current) {
-        URL.revokeObjectURL(previewUrlRef.current);
-      }
-    };
-  }, []);
-
-  function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    // Reset input first — so re-selecting same file (even if invalid) triggers onChange
-    e.target.value = "";
-
-    if (!file) return;
-
-    if (!ALLOWED_MIME_TYPES.includes(file.type)) {
-      toast.error("Only JPEG, PNG and WEBP images are allowed");
-      return;
-    }
-
-    if (file.size > MAX_FILE_SIZE) {
-      toast.error("Image must be less than 10 MB");
-      return;
-    }
-
-    if (previewUrl) {
-      URL.revokeObjectURL(previewUrl);
-    }
-
-    setSelectedFile(file);
-    setPreviewUrl(URL.createObjectURL(file));
-  }
-
-  function clearSelectedFile() {
-    if (previewUrl) {
-      URL.revokeObjectURL(previewUrl);
-    }
-
-    setSelectedFile(null);
-    setPreviewUrl(null);
-  }
-
-  function openFilePicker() {
-    fileInputRef.current?.click();
-  }
-
-  function detachSelectedForSubmit(): DetachedAttachment {
-    const detachedAttachment: DetachedAttachment = {
-      file: selectedFile,
-      previewUrl,
-    };
-
-    setSelectedFile(null);
-    setPreviewUrl(null);
-
-    return detachedAttachment;
-  }
-
-  return {
-    selectedFile,
-    previewUrl,
-    fileInputRef,
-    handleFileSelect,
-    clearSelectedFile,
-    openFilePicker,
-    detachSelectedForSubmit,
-  };
-}
-
-// ── Attachment Popover ──
-
-function AttachmentMenu({ onSelectImage, disabled }: { onSelectImage: () => void; disabled: boolean }) {
-  const [open, setOpen] = useState(false);
-
-  return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <button
-          type="button"
-          aria-label="Attach"
-          disabled={disabled}
-          className="size-[44px] flex items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-50 transition-colors shrink-0"
-        >
-          <Paperclip className="size-[18px]" />
-        </button>
-      </PopoverTrigger>
-      <PopoverContent side="top" align="end" sideOffset={8} className="w-48 p-1">
-        <button
-          type="button"
-          onClick={() => {
-            onSelectImage();
-            setOpen(false);
-          }}
-          className="flex items-center gap-2.5 w-full px-2.5 py-2 text-sm rounded-md hover:bg-accent transition-colors"
-        >
-          <ImagePlus className="size-4 text-muted-foreground" />
-          <span>Photo</span>
-        </button>
-      </PopoverContent>
-    </Popover>
-  );
-}
+import { emitWithAckTimeout } from "@/utils/socketAck.util";
+import { useAttachmentSelection } from "./chat-input/useAttachmentSelection";
+import { useTypingIndicator } from "./chat-input/useTypingIndicator";
+import AttachmentMenu from "./chat-input/AttachmentMenu";
 
 // ── Main Component ──
 
@@ -165,8 +48,6 @@ export default function ChatInput({conversationId, editTarget = null, onCancelEd
   const [inputValue, setInputValue] = useState<string>("");
   const [isSending, setIsSending] = useState<boolean>(false);
   const [isEmojiOpen, setIsEmojiOpen] = useState(false);
-  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const isCurrentlyTypingRef = useRef<boolean>(false);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const pendingCaretRef = useRef<{ start: number; end: number } | null>(null);
   const suppressCloseOnFocusRef = useRef(false);
@@ -175,6 +56,7 @@ export default function ChatInput({conversationId, editTarget = null, onCancelEd
     theme === "dark" ? Theme.DARK : theme === "light" ? Theme.LIGHT : Theme.AUTO;
 
   const { socket } = useSocket();
+  const { notifyTypingActivity, stopTyping } = useTypingIndicator({ socket, conversationId });
   const { user } = useAuth();
   const { sendMessage, insertOptimisticMessage, updateOptimistic } = useMessage();
   const {
@@ -208,19 +90,7 @@ export default function ChatInput({conversationId, editTarget = null, onCancelEd
   // ── Typing indicator ──
   function handleInputChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
     setInputValue(e.target.value);
-
-    if (!socket) return;
-    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-    if (!isCurrentlyTypingRef.current) {
-      socket.emit("typing:start", { conversationId });
-      isCurrentlyTypingRef.current = true;
-    }
-
-    typingTimeoutRef.current = setTimeout(() => {
-      socket.emit("typing:stop", { conversationId });
-      isCurrentlyTypingRef.current = false;
-      typingTimeoutRef.current = null;
-    }, 2500);
+    notifyTypingActivity();
   }
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
@@ -286,15 +156,6 @@ export default function ChatInput({conversationId, editTarget = null, onCancelEd
     return [attachment.id];
   }
 
-  function stopTyping() {
-    socket?.emit("typing:stop", { conversationId });
-    if (typingTimeoutRef.current) {
-      clearTimeout(typingTimeoutRef.current);
-      typingTimeoutRef.current = null;
-    }
-    isCurrentlyTypingRef.current = false;
-  }
-
   function handleCancelEdit() {
     if (!isEditing) return;
     stopTyping();
@@ -322,26 +183,14 @@ export default function ChatInput({conversationId, editTarget = null, onCancelEd
           content: inputValue,
         };
 
-        await new Promise<void>((resolve, reject) => {
-          let settled = false;
-          const timer = setTimeout(() => {
-            if (settled) return;
-            settled = true;
-            reject(new Error("Edit timed out - no server acknowledgement"));
-          }, EDIT_ACK_TIMEOUT_MS);
-
-          socket.emit("editMessage", payload, (ack?: EditMessageAck) => {
-            clearTimeout(timer);
-            if (settled) return;
-            settled = true;
-
-            if (ack?.success) {
-              resolve();
-              return;
-            }
-
-            reject(new Error(ack?.error || "Edit failed"));
-          });
+        await emitWithAckTimeout<EditMessageAck | undefined, EditMessageAck>({
+          socket,
+          event: "editMessage",
+          payload,
+          timeoutMs: EDIT_ACK_TIMEOUT_MS,
+          timeoutErrorMessage: "Edit timed out - no server acknowledgement",
+          isSuccess: (ack): ack is EditMessageAck => Boolean(ack?.success),
+          getErrorMessage: (ack) => ack?.error || "Edit failed",
         });
       }
       handleCancelEdit();

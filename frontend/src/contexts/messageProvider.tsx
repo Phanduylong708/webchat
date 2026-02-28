@@ -10,6 +10,7 @@ import {
   replaceMessageInMap,
   updateOptimisticInMap,
 } from "@/utils/message.utils";
+import { emitWithAckTimeout } from "@/utils/socketAck.util";
 import { MessageContext } from "./messageContext";
 
 interface SendMessageAck {
@@ -87,45 +88,38 @@ function MessageProvider({ children }: { children: React.ReactNode }): JSX.Eleme
 
       const ACK_TIMEOUT_MS = 15_000;
 
-      return new Promise<void>((resolve, reject) => {
-        let settled = false;
-
-        const timer = setTimeout(() => {
-          if (settled) return;
-          settled = true;
+      const ack = await emitWithAckTimeout<SendMessageAck | undefined, SendMessageAck>({
+        socket,
+        event: "sendMessage",
+        payload: socketPayload,
+        timeoutMs: ACK_TIMEOUT_MS,
+        timeoutErrorMessage: "Send timed out — no server acknowledgement",
+        isSuccess: (value): value is SendMessageAck => Boolean(value?.success && value.message),
+        getErrorMessage: (value) => value?.error || "Send failed",
+        onTimeout: () => {
           setMessagesByConversation((prev) =>
             updateOptimisticInMap(prev, conversationId, tempId, {
               _status: "failed",
             }),
           );
-          reject(new Error("Send timed out — no server acknowledgement"));
-        }, ACK_TIMEOUT_MS);
+        },
+        onFailureAck: (value) => {
+          setMessagesByConversation((prev) =>
+            updateOptimisticInMap(prev, conversationId, tempId, {
+              _status: "failed",
+            }),
+          );
+          console.error("Send failed:", value?.error, value?.code);
+        },
+      });
 
-        socket.emit("sendMessage", socketPayload, (ack: SendMessageAck) => {
-          clearTimeout(timer);
-          if (settled) return; // Late ack after timeout — ignore
-          settled = true;
-
-          if (ack.success && ack.message) {
-            setMessagesByConversation((prev) => {
-              const msgs = prev.get(conversationId);
-              const old = msgs?.find((m) => m.id === tempId);
-              if (old && "_optimistic" in old && old._previewUrl?.startsWith("blob:")) {
-                queueMicrotask(() => URL.revokeObjectURL(old._previewUrl!));
-              }
-              return replaceMessageInMap(prev, conversationId, tempId, ack.message!);
-            });
-            resolve();
-          } else {
-            setMessagesByConversation((prev) =>
-              updateOptimisticInMap(prev, conversationId, tempId, {
-                _status: "failed",
-              }),
-            );
-            console.error("Send failed:", ack.error, ack.code);
-            reject(new Error(ack.error || "Send failed"));
-          }
-        });
+      setMessagesByConversation((prev) => {
+        const msgs = prev.get(conversationId);
+        const old = msgs?.find((m) => m.id === tempId);
+        if (old && "_optimistic" in old && old._previewUrl?.startsWith("blob:")) {
+          queueMicrotask(() => URL.revokeObjectURL(old._previewUrl!));
+        }
+        return replaceMessageInMap(prev, conversationId, tempId, ack.message!);
       });
     },
     [socket, user],
