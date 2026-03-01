@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { getEditSaveState } from "./edit-mode.util";
+import { getEditSaveState } from "../../../utils/edit-mode.util";
 
 describe("edit-mode.util getEditSaveState", () => {
   it("disables save for TEXT when draft is empty after trim", () => {

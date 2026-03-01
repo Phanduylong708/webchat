@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, render } from "@testing-library/react";
 
 import type { DisplayMessage } from "@/types/chat.type";
-import { useMessageSockets } from "./useMessageSockets";
+import { useMessageSockets } from "../../../../hooks/sockets/useMessageSockets";
 
 class MockSocket {
   handlers = new Map<string, (...args: unknown[]) => void>();

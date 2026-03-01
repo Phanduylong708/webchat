@@ -1,15 +1,15 @@
 /* global jest, describe, it, expect, beforeEach, afterEach */
 
-import { handleChatMessage } from "../sockets/handlers/chat.handler.js";
-import { createMockSocket, createMockIo, createMockCallback } from "./mocks/socket.mock.js";
+import { handleChatMessage } from "../../sockets/handlers/chat.handler.js";
+import { createMockSocket, createMockIo, createMockCallback } from "../mocks/socket.mock.js";
 
-jest.mock("../sockets/helpers/helpers.js", () => ({
+jest.mock("../../sockets/helpers/helpers.js", () => ({
   verifyMembership: jest.fn(),
   getConversationRoom: jest.fn((id) => `conversation_${id}`),
   getUserRoom: jest.fn((id) => `user_${id}`),
 }));
 
-jest.mock("../shared/prisma.js", () => ({
+jest.mock("../../shared/prisma.js", () => ({
   prisma: {
     message: {
       findUnique: jest.fn(),
@@ -18,8 +18,8 @@ jest.mock("../shared/prisma.js", () => ({
   },
 }));
 
-import { verifyMembership } from "../sockets/helpers/helpers.js";
-import { prisma } from "../shared/prisma.js";
+import { verifyMembership } from "../../sockets/helpers/helpers.js";
+import { prisma } from "../../shared/prisma.js";
 
 describe("chat.handler editMessage", () => {
   let mockIo;

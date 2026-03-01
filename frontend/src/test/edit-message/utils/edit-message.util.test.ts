@@ -5,7 +5,7 @@ import {
   isNoopTextEdit,
   normalizeImageCaptionDraft,
   normalizeTextDraft,
-} from "./edit-message.util";
+} from "../../../utils/edit-message.util";
 
 describe("edit-message.util", () => {
   it("normalizeTextDraft trims only edges", () => {

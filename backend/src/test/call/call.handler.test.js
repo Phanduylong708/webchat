@@ -4,15 +4,15 @@ import {
   handleCall,
   callSessions,
   CALL_TIMEOUT_MS,
-} from "../sockets/handlers/call.handler.js";
+} from "../../sockets/handlers/call.handler.js";
 import {
   createMockSocket,
   createMockIo,
   createMockCallback,
-} from "./mocks/socket.mock.js";
+} from "../mocks/socket.mock.js";
 
 // Mock helpers module
-jest.mock("../sockets/helpers/helpers.js", () => ({
+jest.mock("../../sockets/helpers/helpers.js", () => ({
   verifyMembership: jest.fn(),
   getConversationRoom: jest.fn((id) => `conversation_${id}`),
   getCallRoom: jest.fn((id) => `call_${id}`),
@@ -23,7 +23,7 @@ jest.mock("crypto", () => ({
   randomUUID: jest.fn(() => "mock-uuid-1234"),
 }));
 
-import { verifyMembership } from "../sockets/helpers/helpers.js";
+import { verifyMembership } from "../../sockets/helpers/helpers.js";
 
 describe("call.handler", () => {
   let mockIo;

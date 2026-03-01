@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { DisplayMessage } from "@/types/chat.type";
-import { updateMessageInMap } from "./message.utils";
+import { updateMessageInMap } from "../../../utils/message.utils";
 
 function makeMessage(overrides: Partial<DisplayMessage> & { id: number; conversationId: number }): DisplayMessage {
   const base: DisplayMessage = {
