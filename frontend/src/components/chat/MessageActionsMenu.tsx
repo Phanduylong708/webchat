@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { MoreHorizontal, PencilLine } from "lucide-react";
+import { CornerUpLeft, MoreHorizontal, PencilLine } from "lucide-react";
 
 import type { DisplayMessage } from "@/types/chat.type";
 import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -7,18 +7,27 @@ import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from "@/compon
 type Props = {
   message: DisplayMessage;
   enabled: boolean;
+  onReply?: (message: DisplayMessage) => void;
   onEdit?: (message: DisplayMessage) => void;
+  side?: "left" | "right";
   children: React.ReactNode;
 };
 
 const LONG_PRESS_MS = 450;
 
-export default function MessageActionsMenu({ message, enabled, onEdit, children }: Props) {
+export default function MessageActionsMenu({
+  message,
+  enabled,
+  onReply,
+  onEdit,
+  side = "left",
+  children,
+}: Props) {
   const [open, setOpen] = useState(false);
   const timerRef = useRef<number | null>(null);
   const longPressArmedRef = useRef(false);
 
-  const hasActions = typeof onEdit === "function";
+  const hasActions = typeof onReply === "function" || typeof onEdit === "function";
 
   const clearTimer = useCallback(() => {
     if (timerRef.current !== null) {
@@ -59,6 +68,10 @@ export default function MessageActionsMenu({ message, enabled, onEdit, children 
     onEdit?.(message);
     setOpen(false);
   }, [message, onEdit]);
+  const handleReply = useCallback(() => {
+    onReply?.(message);
+    setOpen(false);
+  }, [message, onReply]);
 
   if (!enabled || !hasActions) {
     return <>{children}</>;
@@ -84,7 +97,9 @@ export default function MessageActionsMenu({ message, enabled, onEdit, children 
           }}
         >
           <div
-            className="absolute -left-9 top-1 opacity-0 group-hover/message:opacity-100 group-focus-within/message:opacity-100 transition-opacity"
+            className={`absolute top-1 opacity-0 group-hover/message:opacity-100 group-focus-within/message:opacity-100 transition-opacity ${
+              side === "right" ? "-right-9" : "-left-9"
+            }`}
             style={{
               transitionDuration: "var(--dur-fast)",
               transitionTimingFunction: "var(--ease-out-smooth)",
@@ -107,18 +122,30 @@ export default function MessageActionsMenu({ message, enabled, onEdit, children 
 
       <PopoverContent
         side="top"
-        align="end"
+        align={side === "right" ? "start" : "end"}
         sideOffset={10}
         className="w-auto rounded-lg p-1 shadow-md"
       >
-        <button
-          type="button"
-          onClick={handleEdit}
-          className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm text-foreground outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          <PencilLine className="size-4 text-muted-foreground" />
-          <span>Edit</span>
-        </button>
+        {onReply && (
+          <button
+            type="button"
+            onClick={handleReply}
+            className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm text-foreground outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <CornerUpLeft className="size-4 text-muted-foreground" />
+            <span>Reply</span>
+          </button>
+        )}
+        {onEdit && (
+          <button
+            type="button"
+            onClick={handleEdit}
+            className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm text-foreground outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <PencilLine className="size-4 text-muted-foreground" />
+            <span>Edit</span>
+          </button>
+        )}
       </PopoverContent>
     </Popover>
   );
