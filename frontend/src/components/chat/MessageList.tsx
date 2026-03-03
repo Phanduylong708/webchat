@@ -8,6 +8,7 @@ import InfiniteScroll from "react-infinite-scroll-component";
 
 type Props = {
   onRequestEdit?: (message: DisplayMessage) => void;
+  onRequestReply?: (message: DisplayMessage) => void;
   editingMessageId?: number | null;
 };
 

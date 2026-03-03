@@ -12,6 +12,13 @@ export interface User {
 
 export type MessageType = "TEXT" | "IMAGE" | "VIDEO" | "FILE";
 
+export type ReplyToPreview = {
+  id: number;
+  content: string | null;
+  messageType: MessageType;
+  sender: User;
+};
+
 export interface AttachmentItem {
   id: number;
   url: string;
@@ -29,6 +36,8 @@ export interface SendMessageInput {
   conversationId: number;
   content?: string;
   attachmentIds?: number[];
+  replyToMessageId?: number;
+  _replyTo?: ReplyToPreview; // client-only: optimistic quote preview
   _optimisticId?: number; // If set, reuse existing optimistic message instead of creating a new one
 }
 
@@ -69,6 +78,8 @@ export interface Messages {
   editedAt: string | null;
   sender: User;
   attachments: AttachmentItem[];
+  replyToMessageId?: number | null;
+  replyTo?: ReplyToPreview | null;
 }
 
 // Client-only metadata for optimistic (unsent/in-flight/failed) messages.

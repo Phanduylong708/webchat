@@ -4,7 +4,7 @@ import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { StackedAvatars } from "@/components/ui/stacked-avatars";
 import { getOptimizedAvatarUrl, getAvatarFallback } from "@/utils/image.util";
-import type { DisplayMessage } from "@/types/chat.type";
+import type { DisplayMessage, ReplyToPreview } from "@/types/chat.type";
 import MessageList from "./MessageList";
 import ChatInput from "./ChatInput";
 import GroupMembersDialog from "./GroupMembersDialog";
@@ -20,16 +20,24 @@ function ChatWindow(): React.JSX.Element {
     messageType: "TEXT" | "IMAGE";
     initialContent: string | null;
   } | null>(null);
+  const [replyTarget, setReplyTarget] = useState<{
+    conversationId: number;
+    replyTo: ReplyToPreview;
+  } | null>(null);
 
   useEffect(() => {
     if (!activeConversationId) return;
     if (editTarget && editTarget.conversationId !== activeConversationId) {
       setEditTarget(null);
     }
-  }, [activeConversationId, editTarget]);
+    if (replyTarget && replyTarget.conversationId !== activeConversationId) {
+      setReplyTarget(null);
+    }
+  }, [activeConversationId, editTarget, replyTarget]);
 
   const handleRequestEdit = useCallback((message: DisplayMessage) => {
     if (message.messageType !== "TEXT" && message.messageType !== "IMAGE") return;
+    setReplyTarget(null);
     setEditTarget({
       conversationId: message.conversationId,
       messageId: message.id,
@@ -38,8 +46,26 @@ function ChatWindow(): React.JSX.Element {
     });
   }, []);
 
+  const handleRequestReply = useCallback((message: DisplayMessage) => {
+    if ("_optimistic" in message) return;
+    setEditTarget(null);
+    setReplyTarget({
+      conversationId: message.conversationId,
+      replyTo: {
+        id: message.id,
+        content: message.content,
+        messageType: message.messageType,
+        sender: message.sender,
+      },
+    });
+  }, []);
+
   const handleCancelEdit = useCallback(() => {
     setEditTarget(null);
+  }, []);
+
+  const handleCancelReply = useCallback(() => {
+    setReplyTarget(null);
   }, []);
 
   if (!activeConversations) {
@@ -109,7 +135,11 @@ function ChatWindow(): React.JSX.Element {
         </div>
       </div>
       <Separator />
-      <MessageList onRequestEdit={handleRequestEdit} editingMessageId={editTarget?.messageId ?? null} /> {/* message list */}
+      <MessageList
+        onRequestEdit={handleRequestEdit}
+        onRequestReply={handleRequestReply}
+        editingMessageId={editTarget?.messageId ?? null}
+      /> {/* message list */}
       {/* system message, eg: typing indicator */}
       {systemMessage && (
         <div className="bg-muted px-4 py-2 text-xs text-muted-foreground">{systemMessage}</div>
@@ -118,6 +148,8 @@ function ChatWindow(): React.JSX.Element {
         conversationId={activeConversations.id}
         editTarget={editTarget}
         onCancelEdit={handleCancelEdit}
+        replyTarget={replyTarget}
+        onCancelReply={handleCancelReply}
       />
     </div>
   );

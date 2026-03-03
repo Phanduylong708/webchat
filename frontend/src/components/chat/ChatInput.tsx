@@ -18,6 +18,7 @@ import { useTypingIndicator } from "./chat-input/useTypingIndicator";
 import AttachmentMenu from "./chat-input/AttachmentMenu";
 import AttachmentPreview from "./chat-input/AttachmentPreview";
 import EditModeBanner from "./chat-input/EditModeBanner";
+import type { ReplyToPreview } from "@/types/chat.type";
 
 // ── Main Component ──
 
@@ -28,11 +29,18 @@ type EditTarget = {
   initialContent: string | null;
 };
 
+type ReplyTarget = {
+  conversationId: number;
+  replyTo: ReplyToPreview;
+};
+
 type Props = {
   conversationId: number;
   editTarget?: EditTarget | null;
   onCancelEdit?: () => void;
   onSaveEdit?: (draft: string) => Promise<void>;
+  replyTarget?: ReplyTarget | null;
+  onCancelReply?: () => void;
 };
 
 type EditMessageAck = {
@@ -45,7 +53,8 @@ type EditMessageAck = {
 const EDIT_ACK_TIMEOUT_MS = 12_000;
 
 //prettier-ignore
-export default function ChatInput({conversationId, editTarget = null, onCancelEdit, onSaveEdit}: Props): React.JSX.Element {
+export default function ChatInput(props: Props): React.JSX.Element {
+  const { conversationId, editTarget = null, onCancelEdit, onSaveEdit } = props;
 
   const [inputValue, setInputValue] = useState<string>("");
   const [isSending, setIsSending] = useState<boolean>(false);
