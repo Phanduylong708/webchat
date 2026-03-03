@@ -62,10 +62,7 @@ async function handleChatMessage(io, socket) {
 
         if (replyTarget.conversationId !== currentConversationId) {
           return callback(
-            ackError(
-              "REPLY_TO_WRONG_CONVERSATION",
-              "Reply target must be in the same conversation.",
-            ),
+            ackError("REPLY_TO_WRONG_CONVERSATION", "Reply target must be in the same conversation."),
           );
         }
       }
@@ -193,10 +190,6 @@ async function handleChatMessage(io, socket) {
       }
 
       const now = new Date();
-      const isExpired = now.getTime() - existing.createdAt.getTime() > 5 * 60 * 1000;
-      if (isExpired) {
-        return callback(ackError("EDIT_WINDOW_EXPIRED", "Edit window has expired."));
-      }
 
       let nextContent = trimmedContent;
       if (existing.messageType === "TEXT") {

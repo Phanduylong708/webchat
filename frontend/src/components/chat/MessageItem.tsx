@@ -41,24 +41,6 @@ function isOptimistic(msg: DisplayMessage): msg is import("@/types/chat.type").O
   return "_optimistic" in msg;
 }
 
-function isWithinEditWindow(createdAt: string, windowMs = 5 * 60 * 1000): boolean {
-  const t = new Date(createdAt).getTime();
-  if (!Number.isFinite(t)) return false;
-  return Date.now() - t <= windowMs;
-}
-
-function EditedMark() {
-  return (
-    <span
-      aria-hidden="true"
-      className="inline-block size-1.5 rounded-full"
-      style={{
-        backgroundImage: "var(--signature-gradient)",
-      }}
-    />
-  );
-}
-
 // ── Image Bubble ──
 
 function ImageBubble({ message }: { message: DisplayMessage }) {
@@ -170,7 +152,9 @@ function MessageContent({
       {hasText ? (
         <div data-message-bubble="true" className={`max-w-full ${bubbleClassName}`}>
           {quoteBlock}
-          <div className={`wrap-anywhere whitespace-pre-wrap ${isAllEmoji && !quoteBlock ? "text-center" : ""}`}>
+          <div
+            className={`wrap-anywhere whitespace-pre-wrap ${isAllEmoji && !quoteBlock ? "text-center" : ""}`}
+          >
             {textNodes}
           </div>
         </div>
@@ -237,11 +221,7 @@ export default function MessageItem({
   const isFailed = optimistic && message._status === "failed";
   const isEdited = Boolean(message.editedAt);
 
-  const canEdit =
-    isOwn &&
-    !optimistic &&
-    (message.messageType === "TEXT" || message.messageType === "IMAGE") &&
-    isWithinEditWindow(message.createdAt);
+  const canEdit = isOwn && !optimistic && (message.messageType === "TEXT" || message.messageType === "IMAGE");
   const canOpenActions = !optimistic;
 
   const handleJumpToReplyTarget = useCallback(() => {
@@ -282,20 +262,14 @@ export default function MessageItem({
           >
             <div
               className={
-                isEditing
-                  ? "rounded-[18px] ring-2 ring-ring/20 ring-offset-2 ring-offset-background"
-                  : ""
+                isEditing ? "rounded-[18px] ring-2 ring-ring/20 ring-offset-2 ring-offset-background" : ""
               }
             >
               <MessageContent
                 message={message}
                 bubbleClassName="bg-primary text-primary-foreground px-3 py-2 rounded-tl-2xl rounded-tr-2xl rounded-bl-2xl"
                 quoteBlock={
-                  <ReplyQuoteBlock
-                    message={message}
-                    tone="own"
-                    onClick={handleJumpToReplyTarget}
-                  />
+                  <ReplyQuoteBlock message={message} tone="own" onClick={handleJumpToReplyTarget} />
                 }
               />
             </div>
@@ -307,8 +281,7 @@ export default function MessageItem({
               {isEdited && (
                 <span className="inline-flex items-center gap-1">
                   <span className="mx-1">·</span>
-                  <EditedMark />
-                  <span>edited</span>
+                  <span>Edited</span>
                 </span>
               )}
             </span>
@@ -336,22 +309,11 @@ export default function MessageItem({
         {isFirstInGroup && (
           <span className="text-xs text-muted-foreground mb-1">{message.sender.username}</span>
         )}
-        <MessageActionsMenu
-          message={message}
-          enabled={canOpenActions}
-          onReply={onRequestReply}
-          side="right"
-        >
+        <MessageActionsMenu message={message} enabled={canOpenActions} onReply={onRequestReply} side="right">
           <MessageContent
             message={message}
             bubbleClassName="bg-muted text-foreground px-3 py-2 rounded-tl-2xl rounded-tr-2xl rounded-br-2xl"
-            quoteBlock={
-              <ReplyQuoteBlock
-                message={message}
-                tone="other"
-                onClick={handleJumpToReplyTarget}
-              />
-            }
+            quoteBlock={<ReplyQuoteBlock message={message} tone="other" onClick={handleJumpToReplyTarget} />}
           />
         </MessageActionsMenu>
         {isLastInGroup && (
@@ -360,8 +322,7 @@ export default function MessageItem({
             {isEdited && (
               <span className="inline-flex items-center gap-1">
                 <span className="mx-1">·</span>
-                <EditedMark />
-                <span>edited</span>
+                <span>Edited</span>
               </span>
             )}
           </span>

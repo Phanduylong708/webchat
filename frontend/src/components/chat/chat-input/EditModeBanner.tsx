@@ -21,7 +21,7 @@ export default function EditModeBanner({ editTarget, onCancelEdit }: Props): Rea
         <div className="text-xs font-medium">
           {editTarget.messageType === "IMAGE" ? "Editing caption" : "Editing message"}
         </div>
-        <div className="text-[11px] text-muted-foreground truncate">{editTarget.initialContent ?? ""}</div>
+        <div className="text-xs text-muted-foreground truncate">{editTarget.initialContent ?? ""}</div>
       </div>
       <button
         type="button"

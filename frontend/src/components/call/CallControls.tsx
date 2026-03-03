@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useMedia } from "@/hooks/context/useMedia";
 import { useWhiteboard } from "@/hooks/context/useWhiteboard";
-import { Mic, MicOff, Video, VideoOff, Users, Monitor, MessageSquare, PhoneOff, Presentation } from "lucide-react";
+import { Mic, MicOff, Video, VideoOff, Users, Monitor, PhoneOff, Presentation } from "lucide-react";
 
 interface CallControlsProps {
   onToggleParticipants?: () => void;
@@ -11,7 +11,17 @@ interface CallControlsProps {
 
 export function CallControls({ onToggleParticipants }: CallControlsProps = {}): React.JSX.Element {
   const { conversationType, status, leaveCall, participants } = useCall();
-  const { isAudioMuted, isVideoMuted, isStartingUserMedia, isStartingScreenShare, screenStream, toggleAudio, toggleVideo, startScreenShare, stopScreenShare } = useMedia();
+  const {
+    isAudioMuted,
+    isVideoMuted,
+    isStartingUserMedia,
+    isStartingScreenShare,
+    screenStream,
+    toggleAudio,
+    toggleVideo,
+    startScreenShare,
+    stopScreenShare,
+  } = useMedia();
   const { isActive: isWhiteboardActive, openWhiteboard, closeWhiteboard } = useWhiteboard();
 
   if (status === "ended") return <></>;
@@ -34,7 +44,7 @@ export function CallControls({ onToggleParticipants }: CallControlsProps = {}): 
       "rounded-full transition-all duration-200",
       isOn
         ? "text-white hover:bg-white/20 bg-transparent" // Normal state
-        : "bg-white text-black hover:bg-zinc-200" // Off state
+        : "bg-white text-black hover:bg-zinc-200", // Off state
     );
 
   return (
@@ -84,17 +94,13 @@ export function CallControls({ onToggleParticipants }: CallControlsProps = {}): 
                 onClick={handleScreenShare}
                 className={cn(
                   "rounded-full hidden sm:inline-flex transition-all duration-200",
-                  isSharing
-                    ? "bg-blue-600 text-white hover:bg-blue-700"
-                    : "text-white hover:bg-white/20",
-                  isStartingScreenShare && "opacity-50 cursor-not-allowed"
+                  isSharing ? "bg-blue-600 text-white hover:bg-blue-700" : "text-white hover:bg-white/20",
+                  isStartingScreenShare && "opacity-50 cursor-not-allowed",
                 )}
               >
                 <Monitor className="size-5" />
               </Button>
-              <Button size="icon" variant="ghost" className="text-white hover:bg-white/20 rounded-full">
-                <MessageSquare className="size-5" />
-              </Button>
+
               <Button
                 size="icon"
                 variant="ghost"
@@ -107,7 +113,7 @@ export function CallControls({ onToggleParticipants }: CallControlsProps = {}): 
                   isWhiteboardActive
                     ? "bg-blue-600 text-white hover:bg-blue-700"
                     : "text-white hover:bg-white/20",
-                  isAnyScreenShare && "opacity-50 cursor-not-allowed"
+                  isAnyScreenShare && "opacity-50 cursor-not-allowed",
                 )}
               >
                 <Presentation className="size-5" />

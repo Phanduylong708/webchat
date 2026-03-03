@@ -47,7 +47,7 @@ describe("chat.handler editMessage", () => {
     prisma.message.findUnique.mockResolvedValue(null);
 
     await expect(
-      mockSocket._trigger("editMessage", { conversationId: 1, messageId: 1, content: "hi" })
+      mockSocket._trigger("editMessage", { conversationId: 1, messageId: 1, content: "hi" }),
     ).resolves.toBeUndefined();
   });
 
@@ -55,7 +55,7 @@ describe("chat.handler editMessage", () => {
     await mockSocket._trigger(
       "editMessage",
       { conversationId: "abc", messageId: 1, content: "hi" },
-      mockCallback
+      mockCallback,
     );
 
     expect(mockCallback).toHaveBeenCalledWith({
@@ -69,7 +69,7 @@ describe("chat.handler editMessage", () => {
     await mockSocket._trigger(
       "editMessage",
       { conversationId: 1, messageId: "abc", content: "hi" },
-      mockCallback
+      mockCallback,
     );
 
     expect(mockCallback).toHaveBeenCalledWith({
@@ -83,7 +83,7 @@ describe("chat.handler editMessage", () => {
     await mockSocket._trigger(
       "editMessage",
       { conversationId: 1, messageId: 1, content: null },
-      mockCallback
+      mockCallback,
     );
 
     expect(mockCallback).toHaveBeenCalledWith({
@@ -99,7 +99,7 @@ describe("chat.handler editMessage", () => {
     await mockSocket._trigger(
       "editMessage",
       { conversationId: 1, messageId: 1, content: "hi" },
-      mockCallback
+      mockCallback,
     );
 
     expect(mockCallback).toHaveBeenCalledWith({
@@ -115,7 +115,7 @@ describe("chat.handler editMessage", () => {
     await mockSocket._trigger(
       "editMessage",
       { conversationId: 1, messageId: 999, content: "hi" },
-      mockCallback
+      mockCallback,
     );
 
     expect(prisma.message.findUnique).toHaveBeenCalled();
@@ -138,35 +138,13 @@ describe("chat.handler editMessage", () => {
     await mockSocket._trigger(
       "editMessage",
       { conversationId: 1, messageId: 10, content: "hi" },
-      mockCallback
+      mockCallback,
     );
 
     expect(mockCallback).toHaveBeenCalledWith({
       success: false,
       code: "NOT_OWNER",
       error: "You can only edit your own messages.",
-    });
-  });
-
-  it("should reject when edit window expired", async () => {
-    prisma.message.findUnique.mockResolvedValue({
-      id: 10,
-      conversationId: 1,
-      senderId: 1,
-      messageType: "TEXT",
-      createdAt: new Date("2026-02-27T09:00:00.000Z"),
-    });
-
-    await mockSocket._trigger(
-      "editMessage",
-      { conversationId: 1, messageId: 10, content: "hi" },
-      mockCallback
-    );
-
-    expect(mockCallback).toHaveBeenCalledWith({
-      success: false,
-      code: "EDIT_WINDOW_EXPIRED",
-      error: "Edit window has expired.",
     });
   });
 
@@ -182,7 +160,7 @@ describe("chat.handler editMessage", () => {
     await mockSocket._trigger(
       "editMessage",
       { conversationId: 1, messageId: 10, content: "   " },
-      mockCallback
+      mockCallback,
     );
 
     expect(mockCallback).toHaveBeenCalledWith({
@@ -217,14 +195,14 @@ describe("chat.handler editMessage", () => {
     await mockSocket._trigger(
       "editMessage",
       { conversationId: 1, messageId: 10, content: "   " },
-      mockCallback
+      mockCallback,
     );
 
     expect(prisma.message.update).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { id: 10 },
         data: expect.objectContaining({ content: null, editedAt: expect.any(Date) }),
-      })
+      }),
     );
     expect(mockIo.to).toHaveBeenCalledWith("conversation_1");
     expect(mockIo._mockEmit).toHaveBeenCalledWith("messageUpdated", updated);
@@ -256,14 +234,14 @@ describe("chat.handler editMessage", () => {
     await mockSocket._trigger(
       "editMessage",
       { conversationId: 1, messageId: 10, content: "  hello  " },
-      mockCallback
+      mockCallback,
     );
 
     expect(prisma.message.update).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { id: 10 },
         data: expect.objectContaining({ content: "hello", editedAt: expect.any(Date) }),
-      })
+      }),
     );
     expect(mockIo._mockEmit).toHaveBeenCalledWith("messageUpdated", updated);
     expect(mockCallback).toHaveBeenCalledWith({ success: true, message: updated });

@@ -19,11 +19,7 @@ import AttachmentPreview from "./chat-input/AttachmentPreview";
 import EditModeBanner from "./chat-input/EditModeBanner";
 import ReplyModeBanner from "./chat-input/ReplyModeBanner";
 import type { ReplyToPreview } from "@/types/chat.type";
-import {
-  buildReplySendFields,
-  getReplyToFromTarget,
-  toUserMessage,
-} from "./chat-input/chatInput.logic";
+import { buildReplySendFields, getReplyToFromTarget, toUserMessage } from "./chat-input/chatInput.logic";
 import { buildOptimisticMediaMessage } from "@/utils/message.utils";
 
 // ── Main Component ──
@@ -340,13 +336,6 @@ export default function ChatInput(props: Props): React.JSX.Element {
         onChange={handleFileSelect}
       />
 
-      {/* File preview — above the composer */}
-      <AttachmentPreview
-        previewUrl={previewUrl}
-        selectedFile={selectedFile}
-        isSending={isSending}
-        onClear={clearSelectedFile}
-      />
 
       <EditModeBanner editTarget={editTarget} onCancelEdit={handleCancelEdit} />
       <ReplyModeBanner replyTo={replyTarget?.replyTo ?? null} onCancelReply={handleCancelReply} />
@@ -354,7 +343,17 @@ export default function ChatInput(props: Props): React.JSX.Element {
       {/* Composer row */}
       <form className="flex items-end gap-2" onSubmit={handleFormSubmit}>
         {/* Input container */}
-        <div className="flex-1 flex items-end min-w-0 bg-muted/30 border border-border/40 rounded-xl overflow-hidden">
+        <div className="flex-1 flex flex-col min-w-0 bg-muted/30 border border-border/40 rounded-xl overflow-hidden">
+          {/* Attachment preview — inside container */}
+          <AttachmentPreview
+            previewUrl={previewUrl}
+            selectedFile={selectedFile}
+            isSending={isSending}
+            onClear={clearSelectedFile}
+          />
+
+          {/* Input row */}
+          <div className="flex items-end">
           {/* Emoji picker — left side inside container */}
           <Popover open={isEmojiOpen} onOpenChange={setIsEmojiOpen}>
             <PopoverTrigger asChild>
@@ -405,6 +404,7 @@ export default function ChatInput(props: Props): React.JSX.Element {
             }}
             disabled={isSending || isEditing}
           />
+          </div>
         </div>
 
         {/* Send button — outside container, visually aligned */}
