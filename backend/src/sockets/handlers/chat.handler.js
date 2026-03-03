@@ -217,6 +217,14 @@ async function handleChatMessage(io, socket) {
         },
         include: {
           sender: { select: { id: true, username: true, avatar: true } },
+          replyTo: {
+            select: {
+              id: true,
+              content: true,
+              messageType: true,
+              sender: { select: { id: true, username: true, avatar: true } },
+            },
+          },
           attachments: {
             select: {
               id: true,
