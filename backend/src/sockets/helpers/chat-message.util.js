@@ -28,9 +28,12 @@ function parseSendMessagePayload(payload) {
   // Parse IDs
   const rawConversationId = raw.conversationId ?? null;
   const rawRecipientId = raw.recipientId ?? null;
+  const rawReplyToMessageId = raw.replyToMessageId ?? null;
 
   const conversationId = rawConversationId !== null ? parseSocketInt(rawConversationId) : null;
   const recipientId = rawRecipientId !== null ? parseSocketInt(rawRecipientId) : null;
+  const replyToMessageId =
+    rawReplyToMessageId !== null ? parseSocketInt(rawReplyToMessageId) : null;
 
   if (rawConversationId !== null && conversationId === null) {
     return {
@@ -42,6 +45,12 @@ function parseSendMessagePayload(payload) {
     return {
       ok: false,
       error: ackError("INVALID_RECIPIENT_ID", "recipientId must be a valid positive integer."),
+    };
+  }
+  if (rawReplyToMessageId !== null && replyToMessageId === null) {
+    return {
+      ok: false,
+      error: ackError("INVALID_REPLY_TO_ID", "replyToMessageId must be a valid positive integer."),
     };
   }
 
@@ -56,6 +65,15 @@ function parseSendMessagePayload(payload) {
     return {
       ok: false,
       error: ackError("MISSING_IDENTIFIER", "Must specify either conversationId or recipientId."),
+    };
+  }
+  if (recipientId !== null && replyToMessageId !== null) {
+    return {
+      ok: false,
+      error: ackError(
+        "REPLY_TO_UNSUPPORTED_FOR_RECIPIENT",
+        "replyToMessageId is only supported with conversationId.",
+      ),
     };
   }
 
@@ -101,7 +119,15 @@ function parseSendMessagePayload(payload) {
 
   return {
     ok: true,
-    data: { conversationId, recipientId, trimmedContent, hasContent, attachmentIds, hasAttachments },
+    data: {
+      conversationId,
+      recipientId,
+      trimmedContent,
+      hasContent,
+      attachmentIds,
+      hasAttachments,
+      replyToMessageId,
+    },
   };
 }
 
