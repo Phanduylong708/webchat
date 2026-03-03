@@ -18,6 +18,7 @@ import { useTypingIndicator } from "./chat-input/useTypingIndicator";
 import AttachmentMenu from "./chat-input/AttachmentMenu";
 import AttachmentPreview from "./chat-input/AttachmentPreview";
 import EditModeBanner from "./chat-input/EditModeBanner";
+import ReplyModeBanner from "./chat-input/ReplyModeBanner";
 import type { ReplyToPreview } from "@/types/chat.type";
 
 // ── Main Component ──
@@ -54,7 +55,14 @@ const EDIT_ACK_TIMEOUT_MS = 12_000;
 
 //prettier-ignore
 export default function ChatInput(props: Props): React.JSX.Element {
-  const { conversationId, editTarget = null, onCancelEdit, onSaveEdit } = props;
+  const {
+    conversationId,
+    editTarget = null,
+    onCancelEdit,
+    onSaveEdit,
+    replyTarget = null,
+    onCancelReply,
+  } = props;
 
   const [inputValue, setInputValue] = useState<string>("");
   const [isSending, setIsSending] = useState<boolean>(false);
@@ -173,6 +181,10 @@ export default function ChatInput(props: Props): React.JSX.Element {
     setInputValue("");
     clearSelectedFile();
     onCancelEdit?.();
+  }
+
+  function handleCancelReply() {
+    onCancelReply?.();
   }
 
   async function handleSaveEdit() {
@@ -337,6 +349,7 @@ export default function ChatInput(props: Props): React.JSX.Element {
       />
 
       <EditModeBanner editTarget={editTarget} onCancelEdit={handleCancelEdit} />
+      <ReplyModeBanner replyTo={replyTarget?.replyTo ?? null} onCancelReply={handleCancelReply} />
 
       {/* Composer row */}
       <form className="flex items-end gap-2" onSubmit={handleFormSubmit}>
