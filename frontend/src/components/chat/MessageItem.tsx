@@ -14,6 +14,7 @@ interface MessageItemProps {
   isLastInGroup: boolean;
   isEditing?: boolean;
   onRequestEdit?: (message: DisplayMessage) => void;
+  onRequestReply?: (message: DisplayMessage) => void;
 }
 
 // ── Helpers ──
@@ -162,27 +163,36 @@ export default function MessageItem({
   isLastInGroup,
   isEditing = false,
   onRequestEdit,
+  onRequestReply,
 }: MessageItemProps): React.JSX.Element {
   const timestamp = new Date(message.createdAt).toLocaleTimeString("en-US", {
     hour: "2-digit",
     minute: "2-digit",
   });
 
-  const isFailed = isOptimistic(message) && message._status === "failed";
+  const optimistic = isOptimistic(message);
+  const isFailed = optimistic && message._status === "failed";
   const isEdited = Boolean(message.editedAt);
 
   const canEdit =
     isOwn &&
-    !isOptimistic(message) &&
+    !optimistic &&
     (message.messageType === "TEXT" || message.messageType === "IMAGE") &&
     isWithinEditWindow(message.createdAt);
+  const canOpenActions = !optimistic;
 
   // ── Own messages: right-aligned, no avatar ──
   if (isOwn) {
     return (
       <div className="flex justify-end">
         <div className="flex flex-col items-end max-w-[70%] min-w-0">
-          <MessageActionsMenu message={message} enabled={canEdit} onEdit={onRequestEdit}>
+          <MessageActionsMenu
+            message={message}
+            enabled={canOpenActions}
+            onReply={onRequestReply}
+            onEdit={canEdit ? onRequestEdit : undefined}
+            side="left"
+          >
             <div
               className={
                 isEditing
@@ -232,10 +242,17 @@ export default function MessageItem({
         {isFirstInGroup && (
           <span className="text-xs text-muted-foreground mb-1">{message.sender.username}</span>
         )}
-        <MessageContent
+        <MessageActionsMenu
           message={message}
-          bubbleClassName="bg-muted text-foreground px-3 py-2 rounded-tl-2xl rounded-tr-2xl rounded-br-2xl"
-        />
+          enabled={canOpenActions}
+          onReply={onRequestReply}
+          side="right"
+        >
+          <MessageContent
+            message={message}
+            bubbleClassName="bg-muted text-foreground px-3 py-2 rounded-tl-2xl rounded-tr-2xl rounded-br-2xl"
+          />
+        </MessageActionsMenu>
         {isLastInGroup && (
           <span className="text-[10px] text-muted-foreground mt-1">
             {timestamp}

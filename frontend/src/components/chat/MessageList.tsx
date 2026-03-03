@@ -12,7 +12,7 @@ type Props = {
   editingMessageId?: number | null;
 };
 
-export default function MessageList({ onRequestEdit, editingMessageId = null }: Props) {
+export default function MessageList({ onRequestEdit, onRequestReply, editingMessageId = null }: Props) {
   const { messagesByConversation, loadingMessages, loadOlderMessages, pagination, error } = useMessage();
   const { activeConversationId } = useConversation();
   const paginationInfo = activeConversationId ? pagination.get(activeConversationId) : undefined;
@@ -70,6 +70,7 @@ export default function MessageList({ onRequestEdit, editingMessageId = null }: 
                 isLastInGroup={isLastInGroup}
                 isEditing={editingMessageId === message.id}
                 onRequestEdit={onRequestEdit}
+                onRequestReply={onRequestReply}
               />
             </div>
           );

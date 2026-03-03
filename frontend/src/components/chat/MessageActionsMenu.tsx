@@ -57,7 +57,7 @@ export default function MessageActionsMenu({
         setOpen(true);
       }, LONG_PRESS_MS);
     },
-    [enabled, hasActions, clearTimer]
+    [enabled, hasActions, clearTimer],
   );
 
   const handlePointerCancel = useCallback(() => {
