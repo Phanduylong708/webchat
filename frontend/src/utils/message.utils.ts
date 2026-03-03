@@ -1,4 +1,29 @@
-import type { Messages, DisplayMessage } from "@/types/chat.type";
+import type {
+  DisplayMessage,
+  Messages,
+  OptimisticMessage,
+  ReplyToPreview,
+  User,
+} from "@/types/chat.type";
+
+type BuildOptimisticTextMessageParams = {
+  tempId: number;
+  conversationId: number;
+  trimmedContent: string | null;
+  messageType?: "TEXT" | "IMAGE";
+  sender: User;
+  replyToMessageId?: number | null;
+  replyTo?: ReplyToPreview | null;
+};
+
+type BuildOptimisticMediaMessageParams = {
+  tempId: number;
+  conversationId: number;
+  trimmed: string;
+  sender: User;
+  previewUrl: string | null;
+  replyTo?: ReplyToPreview | null;
+};
 
 // Appends a message to the existing conversation history while cloning Maps for immutability.
 export function addMessageToMap(
@@ -100,4 +125,57 @@ export function updateMessageInMap(
   cloned[index] = merged;
   updated.set(conversationId, cloned);
   return updated;
+}
+
+export function buildOptimisticTextMessage({
+  tempId,
+  conversationId,
+  trimmedContent,
+  messageType = "TEXT",
+  sender,
+  replyToMessageId,
+  replyTo,
+}: BuildOptimisticTextMessageParams): OptimisticMessage {
+  return {
+    id: tempId,
+    conversationId,
+    content: trimmedContent,
+    messageType,
+    senderId: sender.id,
+    sender: {
+      id: sender.id,
+      username: sender.username,
+      avatar: sender.avatar || null,
+    },
+    attachments: [],
+    createdAt: new Date().toISOString(),
+    editedAt: null,
+    replyToMessageId: replyToMessageId ?? replyTo?.id ?? null,
+    replyTo: replyTo ?? null,
+    _optimistic: true,
+    _status: "sending",
+  };
+}
+
+export function buildOptimisticMediaMessage({
+  tempId,
+  conversationId,
+  trimmed,
+  sender,
+  previewUrl,
+  replyTo,
+}: BuildOptimisticMediaMessageParams): OptimisticMessage {
+  return {
+    ...buildOptimisticTextMessage({
+      tempId,
+      conversationId,
+      trimmedContent: trimmed.length > 0 ? trimmed : null,
+      messageType: "IMAGE",
+      sender,
+      replyToMessageId: replyTo?.id ?? null,
+      replyTo: replyTo ?? null,
+    }),
+    _previewUrl: previewUrl ?? undefined,
+    _progress: 0,
+  };
 }

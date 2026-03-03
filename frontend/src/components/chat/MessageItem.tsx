@@ -7,6 +7,11 @@ import { Loader2, AlertCircle, X } from "lucide-react";
 import { getEmojiSizing, renderTwemojiTokens, tokenizeEmojiContent } from "@/utils/emoji.util";
 import MessageActionsMenu from "./MessageActionsMenu";
 import { toast } from "sonner";
+import {
+  applyReplyHighlight,
+  findReplyTargetRow,
+  getReplyPreviewText,
+} from "./message-item/messageItem.logic";
 
 interface MessageItemProps {
   message: DisplayMessage;
@@ -19,6 +24,8 @@ interface MessageItemProps {
 }
 
 const REPLY_HIGHLIGHT_TIMEOUT_MS = 800;
+const REPLY_HIGHLIGHT_SELECTOR = '[data-message-bubble="true"]';
+const REPLY_HIGHLIGHT_TIMEOUT_ATTR = "data-reply-highlight-timeout-id";
 const REPLY_HIGHLIGHT_CLASSES = [
   "ring-1",
   "ring-primary/45",
@@ -178,21 +185,6 @@ function MessageContent({
   );
 }
 
-function getReplyPreviewText(message: DisplayMessage): string {
-  const replyTo = message.replyTo;
-  if (!replyTo) return "Message unavailable";
-
-  if (replyTo.messageType === "TEXT") {
-    const text = replyTo.content?.trim();
-    return text ? text : "Message";
-  }
-  if (replyTo.messageType === "IMAGE") {
-    const caption = replyTo.content?.trim();
-    return caption ? `Image - ${caption}` : "Image";
-  }
-  return "Message";
-}
-
 function ReplyQuoteBlock({
   message,
   tone,
@@ -256,36 +248,24 @@ export default function MessageItem({
     const replyToMessageId = message.replyToMessageId;
     if (replyToMessageId == null) return;
 
-    const scrollContainer = document.getElementById("scrollableDiv");
+    const scrollContainerId = "scrollableDiv";
+    const scrollContainer = document.getElementById(scrollContainerId);
     if (!scrollContainer) return;
 
-    const targetRow = scrollContainer.querySelector<HTMLElement>(
-      `[data-message-id="${replyToMessageId}"]`,
-    );
+    const targetRow = findReplyTargetRow({ scrollContainerId, replyToMessageId });
     if (!targetRow) {
       toast("Original message isn’t loaded yet. Scroll up to load older messages.");
       return;
     }
 
     targetRow.scrollIntoView({ behavior: "smooth", block: "center" });
-
-    const highlightTarget = targetRow.querySelector<HTMLElement>('[data-message-bubble="true"]');
-    if (!highlightTarget) return;
-
-    const existingTimeoutId = highlightTarget.getAttribute("data-reply-highlight-timeout-id");
-    if (existingTimeoutId) {
-      window.clearTimeout(Number(existingTimeoutId));
-    }
-
-    highlightTarget.classList.remove(...REPLY_HIGHLIGHT_CLASSES);
-    void highlightTarget.offsetWidth;
-    highlightTarget.classList.add(...REPLY_HIGHLIGHT_CLASSES);
-
-    const timeoutId = window.setTimeout(() => {
-      highlightTarget.classList.remove(...REPLY_HIGHLIGHT_CLASSES);
-      highlightTarget.removeAttribute("data-reply-highlight-timeout-id");
-    }, REPLY_HIGHLIGHT_TIMEOUT_MS);
-    highlightTarget.setAttribute("data-reply-highlight-timeout-id", String(timeoutId));
+    applyReplyHighlight({
+      targetRow,
+      highlightSelector: REPLY_HIGHLIGHT_SELECTOR,
+      classes: REPLY_HIGHLIGHT_CLASSES,
+      timeoutMs: REPLY_HIGHLIGHT_TIMEOUT_MS,
+      timeoutAttr: REPLY_HIGHLIGHT_TIMEOUT_ATTR,
+    });
   }, [message.replyToMessageId]);
 
   // ── Own messages: right-aligned, no avatar ──

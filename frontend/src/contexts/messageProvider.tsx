@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/context/useAuth";
 import { useMessageSockets } from "@/hooks/sockets/useMessageSockets";
 import {
   addMessageToMap,
+  buildOptimisticTextMessage,
   removeMessageFromMap,
   replaceMessageInMap,
   updateOptimisticInMap,
@@ -18,6 +19,53 @@ interface SendMessageAck {
   message?: Messages;
   error?: string;
   code?: string;
+}
+
+type NormalizedSendPayload = {
+  conversationId: number;
+  attachmentIds?: number[];
+  replyToMessageId?: number;
+  _replyTo?: SendMessageInput["_replyTo"];
+  _optimisticId?: number;
+  trimmedContent: string | null;
+  hasAttachment: boolean;
+};
+
+const SEND_ACK_TIMEOUT_MS = 15_000;
+
+function normalizeSendPayload(payload: SendMessageInput): NormalizedSendPayload {
+  const { conversationId, attachmentIds, replyToMessageId, _replyTo, _optimisticId } = payload;
+  const trimmedContent = payload.content?.trim() || null;
+  const hasAttachment = Array.isArray(attachmentIds) && attachmentIds.length > 0;
+
+  return {
+    conversationId,
+    attachmentIds,
+    replyToMessageId,
+    _replyTo,
+    _optimisticId,
+    trimmedContent,
+    hasAttachment,
+  };
+}
+
+function assertMessageBody(trimmedContent: string | null, hasAttachment: boolean): void {
+  if (!trimmedContent && !hasAttachment) {
+    throw new Error("Message must have content or attachments");
+  }
+}
+
+function buildSocketPayload(
+  normalized: Pick<
+    NormalizedSendPayload,
+    "conversationId" | "trimmedContent" | "hasAttachment" | "attachmentIds" | "replyToMessageId"
+  >,
+): Record<string, unknown> {
+  const socketPayload: Record<string, unknown> = { conversationId: normalized.conversationId };
+  if (normalized.trimmedContent) socketPayload.content = normalized.trimmedContent;
+  if (normalized.hasAttachment) socketPayload.attachmentIds = normalized.attachmentIds;
+  if (normalized.replyToMessageId != null) socketPayload.replyToMessageId = normalized.replyToMessageId;
+  return socketPayload;
 }
 
 function MessageProvider({ children }: { children: React.ReactNode }): JSX.Element {
@@ -35,6 +83,26 @@ function MessageProvider({ children }: { children: React.ReactNode }): JSX.Eleme
   const { user } = useAuth();
   useMessageSockets({ socket, setMessagesByConversation });
 
+  function markOptimisticFailed(conversationId: number, tempId: number): void {
+    setMessagesByConversation((prev) =>
+      updateOptimisticInMap(prev, conversationId, tempId, {
+        _status: "failed",
+      }),
+    );
+  }
+
+  function reconcileOptimisticMessage(conversationId: number, tempId: number, serverMessage: Messages): void {
+    setMessagesByConversation((prev) => {
+      const msgs = prev.get(conversationId);
+      const old = msgs?.find((m) => m.id === tempId);
+      const previewUrl = old && "_optimistic" in old ? old._previewUrl : undefined;
+      if (previewUrl?.startsWith("blob:")) {
+        queueMicrotask(() => URL.revokeObjectURL(previewUrl));
+      }
+      return replaceMessageInMap(prev, conversationId, tempId, serverMessage);
+    });
+  }
+
   // Send a message (text-only, image-only, or text+image).
   // Returns a Promise that resolves after the server ack, so callers can
   // `await sendMessage(...)` to coordinate isSending / typing:stop.
@@ -47,83 +115,48 @@ function MessageProvider({ children }: { children: React.ReactNode }): JSX.Eleme
         throw new Error("User not authenticated");
       }
 
-      const { conversationId, attachmentIds, replyToMessageId, _replyTo, _optimisticId } = payload;
-      const trimmedContent = payload.content?.trim() || null;
-      const hasAttachment = attachmentIds && attachmentIds.length > 0;
-
-      // Enforce backend rule: at least one of content or attachmentIds required
-      if (!trimmedContent && !hasAttachment) {
-        throw new Error("Message must have content or attachments");
-      }
+      const normalized = normalizeSendPayload(payload);
+      assertMessageBody(normalized.trimmedContent, normalized.hasAttachment);
 
       // If caller already inserted an optimistic message (media flow), reuse its ID.
       // Otherwise create a new temp message (text-only flow).
-      const tempId = _optimisticId ?? -Date.now();
+      const tempId = normalized._optimisticId ?? -Date.now();
 
-      if (!_optimisticId) {
-        const tempMessage: OptimisticMessage = {
-          id: tempId,
-          conversationId,
-          content: trimmedContent,
-          messageType: hasAttachment ? "IMAGE" : "TEXT",
-          senderId: user.id,
-          sender: {
-            id: user.id,
-            username: user.username,
-            avatar: user.avatar || null,
-          },
-          attachments: [],
-          createdAt: new Date().toISOString(),
-          editedAt: null,
-          replyToMessageId: replyToMessageId ?? null,
-          replyTo: _replyTo ?? null,
-          _optimistic: true,
-          _status: "sending",
-        };
-        setMessagesByConversation((prev) => addMessageToMap(prev, conversationId, tempMessage));
+      if (!normalized._optimisticId) {
+        const tempMessage: OptimisticMessage = buildOptimisticTextMessage({
+          tempId,
+          conversationId: normalized.conversationId,
+          trimmedContent: normalized.trimmedContent,
+          messageType: normalized.hasAttachment ? "IMAGE" : "TEXT",
+          sender: user,
+          replyToMessageId: normalized.replyToMessageId ?? null,
+          replyTo: normalized._replyTo ?? null,
+        });
+        setMessagesByConversation((prev) =>
+          addMessageToMap(prev, normalized.conversationId, tempMessage),
+        );
       }
 
-      // Build the socket payload — only include fields that have values
-      const socketPayload: Record<string, unknown> = { conversationId };
-      if (trimmedContent) socketPayload.content = trimmedContent;
-      if (hasAttachment) socketPayload.attachmentIds = attachmentIds;
-      if (replyToMessageId != null) socketPayload.replyToMessageId = replyToMessageId;
-
-      const ACK_TIMEOUT_MS = 15_000;
+      const socketPayload = buildSocketPayload(normalized);
 
       const ack = await emitWithAckTimeout<SendMessageAck | undefined, SendMessageAck>({
         socket,
         event: "sendMessage",
         payload: socketPayload,
-        timeoutMs: ACK_TIMEOUT_MS,
+        timeoutMs: SEND_ACK_TIMEOUT_MS,
         timeoutErrorMessage: "Send timed out — no server acknowledgement",
         isSuccess: (value): value is SendMessageAck => Boolean(value?.success && value.message),
         getErrorMessage: (value) => value?.error || "Send failed",
         onTimeout: () => {
-          setMessagesByConversation((prev) =>
-            updateOptimisticInMap(prev, conversationId, tempId, {
-              _status: "failed",
-            }),
-          );
+          markOptimisticFailed(normalized.conversationId, tempId);
         },
         onFailureAck: (value) => {
-          setMessagesByConversation((prev) =>
-            updateOptimisticInMap(prev, conversationId, tempId, {
-              _status: "failed",
-            }),
-          );
+          markOptimisticFailed(normalized.conversationId, tempId);
           console.error("Send failed:", value?.error, value?.code);
         },
       });
 
-      setMessagesByConversation((prev) => {
-        const msgs = prev.get(conversationId);
-        const old = msgs?.find((m) => m.id === tempId);
-        if (old && "_optimistic" in old && old._previewUrl?.startsWith("blob:")) {
-          queueMicrotask(() => URL.revokeObjectURL(old._previewUrl!));
-        }
-        return replaceMessageInMap(prev, conversationId, tempId, ack.message!);
-      });
+      reconcileOptimisticMessage(normalized.conversationId, tempId, ack.message!);
     },
     [socket, user],
   );
@@ -200,7 +233,7 @@ function MessageProvider({ children }: { children: React.ReactNode }): JSX.Eleme
         });
       }
     },
-    [loadingOlderByConversation, messagesByConversation],
+    [loadingOlderByConversation, messagesByConversation, pagination],
   );
 
   // Insert an optimistic message into the list (for media flow before upload).

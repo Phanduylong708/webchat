@@ -8,7 +8,6 @@ import { useMessage } from "@/hooks/context/useMessage";
 import useSocket from "@/hooks/context/useSocket";
 import { useAuth } from "@/hooks/context/useAuth";
 import { uploadMediaApi } from "@/api/media.api";
-import type { OptimisticMessage } from "@/types/chat.type";
 import { toast } from "sonner";
 import { insertTextAtCaret } from "@/utils/caret.util";
 import { getEditSaveState } from "@/utils/edit-mode.util";
@@ -20,6 +19,12 @@ import AttachmentPreview from "./chat-input/AttachmentPreview";
 import EditModeBanner from "./chat-input/EditModeBanner";
 import ReplyModeBanner from "./chat-input/ReplyModeBanner";
 import type { ReplyToPreview } from "@/types/chat.type";
+import {
+  buildReplySendFields,
+  getReplyToFromTarget,
+  toUserMessage,
+} from "./chat-input/chatInput.logic";
+import { buildOptimisticMediaMessage } from "@/utils/message.utils";
 
 // ── Main Component ──
 
@@ -144,34 +149,6 @@ export default function ChatInput(props: Props): React.JSX.Element {
 
   // ── Helpers for handleSubmit ──
 
-  function buildOptimisticMessage(
-    tempId: number,
-    trimmed: string,
-    replyTo: ReplyToPreview | null,
-  ): OptimisticMessage {
-    return {
-      id: tempId,
-      conversationId,
-      content: trimmed.length > 0 ? trimmed : null,
-      messageType: "IMAGE",
-      senderId: user!.id,
-      sender: {
-        id: user!.id,
-        username: user!.username,
-        avatar: user!.avatar || null,
-      },
-      attachments: [],
-      createdAt: new Date().toISOString(),
-      editedAt: null,
-      replyToMessageId: replyTo?.id ?? null,
-      replyTo,
-      _optimistic: true,
-      _status: "sending",
-      _previewUrl: previewUrl ?? undefined,
-      _progress: 0,
-    };
-  }
-
   async function uploadWithProgress(file: File, tempId: number): Promise<number[]> {
     const attachment = await uploadMediaApi(file, {
       onProgress: (percent) => {
@@ -229,10 +206,7 @@ export default function ChatInput(props: Props): React.JSX.Element {
       }
       handleCancelEdit();
     } catch (error) {
-      const message =
-        error && typeof error === "object" && "message" in error
-          ? String((error as { message?: unknown }).message ?? "Edit failed")
-          : "Edit failed";
+      const message = toUserMessage(error, "Edit failed");
       toast.error(message);
       console.error("Edit failed:", error);
     } finally {
@@ -242,10 +216,20 @@ export default function ChatInput(props: Props): React.JSX.Element {
 
   async function handleMediaSend(trimmed: string, file: File) {
     const tempId = -Date.now();
-    const replyTo = replyTarget?.replyTo ?? null;
+    const replyTo = getReplyToFromTarget(replyTarget);
+    const replySendFields = buildReplySendFields(replyTo);
 
     // Insert optimistic bubble immediately — bubble is now in message list
-    insertOptimisticMessage(buildOptimisticMessage(tempId, trimmed, replyTo));
+    insertOptimisticMessage(
+      buildOptimisticMediaMessage({
+        tempId,
+        conversationId,
+        trimmed,
+        sender: user!,
+        previewUrl,
+        replyTo,
+      }),
+    );
     clearReplyModeAfterEnqueue();
 
     // Clear composer immediately (don't revoke URL — bubble is using it)
@@ -257,10 +241,7 @@ export default function ChatInput(props: Props): React.JSX.Element {
       attachmentIds = await uploadWithProgress(file, tempId);
     } catch (uploadError) {
       updateOptimistic(conversationId, tempId, { _status: "failed" });
-      const msg =
-        uploadError && typeof uploadError === "object" && "message" in uploadError
-          ? (uploadError as { message: string }).message
-          : "Upload failed";
+      const msg = toUserMessage(uploadError, "Upload failed");
       toast.error(msg);
       return;
     }
@@ -270,20 +251,19 @@ export default function ChatInput(props: Props): React.JSX.Element {
       conversationId,
       content: trimmed.length > 0 ? trimmed : undefined,
       attachmentIds,
-      replyToMessageId: replyTo?.id,
-      _replyTo: replyTo ?? undefined,
+      ...replySendFields,
       _optimisticId: tempId,
     });
   }
 
   async function handleTextSend(trimmed: string) {
-    const replyTo = replyTarget?.replyTo ?? null;
+    const replyTo = getReplyToFromTarget(replyTarget);
+    const replySendFields = buildReplySendFields(replyTo);
     // sendMessage creates its own optimistic bubble
     const sendPromise = sendMessage({
       conversationId,
       content: trimmed,
-      replyToMessageId: replyTo?.id,
-      _replyTo: replyTo ?? undefined,
+      ...replySendFields,
     });
     clearReplyModeAfterEnqueue();
     await sendPromise;
@@ -309,10 +289,7 @@ export default function ChatInput(props: Props): React.JSX.Element {
       stopTyping();
       clearSelectedFile();
     } catch (error) {
-      const message =
-        error && typeof error === "object" && "message" in error
-          ? String((error as { message?: unknown }).message ?? "Send failed")
-          : "Send failed";
+      const message = toUserMessage(error, "Send failed");
       toast.error(message);
       console.error("Send failed:", error);
       // Text-only: input value preserved for retry
