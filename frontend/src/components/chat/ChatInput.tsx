@@ -144,7 +144,11 @@ export default function ChatInput(props: Props): React.JSX.Element {
 
   // ── Helpers for handleSubmit ──
 
-  function buildOptimisticMessage(tempId: number, trimmed: string): OptimisticMessage {
+  function buildOptimisticMessage(
+    tempId: number,
+    trimmed: string,
+    replyTo: ReplyToPreview | null,
+  ): OptimisticMessage {
     return {
       id: tempId,
       conversationId,
@@ -159,6 +163,8 @@ export default function ChatInput(props: Props): React.JSX.Element {
       attachments: [],
       createdAt: new Date().toISOString(),
       editedAt: null,
+      replyToMessageId: replyTo?.id ?? null,
+      replyTo,
       _optimistic: true,
       _status: "sending",
       _previewUrl: previewUrl ?? undefined,
@@ -184,6 +190,11 @@ export default function ChatInput(props: Props): React.JSX.Element {
   }
 
   function handleCancelReply() {
+    onCancelReply?.();
+  }
+
+  function clearReplyModeAfterEnqueue() {
+    if (!replyTarget) return;
     onCancelReply?.();
   }
 
@@ -231,9 +242,11 @@ export default function ChatInput(props: Props): React.JSX.Element {
 
   async function handleMediaSend(trimmed: string, file: File) {
     const tempId = -Date.now();
+    const replyTo = replyTarget?.replyTo ?? null;
 
     // Insert optimistic bubble immediately — bubble is now in message list
-    insertOptimisticMessage(buildOptimisticMessage(tempId, trimmed));
+    insertOptimisticMessage(buildOptimisticMessage(tempId, trimmed, replyTo));
+    clearReplyModeAfterEnqueue();
 
     // Clear composer immediately (don't revoke URL — bubble is using it)
     setInputValue("");
@@ -257,13 +270,23 @@ export default function ChatInput(props: Props): React.JSX.Element {
       conversationId,
       content: trimmed.length > 0 ? trimmed : undefined,
       attachmentIds,
+      replyToMessageId: replyTo?.id,
+      _replyTo: replyTo ?? undefined,
       _optimisticId: tempId,
     });
   }
 
   async function handleTextSend(trimmed: string) {
+    const replyTo = replyTarget?.replyTo ?? null;
     // sendMessage creates its own optimistic bubble
-    await sendMessage({ conversationId, content: trimmed });
+    const sendPromise = sendMessage({
+      conversationId,
+      content: trimmed,
+      replyToMessageId: replyTo?.id,
+      _replyTo: replyTo ?? undefined,
+    });
+    clearReplyModeAfterEnqueue();
+    await sendPromise;
     setInputValue("");
   }
 

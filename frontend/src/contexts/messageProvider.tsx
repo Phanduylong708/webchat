@@ -47,7 +47,7 @@ function MessageProvider({ children }: { children: React.ReactNode }): JSX.Eleme
         throw new Error("User not authenticated");
       }
 
-      const { conversationId, attachmentIds, _optimisticId } = payload;
+      const { conversationId, attachmentIds, replyToMessageId, _replyTo, _optimisticId } = payload;
       const trimmedContent = payload.content?.trim() || null;
       const hasAttachment = attachmentIds && attachmentIds.length > 0;
 
@@ -75,6 +75,8 @@ function MessageProvider({ children }: { children: React.ReactNode }): JSX.Eleme
           attachments: [],
           createdAt: new Date().toISOString(),
           editedAt: null,
+          replyToMessageId: replyToMessageId ?? null,
+          replyTo: _replyTo ?? null,
           _optimistic: true,
           _status: "sending",
         };
@@ -85,6 +87,7 @@ function MessageProvider({ children }: { children: React.ReactNode }): JSX.Eleme
       const socketPayload: Record<string, unknown> = { conversationId };
       if (trimmedContent) socketPayload.content = trimmedContent;
       if (hasAttachment) socketPayload.attachmentIds = attachmentIds;
+      if (replyToMessageId != null) socketPayload.replyToMessageId = replyToMessageId;
 
       const ACK_TIMEOUT_MS = 15_000;
 
