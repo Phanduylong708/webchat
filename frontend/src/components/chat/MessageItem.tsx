@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import type { DisplayMessage } from "@/types/chat.type";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { getOptimizedAvatarUrl, getAvatarFallback, getOptimizedMessageImageUrl } from "@/utils/image.util";
@@ -6,6 +6,7 @@ import { useMessage } from "@/hooks/context/useMessage";
 import { Loader2, AlertCircle, X } from "lucide-react";
 import { getEmojiSizing, renderTwemojiTokens, tokenizeEmojiContent } from "@/utils/emoji.util";
 import MessageActionsMenu from "./MessageActionsMenu";
+import { toast } from "sonner";
 
 interface MessageItemProps {
   message: DisplayMessage;
@@ -16,6 +17,16 @@ interface MessageItemProps {
   onRequestEdit?: (message: DisplayMessage) => void;
   onRequestReply?: (message: DisplayMessage) => void;
 }
+
+const REPLY_HIGHLIGHT_TIMEOUT_MS = 800;
+const REPLY_HIGHLIGHT_CLASSES = [
+  "ring-1",
+  "ring-primary/45",
+  "ring-offset-1",
+  "ring-offset-background",
+  "transition-shadow",
+  "duration-200",
+];
 
 // ── Helpers ──
 
@@ -116,7 +127,15 @@ function FailedActions({ message }: { message: DisplayMessage }) {
 
 // ── Message Content ──
 
-function MessageContent({ message, bubbleClassName }: { message: DisplayMessage; bubbleClassName: string }) {
+function MessageContent({
+  message,
+  bubbleClassName,
+  quoteBlock = null,
+}: {
+  message: DisplayMessage;
+  bubbleClassName: string;
+  quoteBlock?: React.ReactNode;
+}) {
   const hasImage = message.messageType === "IMAGE" || (isOptimistic(message) && message._previewUrl);
   const rawText = message.content ?? "";
   const hasText = rawText.length > 0;
@@ -141,16 +160,68 @@ function MessageContent({ message, bubbleClassName }: { message: DisplayMessage;
   return (
     <>
       {hasImage && <ImageBubble message={message} />}
-      {hasText && (
-        <div
-          className={`max-w-full wrap-anywhere whitespace-pre-wrap ${bubbleClassName} ${
-            isAllEmoji ? "text-center" : ""
-          }`}
-        >
-          {textNodes}
+      {hasText ? (
+        <div data-message-bubble="true" className={`max-w-full ${bubbleClassName}`}>
+          {quoteBlock}
+          <div className={`wrap-anywhere whitespace-pre-wrap ${isAllEmoji && !quoteBlock ? "text-center" : ""}`}>
+            {textNodes}
+          </div>
         </div>
+      ) : (
+        quoteBlock && (
+          <div data-message-bubble="true" className={`max-w-full ${bubbleClassName}`}>
+            {quoteBlock}
+          </div>
+        )
       )}
     </>
+  );
+}
+
+function getReplyPreviewText(message: DisplayMessage): string {
+  const replyTo = message.replyTo;
+  if (!replyTo) return "Message unavailable";
+
+  if (replyTo.messageType === "TEXT") {
+    const text = replyTo.content?.trim();
+    return text ? text : "Message";
+  }
+  if (replyTo.messageType === "IMAGE") {
+    const caption = replyTo.content?.trim();
+    return caption ? `Image - ${caption}` : "Image";
+  }
+  return "Message";
+}
+
+function ReplyQuoteBlock({
+  message,
+  tone,
+  onClick,
+}: {
+  message: DisplayMessage;
+  tone: "own" | "other";
+  onClick: () => void;
+}) {
+  if (message.replyToMessageId == null) {
+    return null;
+  }
+
+  const header = message.replyTo?.sender.username ?? "Original message";
+  const preview = getReplyPreviewText(message);
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`mb-1 w-full max-w-full cursor-pointer rounded-md border-l-2 px-2 py-1 text-left transition-colors focus:outline-none ${
+        tone === "own"
+          ? "border-primary-foreground/55 bg-primary-foreground/10 hover:bg-primary-foreground/15"
+          : "border-foreground/40 bg-foreground/5 hover:bg-foreground/10"
+      }`}
+    >
+      <div className="text-xs font-medium truncate opacity-95">{header}</div>
+      <div className="text-xs truncate opacity-80">{preview}</div>
+    </button>
   );
 }
 
@@ -181,6 +252,42 @@ export default function MessageItem({
     isWithinEditWindow(message.createdAt);
   const canOpenActions = !optimistic;
 
+  const handleJumpToReplyTarget = useCallback(() => {
+    const replyToMessageId = message.replyToMessageId;
+    if (replyToMessageId == null) return;
+
+    const scrollContainer = document.getElementById("scrollableDiv");
+    if (!scrollContainer) return;
+
+    const targetRow = scrollContainer.querySelector<HTMLElement>(
+      `[data-message-id="${replyToMessageId}"]`,
+    );
+    if (!targetRow) {
+      toast("Original message isn’t loaded yet. Scroll up to load older messages.");
+      return;
+    }
+
+    targetRow.scrollIntoView({ behavior: "smooth", block: "center" });
+
+    const highlightTarget = targetRow.querySelector<HTMLElement>('[data-message-bubble="true"]');
+    if (!highlightTarget) return;
+
+    const existingTimeoutId = highlightTarget.getAttribute("data-reply-highlight-timeout-id");
+    if (existingTimeoutId) {
+      window.clearTimeout(Number(existingTimeoutId));
+    }
+
+    highlightTarget.classList.remove(...REPLY_HIGHLIGHT_CLASSES);
+    void highlightTarget.offsetWidth;
+    highlightTarget.classList.add(...REPLY_HIGHLIGHT_CLASSES);
+
+    const timeoutId = window.setTimeout(() => {
+      highlightTarget.classList.remove(...REPLY_HIGHLIGHT_CLASSES);
+      highlightTarget.removeAttribute("data-reply-highlight-timeout-id");
+    }, REPLY_HIGHLIGHT_TIMEOUT_MS);
+    highlightTarget.setAttribute("data-reply-highlight-timeout-id", String(timeoutId));
+  }, [message.replyToMessageId]);
+
   // ── Own messages: right-aligned, no avatar ──
   if (isOwn) {
     return (
@@ -203,6 +310,13 @@ export default function MessageItem({
               <MessageContent
                 message={message}
                 bubbleClassName="bg-primary text-primary-foreground px-3 py-2 rounded-tl-2xl rounded-tr-2xl rounded-bl-2xl"
+                quoteBlock={
+                  <ReplyQuoteBlock
+                    message={message}
+                    tone="own"
+                    onClick={handleJumpToReplyTarget}
+                  />
+                }
               />
             </div>
           </MessageActionsMenu>
@@ -251,6 +365,13 @@ export default function MessageItem({
           <MessageContent
             message={message}
             bubbleClassName="bg-muted text-foreground px-3 py-2 rounded-tl-2xl rounded-tr-2xl rounded-br-2xl"
+            quoteBlock={
+              <ReplyQuoteBlock
+                message={message}
+                tone="other"
+                onClick={handleJumpToReplyTarget}
+              />
+            }
           />
         </MessageActionsMenu>
         {isLastInGroup && (

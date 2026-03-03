@@ -62,7 +62,11 @@ export default function MessageList({ onRequestEdit, onRequestReply, editingMess
             ? String(message._stableKey)
             : String(message.id);
           return (
-            <div key={stableKey} className={isFirstInGroup && index !== 0 ? "pt-3" : ""}>
+            <div
+              key={stableKey}
+              data-message-id={message.id}
+              className={isFirstInGroup && index !== 0 ? "pt-3" : ""}
+            >
               <MessageItem
                 message={message}
                 isOwn={isOwn}
