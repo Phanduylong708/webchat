@@ -18,8 +18,15 @@ async function handleChatMessage(io, socket) {
       const parsed = parseSendMessagePayload(payload);
       if (!parsed.ok) return callback(parsed.error);
 
-      const { conversationId, recipientId, trimmedContent, hasContent, attachmentIds, hasAttachments } =
-        parsed.data;
+      const {
+        conversationId,
+        recipientId,
+        trimmedContent,
+        hasContent,
+        attachmentIds,
+        hasAttachments,
+        replyToMessageId,
+      } = parsed.data;
 
       const currentUserId = socket.data.user.id;
       let currentConversationId = conversationId;
@@ -43,6 +50,26 @@ async function handleChatMessage(io, socket) {
         }
       }
 
+      if (replyToMessageId !== null) {
+        const replyTarget = await prisma.message.findUnique({
+          where: { id: replyToMessageId },
+          select: { id: true, conversationId: true },
+        });
+
+        if (!replyTarget) {
+          return callback(ackError("REPLY_TO_NOT_FOUND", "Reply target not found."));
+        }
+
+        if (replyTarget.conversationId !== currentConversationId) {
+          return callback(
+            ackError(
+              "REPLY_TO_WRONG_CONVERSATION",
+              "Reply target must be in the same conversation.",
+            ),
+          );
+        }
+      }
+
       // ── Pre-flight attachment validation ──────────────────────────────────
       if (hasAttachments) {
         const preflightError = await validateAttachmentsPreflight(attachmentIds, currentUserId);
@@ -59,9 +86,18 @@ async function handleChatMessage(io, socket) {
             senderId: currentUserId,
             content: hasContent ? trimmedContent : null,
             messageType,
+            replyToMessageId: replyToMessageId ?? null,
           },
           include: {
             sender: { select: { id: true, username: true, avatar: true } },
+            replyTo: {
+              select: {
+                id: true,
+                content: true,
+                messageType: true,
+                sender: { select: { id: true, username: true, avatar: true } },
+              },
+            },
           },
         });
 

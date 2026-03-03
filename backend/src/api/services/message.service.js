@@ -25,6 +25,14 @@ async function getMessages(conversationId, userId, before, limit) {
     take: limit + 1, // Fetch one extra message to determine if there are more messages
     include: {
       sender: { select: { id: true, username: true, avatar: true } },
+      replyTo: {
+        select: {
+          id: true,
+          content: true,
+          messageType: true,
+          sender: { select: { id: true, username: true, avatar: true } },
+        },
+      },
       attachments: {
         select: {
           id: true,
