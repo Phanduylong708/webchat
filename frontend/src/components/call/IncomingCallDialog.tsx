@@ -46,16 +46,12 @@ export function IncomingCallDialog(): JSX.Element | null {
                 alt={displayName}
                 className="object-cover"
               />
-              <AvatarFallback className="text-xl bg-muted">
-                {initial}
-              </AvatarFallback>
+              <AvatarFallback className="text-xl bg-muted">{initial}</AvatarFallback>
             </Avatar>
           </div>
           {/* leading-none: remove default margin of shadcn */}
           <div className="space-y-1">
-            <h3 className="text-xl font-bold text-foreground leading-none">
-              {displayName}
-            </h3>
+            <h3 className="text-xl font-bold text-foreground leading-none">{displayName}</h3>
             <AlertDialogDescription>is calling you...</AlertDialogDescription>
           </div>
         </AlertDialogHeader>
@@ -64,7 +60,7 @@ export function IncomingCallDialog(): JSX.Element | null {
         <AlertDialogFooter className="flex flex-row items-center justify-center gap-8 sm:justify-center sm:space-x-0 w-full">
           <AlertDialogCancel
             onClick={declineCall}
-            className=" h-14 w-14 rounded-full border-none bg-red-500 text-white hover:bg-red-600 hover:text-white shadow-sm transition-colors"
+            className=" h-14 w-14 rounded-full border-none bg-red-500 dark:bg-red-500 text-white hover:bg-red-600 dark:hover:bg-red-600 hover:text-white shadow-sm transition-colors"
           >
             <PhoneOff />
           </AlertDialogCancel>
