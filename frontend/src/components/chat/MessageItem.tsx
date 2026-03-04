@@ -126,8 +126,10 @@ function MessageContent({
   quoteBlock?: React.ReactNode;
 }) {
   const hasImage = message.messageType === "IMAGE" || (isOptimistic(message) && message._previewUrl);
+  const hasQuote = message.replyToMessageId != null || message.replyTo != null;
   const rawText = message.content ?? "";
   const hasText = rawText.length > 0;
+  const shouldRenderTextBubble = hasText || hasQuote;
 
   const { tokens, isAllEmoji, sizePx } = useMemo(() => {
     if (!hasText) {
@@ -149,21 +151,17 @@ function MessageContent({
   return (
     <>
       {hasImage && <ImageBubble message={message} />}
-      {hasText ? (
+      {shouldRenderTextBubble && (
         <div data-message-bubble="true" className={`max-w-full ${bubbleClassName}`}>
-          {quoteBlock}
-          <div
-            className={`wrap-anywhere whitespace-pre-wrap ${isAllEmoji && !quoteBlock ? "text-center" : ""}`}
-          >
-            {textNodes}
+          {hasQuote ? quoteBlock : null}
+          {hasText ? (
+            <div
+              className={`wrap-anywhere whitespace-pre-wrap ${isAllEmoji && !hasQuote && !hasImage ? "text-center" : ""}`}
+            >
+              {textNodes}
+            </div>
+          ) : null}
           </div>
-        </div>
-      ) : (
-        quoteBlock && (
-          <div data-message-bubble="true" className={`max-w-full ${bubbleClassName}`}>
-            {quoteBlock}
-          </div>
-        )
       )}
     </>
   );
