@@ -9,10 +9,16 @@ import InfiniteScroll from "react-infinite-scroll-component";
 type Props = {
   onRequestEdit?: (message: DisplayMessage) => void;
   onRequestReply?: (message: DisplayMessage) => void;
+  onRequestDelete?: (message: DisplayMessage) => void;
   editingMessageId?: number | null;
 };
 
-export default function MessageList({ onRequestEdit, onRequestReply, editingMessageId = null }: Props) {
+export default function MessageList({
+  onRequestEdit,
+  onRequestReply,
+  onRequestDelete,
+  editingMessageId = null,
+}: Props) {
   const { messagesByConversation, loadingMessages, loadOlderMessages, pagination, error } = useMessage();
   const { activeConversationId } = useConversation();
   const paginationInfo = activeConversationId ? pagination.get(activeConversationId) : undefined;
@@ -75,6 +81,7 @@ export default function MessageList({ onRequestEdit, onRequestReply, editingMess
                 isEditing={editingMessageId === message.id}
                 onRequestEdit={onRequestEdit}
                 onRequestReply={onRequestReply}
+                onRequestDelete={onRequestDelete}
               />
             </div>
           );

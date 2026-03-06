@@ -5,13 +5,22 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { StackedAvatars } from "@/components/ui/stacked-avatars";
 import { getOptimizedAvatarUrl, getAvatarFallback } from "@/utils/image.util";
 import type { DisplayMessage, ReplyToPreview } from "@/types/chat.type";
+import useSocket from "@/hooks/context/useSocket";
 import MessageList from "./MessageList";
 import ChatInput from "./ChatInput";
 import GroupMembersDialog from "./GroupMembersDialog";
+import DeleteMessageDialog from "./DeleteMessageDialog";
+import type { DeleteMessageTarget } from "./DeleteMessageDialog";
 import { CallButton } from "@/components/call/CallButton";
+
+type MessageDeletedPayload = {
+  conversationId: number;
+  messageId: number;
+};
 
 function ChatWindow(): React.JSX.Element {
   const { conversations, activeConversationId, onlineUsers, systemMessages } = useConversation();
+  const { socket } = useSocket();
   const activeConversations = conversations.find((c) => c.id === activeConversationId);
 
   const [editTarget, setEditTarget] = useState<{
@@ -24,6 +33,7 @@ function ChatWindow(): React.JSX.Element {
     conversationId: number;
     replyTo: ReplyToPreview;
   } | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<DeleteMessageTarget | null>(null);
 
   useEffect(() => {
     if (!activeConversationId) return;
@@ -33,7 +43,10 @@ function ChatWindow(): React.JSX.Element {
     if (replyTarget && replyTarget.conversationId !== activeConversationId) {
       setReplyTarget(null);
     }
-  }, [activeConversationId, editTarget, replyTarget]);
+    if (deleteTarget && deleteTarget.conversationId !== activeConversationId) {
+      setDeleteTarget(null);
+    }
+  }, [activeConversationId, deleteTarget, editTarget, replyTarget]);
 
   const handleRequestEdit = useCallback((message: DisplayMessage) => {
     if (message.messageType !== "TEXT" && message.messageType !== "IMAGE") return;
@@ -67,6 +80,45 @@ function ChatWindow(): React.JSX.Element {
   const handleCancelReply = useCallback(() => {
     setReplyTarget(null);
   }, []);
+
+  const handleRequestDelete = useCallback((message: DisplayMessage) => {
+    if ("_optimistic" in message) return;
+    setDeleteTarget({
+      conversationId: message.conversationId,
+      messageId: message.id,
+    });
+  }, []);
+
+  const handleDeleteDialogOpenChange = useCallback((open: boolean) => {
+    if (!open) {
+      setDeleteTarget(null);
+    }
+  }, []);
+
+  const handleDeleteSuccess = useCallback(
+    (target: DeleteMessageTarget) => {
+      if (editTarget?.conversationId === target.conversationId && editTarget.messageId === target.messageId) {
+        setEditTarget(null);
+      }
+    },
+    [editTarget],
+  );
+
+  useEffect(() => {
+    if (!socket || !replyTarget) return;
+    const currentReplyTarget = replyTarget;
+
+    function handleMessageDeleted(payload: MessageDeletedPayload) {
+      if (payload.conversationId !== currentReplyTarget.conversationId) return;
+      if (payload.messageId !== currentReplyTarget.replyTo.id) return;
+      setReplyTarget(null);
+    }
+
+    socket.on("messageDeleted", handleMessageDeleted);
+    return () => {
+      socket.off("messageDeleted", handleMessageDeleted);
+    };
+  }, [replyTarget, socket]);
 
   if (!activeConversations) {
     return (
@@ -138,6 +190,7 @@ function ChatWindow(): React.JSX.Element {
       <MessageList
         onRequestEdit={handleRequestEdit}
         onRequestReply={handleRequestReply}
+        onRequestDelete={handleRequestDelete}
         editingMessageId={editTarget?.messageId ?? null}
       /> {/* message list */}
       {/* system message, eg: typing indicator */}
@@ -150,6 +203,11 @@ function ChatWindow(): React.JSX.Element {
         onCancelEdit={handleCancelEdit}
         replyTarget={replyTarget}
         onCancelReply={handleCancelReply}
+      />
+      <DeleteMessageDialog
+        target={deleteTarget}
+        onOpenChange={handleDeleteDialogOpenChange}
+        onDeleteSuccess={handleDeleteSuccess}
       />
     </div>
   );

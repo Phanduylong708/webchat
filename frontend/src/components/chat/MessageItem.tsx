@@ -21,6 +21,7 @@ interface MessageItemProps {
   isEditing?: boolean;
   onRequestEdit?: (message: DisplayMessage) => void;
   onRequestReply?: (message: DisplayMessage) => void;
+  onRequestDelete?: (message: DisplayMessage) => void;
 }
 
 const REPLY_HIGHLIGHT_TIMEOUT_MS = 800;
@@ -209,6 +210,7 @@ export default function MessageItem({
   isEditing = false,
   onRequestEdit,
   onRequestReply,
+  onRequestDelete,
 }: MessageItemProps): React.JSX.Element {
   const timestamp = new Date(message.createdAt).toLocaleTimeString("en-US", {
     hour: "2-digit",
@@ -220,6 +222,7 @@ export default function MessageItem({
   const isEdited = Boolean(message.editedAt);
 
   const canEdit = isOwn && !optimistic && (message.messageType === "TEXT" || message.messageType === "IMAGE");
+  const canDelete = isOwn && !optimistic;
   const canOpenActions = !optimistic;
 
   const handleJumpToReplyTarget = useCallback(() => {
@@ -256,6 +259,7 @@ export default function MessageItem({
             enabled={canOpenActions}
             onReply={onRequestReply}
             onEdit={canEdit ? onRequestEdit : undefined}
+            onDelete={canDelete ? onRequestDelete : undefined}
             side="left"
           >
             <div
