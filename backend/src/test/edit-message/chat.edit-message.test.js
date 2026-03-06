@@ -11,9 +11,9 @@ jest.mock("../../sockets/helpers/helpers.js", () => ({
 
 jest.mock("../../shared/prisma.js", () => ({
   prisma: {
+    $transaction: jest.fn(),
     message: {
       findUnique: jest.fn(),
-      update: jest.fn(),
     },
   },
 }));
@@ -36,6 +36,14 @@ describe("chat.handler editMessage", () => {
 
     jest.clearAllMocks();
     verifyMembership.mockResolvedValue(true);
+    prisma.$transaction.mockImplementation(async (callback) =>
+      callback({
+        message: {
+          updateMany: jest.fn(),
+          findUnique: jest.fn(),
+        },
+      }),
+    );
     handleChatMessage(mockIo, mockSocket);
   });
 
@@ -133,6 +141,7 @@ describe("chat.handler editMessage", () => {
       senderId: 2,
       messageType: "TEXT",
       createdAt: new Date("2026-02-27T09:09:00.000Z"),
+      deletedAt: null,
     });
 
     await mockSocket._trigger(
@@ -148,6 +157,65 @@ describe("chat.handler editMessage", () => {
     });
   });
 
+  it("should reject when message is soft deleted", async () => {
+    prisma.message.findUnique.mockResolvedValue({
+      id: 10,
+      conversationId: 1,
+      senderId: 1,
+      messageType: "TEXT",
+      createdAt: new Date("2026-02-27T09:09:00.000Z"),
+      deletedAt: new Date("2026-03-04T00:00:00.000Z"),
+    });
+
+    await mockSocket._trigger(
+      "editMessage",
+      { conversationId: 1, messageId: 10, content: "hi" },
+      mockCallback,
+    );
+
+    expect(mockCallback).toHaveBeenCalledWith({
+      success: false,
+      code: "MESSAGE_NOT_FOUND",
+      error: "Message not found.",
+    });
+  });
+
+  it("should reject when message is deleted before guarded write", async () => {
+    prisma.message.findUnique.mockResolvedValue({
+      id: 10,
+      conversationId: 1,
+      senderId: 1,
+      messageType: "TEXT",
+      createdAt: new Date("2026-02-27T09:09:00.000Z"),
+      deletedAt: null,
+    });
+
+    const tx = {
+      message: {
+        updateMany: jest.fn().mockResolvedValue({ count: 0 }),
+        findUnique: jest.fn(),
+      },
+    };
+    prisma.$transaction.mockImplementation(async (callback) => callback(tx));
+
+    await mockSocket._trigger(
+      "editMessage",
+      { conversationId: 1, messageId: 10, content: "hi" },
+      mockCallback,
+    );
+
+    expect(tx.message.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: 10, deletedAt: null },
+      }),
+    );
+    expect(mockCallback).toHaveBeenCalledWith({
+      success: false,
+      code: "MESSAGE_NOT_FOUND",
+      error: "Message not found.",
+    });
+  });
+
   it("should reject TEXT edit when content is empty after trim", async () => {
     prisma.message.findUnique.mockResolvedValue({
       id: 10,
@@ -155,6 +223,7 @@ describe("chat.handler editMessage", () => {
       senderId: 1,
       messageType: "TEXT",
       createdAt: new Date("2026-02-27T09:09:00.000Z"),
+      deletedAt: null,
     });
 
     await mockSocket._trigger(
@@ -177,6 +246,7 @@ describe("chat.handler editMessage", () => {
       senderId: 1,
       messageType: "IMAGE",
       createdAt: new Date("2026-02-27T09:09:00.000Z"),
+      deletedAt: null,
     });
 
     const updated = {
@@ -189,8 +259,15 @@ describe("chat.handler editMessage", () => {
       editedAt: new Date("2026-02-27T09:10:00.000Z"),
       sender: { id: 1, username: "alice", avatar: null },
       attachments: [],
+      deletedAt: null,
     };
-    prisma.message.update.mockResolvedValue(updated);
+    const tx = {
+      message: {
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+        findUnique: jest.fn().mockResolvedValue(updated),
+      },
+    };
+    prisma.$transaction.mockImplementation(async (callback) => callback(tx));
 
     await mockSocket._trigger(
       "editMessage",
@@ -198,9 +275,9 @@ describe("chat.handler editMessage", () => {
       mockCallback,
     );
 
-    expect(prisma.message.update).toHaveBeenCalledWith(
+    expect(tx.message.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { id: 10 },
+        where: { id: 10, deletedAt: null },
         data: expect.objectContaining({ content: null, editedAt: expect.any(Date) }),
       }),
     );
@@ -216,6 +293,7 @@ describe("chat.handler editMessage", () => {
       senderId: 1,
       messageType: "TEXT",
       createdAt: new Date("2026-02-27T09:09:00.000Z"),
+      deletedAt: null,
     });
 
     const updated = {
@@ -228,8 +306,15 @@ describe("chat.handler editMessage", () => {
       editedAt: new Date("2026-02-27T09:10:00.000Z"),
       sender: { id: 1, username: "alice", avatar: null },
       attachments: [],
+      deletedAt: null,
     };
-    prisma.message.update.mockResolvedValue(updated);
+    const tx = {
+      message: {
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+        findUnique: jest.fn().mockResolvedValue(updated),
+      },
+    };
+    prisma.$transaction.mockImplementation(async (callback) => callback(tx));
 
     await mockSocket._trigger(
       "editMessage",
@@ -237,9 +322,9 @@ describe("chat.handler editMessage", () => {
       mockCallback,
     );
 
-    expect(prisma.message.update).toHaveBeenCalledWith(
+    expect(tx.message.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { id: 10 },
+        where: { id: 10, deletedAt: null },
         data: expect.objectContaining({ content: "hello", editedAt: expect.any(Date) }),
       }),
     );

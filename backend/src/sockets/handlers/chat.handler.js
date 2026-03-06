@@ -53,10 +53,10 @@ async function handleChatMessage(io, socket) {
       if (replyToMessageId !== null) {
         const replyTarget = await prisma.message.findUnique({
           where: { id: replyToMessageId },
-          select: { id: true, conversationId: true },
+          select: { id: true, conversationId: true, deletedAt: true },
         });
 
-        if (!replyTarget) {
+        if (!replyTarget || replyTarget.deletedAt !== null) {
           return callback(ackError("REPLY_TO_NOT_FOUND", "Reply target not found."));
         }
 
@@ -75,6 +75,17 @@ async function handleChatMessage(io, socket) {
 
       // ── Atomic transaction ────────────────────────────────────────────────
       const message = await prisma.$transaction(async (tx) => {
+        if (replyToMessageId !== null) {
+          const replyTarget = await tx.message.findUnique({
+            where: { id: replyToMessageId },
+            select: { id: true, deletedAt: true },
+          });
+
+          if (!replyTarget || replyTarget.deletedAt !== null) {
+            throw Object.assign(new Error("Reply target not found."), { code: "REPLY_TO_NOT_FOUND" });
+          }
+        }
+
         const messageType = hasAttachments ? "IMAGE" : "TEXT";
 
         const result = await tx.message.create({
@@ -148,10 +159,13 @@ async function handleChatMessage(io, socket) {
       socket.to(getConversationRoom(currentConversationId)).emit("newMessage", message);
       callback({ success: true, message });
     } catch (error) {
-      console.error("Error handling sendMessage:", error);
       if (error.code === "ATTACHMENT_CONFLICT") {
         return callback(ackError("ATTACHMENT_CONFLICT", error.message));
       }
+      if (error.code === "REPLY_TO_NOT_FOUND") {
+        return callback(ackError("REPLY_TO_NOT_FOUND", error.message));
+      }
+      console.error("Error handling sendMessage:", error);
       callback(ackError("INTERNAL_ERROR", "Internal server error."));
     }
   });
@@ -179,10 +193,11 @@ async function handleChatMessage(io, socket) {
           senderId: true,
           messageType: true,
           createdAt: true,
+          deletedAt: true,
         },
       });
 
-      if (!existing || existing.conversationId !== conversationId) {
+      if (!existing || existing.conversationId !== conversationId || existing.deletedAt !== null) {
         return callback(ackError("MESSAGE_NOT_FOUND", "Message not found."));
       }
       if (existing.senderId !== currentUserId) {
@@ -202,37 +217,58 @@ async function handleChatMessage(io, socket) {
         return callback(ackError("INVALID_CONTENT", "This message type cannot be edited."));
       }
 
-      const updatedMessage = await prisma.message.update({
-        where: { id: messageId },
-        data: {
-          content: nextContent,
-          editedAt: now,
-        },
-        include: {
-          sender: { select: { id: true, username: true, avatar: true } },
-          replyTo: {
-            select: {
-              id: true,
-              content: true,
-              messageType: true,
-              sender: { select: { id: true, username: true, avatar: true } },
+      const updatedMessage = await prisma.$transaction(async (tx) => {
+        const updateResult = await tx.message.updateMany({
+          where: {
+            id: messageId,
+            deletedAt: null,
+          },
+          data: {
+            content: nextContent,
+            editedAt: now,
+          },
+        });
+
+        if (updateResult.count !== 1) {
+          return null;
+        }
+
+        return tx.message.findUnique({
+          where: { id: messageId },
+          include: {
+            sender: { select: { id: true, username: true, avatar: true } },
+            replyTo: {
+              select: {
+                id: true,
+                content: true,
+                messageType: true,
+                sender: { select: { id: true, username: true, avatar: true } },
+              },
+            },
+            attachments: {
+              select: {
+                id: true,
+                url: true,
+                publicId: true,
+                mimeType: true,
+                sizeBytes: true,
+                width: true,
+                height: true,
+                originalFileName: true,
+                createdAt: true,
+              },
             },
           },
-          attachments: {
-            select: {
-              id: true,
-              url: true,
-              publicId: true,
-              mimeType: true,
-              sizeBytes: true,
-              width: true,
-              height: true,
-              originalFileName: true,
-              createdAt: true,
-            },
-          },
-        },
+        });
       });
+
+      if (!updatedMessage) {
+        return callback(ackError("MESSAGE_NOT_FOUND", "Message not found."));
+      }
+
+      if (updatedMessage.deletedAt !== null) {
+        return callback(ackError("MESSAGE_NOT_FOUND", "Message not found."));
+      }
 
       socket.join(getConversationRoom(conversationId));
       io.to(getConversationRoom(conversationId)).emit("messageUpdated", updatedMessage);

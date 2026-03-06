@@ -60,7 +60,7 @@ describe("chat.handler sendMessage (reply)", () => {
   });
 
   it("should reject when reply target is in another conversation", async () => {
-    prisma.message.findUnique.mockResolvedValue({ id: 99, conversationId: 2 });
+    prisma.message.findUnique.mockResolvedValue({ id: 99, conversationId: 2, deletedAt: null });
 
     await mockSocket._trigger(
       "sendMessage",
@@ -76,8 +76,29 @@ describe("chat.handler sendMessage (reply)", () => {
     expect(prisma.$transaction).not.toHaveBeenCalled();
   });
 
+  it("should reject when reply target is soft deleted", async () => {
+    prisma.message.findUnique.mockResolvedValue({
+      id: 99,
+      conversationId: 1,
+      deletedAt: new Date("2026-03-04T00:00:00.000Z"),
+    });
+
+    await mockSocket._trigger(
+      "sendMessage",
+      { conversationId: 1, content: "hello", replyToMessageId: 99 },
+      mockCallback,
+    );
+
+    expect(mockCallback).toHaveBeenCalledWith({
+      success: false,
+      code: "REPLY_TO_NOT_FOUND",
+      error: "Reply target not found.",
+    });
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
   it("should persist replyToMessageId and include minimal replyTo preview on success", async () => {
-    prisma.message.findUnique.mockResolvedValue({ id: 99, conversationId: 1 });
+    prisma.message.findUnique.mockResolvedValue({ id: 99, conversationId: 1, deletedAt: null });
 
     const createdMessage = {
       id: 1001,
@@ -92,10 +113,12 @@ describe("chat.handler sendMessage (reply)", () => {
         messageType: "TEXT",
         sender: { id: 2, username: "bob", avatar: null },
       },
+      deletedAt: null,
     };
 
     const tx = {
       message: {
+        findUnique: jest.fn().mockResolvedValue({ id: 99, deletedAt: null }),
         create: jest.fn().mockResolvedValue(createdMessage),
       },
       conversation: {
@@ -133,5 +156,37 @@ describe("chat.handler sendMessage (reply)", () => {
       }),
     );
     expect(mockCallback).toHaveBeenCalledWith({ success: true, message: expect.any(Object) });
+  });
+
+  it("should reject when reply target is deleted during transaction", async () => {
+    prisma.message.findUnique.mockResolvedValueOnce({ id: 99, conversationId: 1, deletedAt: null });
+
+    const tx = {
+      message: {
+        findUnique: jest.fn().mockResolvedValue({
+          id: 99,
+          deletedAt: new Date("2026-03-04T00:00:00.000Z"),
+        }),
+        create: jest.fn(),
+      },
+      conversation: {
+        update: jest.fn(),
+      },
+    };
+
+    prisma.$transaction.mockImplementation(async (callback) => callback(tx));
+
+    await mockSocket._trigger(
+      "sendMessage",
+      { conversationId: 1, content: "hello", replyToMessageId: 99 },
+      mockCallback,
+    );
+
+    expect(tx.message.create).not.toHaveBeenCalled();
+    expect(mockCallback).toHaveBeenCalledWith({
+      success: false,
+      code: "REPLY_TO_NOT_FOUND",
+      error: "Reply target not found.",
+    });
   });
 });
