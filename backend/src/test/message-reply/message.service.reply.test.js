@@ -26,7 +26,7 @@ describe("message.service getMessages (reply)", () => {
 
     expect(prisma.message.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { conversationId: 10 },
+        where: expect.objectContaining({ conversationId: 10, deletedAt: null }),
         include: expect.objectContaining({
           replyTo: {
             select: {

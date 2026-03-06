@@ -13,7 +13,7 @@ async function getMessages(conversationId, userId, before, limit) {
     throw createHTTPError(403, "Not a member of conversation");
   }
 
-  const where = { conversationId }; // Prepare query conditions
+  const where = { conversationId, deletedAt: null }; // Prepare query conditions
   if (before) {
     // If 'before' cursor is provided, add it to the conditions
     where.id = { lt: before }; // Fetch messages with IDs less than 'before'

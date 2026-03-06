@@ -30,6 +30,7 @@ async function getConversations(userId) {
             },
           },
           messages: {
+            where: { deletedAt: null },
             orderBy: { createdAt: "desc" },
             take: 1,
             select: {
