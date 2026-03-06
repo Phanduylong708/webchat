@@ -1,10 +1,12 @@
 import { findOrCreatePrivateConversation } from "../../api/services/conversation.service.js";
+import { deleteCloudAssetBestEffort } from "../../api/services/media.service.js";
 import { prisma } from "../../shared/prisma.js";
 import { verifyMembership } from "../helpers/helpers.js";
 import { getConversationRoom, getUserRoom } from "../helpers/helpers.js";
 import {
   parseSendMessagePayload,
   parseEditMessagePayload,
+  parseDeleteMessagePayload,
   ackError,
   validateAttachmentsPreflight,
 } from "../helpers/chat-message.util.js";
@@ -275,6 +277,129 @@ async function handleChatMessage(io, socket) {
       callback({ success: true, message: updatedMessage });
     } catch (error) {
       console.error("Error handling editMessage:", error);
+      callback(ackError("INTERNAL_ERROR", "Internal server error."));
+    }
+  });
+
+  socket.on("deleteMessage", async (payload, callback) => {
+    try {
+      if (typeof callback !== "function") return;
+
+      const parsed = parseDeleteMessagePayload(payload);
+      if (!parsed.ok) return callback(parsed.error);
+
+      const { conversationId, messageId } = parsed.data;
+      const currentUserId = socket.data.user.id;
+
+      const isMember = await verifyMembership(currentUserId, conversationId);
+      if (!isMember) {
+        return callback(ackError("NOT_A_MEMBER", "You are not a member of this conversation."));
+      }
+
+      const targetMessage = await prisma.message.findUnique({
+        where: { id: messageId },
+        select: {
+          id: true,
+          conversationId: true,
+          senderId: true,
+          deletedAt: true,
+          attachments: {
+            select: {
+              publicId: true,
+            },
+          },
+        },
+      });
+
+      if (!targetMessage || targetMessage.conversationId !== conversationId || targetMessage.deletedAt !== null) {
+        return callback(ackError("MESSAGE_NOT_FOUND", "Message not found."));
+      }
+      if (targetMessage.senderId !== currentUserId) {
+        return callback(ackError("NOT_OWNER", "You can only delete your own messages."));
+      }
+
+      const beforeLast = await prisma.message.findFirst({
+        where: { conversationId, deletedAt: null },
+        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+        select: { id: true },
+      });
+
+      const now = new Date();
+      const deleted = await prisma.$transaction(async (tx) => {
+        const updateResult = await tx.message.updateMany({
+          where: {
+            id: messageId,
+            deletedAt: null,
+          },
+          data: { deletedAt: now },
+        });
+
+        if (updateResult.count !== 1) {
+          return false;
+        }
+
+        await tx.message.updateMany({
+          where: { replyToMessageId: messageId },
+          data: { replyToMessageId: null },
+        });
+
+        return true;
+      });
+
+      if (!deleted) {
+        return callback(ackError("MESSAGE_NOT_FOUND", "Message not found."));
+      }
+
+      const payloadToEmit = {
+        conversationId,
+        messageId,
+      };
+
+      if (beforeLast?.id === messageId) {
+        const nextLastMessage = await prisma.message.findFirst({
+          where: { conversationId, deletedAt: null },
+          orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+          include: {
+            sender: { select: { id: true, username: true, avatar: true } },
+            replyTo: {
+              select: {
+                id: true,
+                content: true,
+                messageType: true,
+                sender: { select: { id: true, username: true, avatar: true } },
+              },
+            },
+            attachments: {
+              select: {
+                id: true,
+                url: true,
+                publicId: true,
+                mimeType: true,
+                sizeBytes: true,
+                width: true,
+                height: true,
+                originalFileName: true,
+                createdAt: true,
+              },
+            },
+          },
+        });
+
+        payloadToEmit.nextLastMessage = nextLastMessage ?? null;
+      }
+
+      socket.join(getConversationRoom(conversationId));
+      io.to(getConversationRoom(conversationId)).emit("messageDeleted", payloadToEmit);
+      callback({ success: true });
+
+      const publicIds = targetMessage.attachments
+        .map((attachment) => attachment.publicId)
+        .filter((publicId) => typeof publicId === "string" && publicId.length > 0);
+      if (publicIds.length > 0) {
+        void Promise.allSettled(publicIds.map((publicId) => deleteCloudAssetBestEffort(publicId)));
+      }
+    } catch (error) {
+      console.error("Error handling deleteMessage:", error);
       callback(ackError("INTERNAL_ERROR", "Internal server error."));
     }
   });

@@ -31,7 +31,7 @@ async function getConversations(userId) {
           },
           messages: {
             where: { deletedAt: null },
-            orderBy: { createdAt: "desc" },
+            orderBy: [{ createdAt: "desc" }, { id: "desc" }],
             take: 1,
             select: {
               id: true,
