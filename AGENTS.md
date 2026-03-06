@@ -8,7 +8,7 @@
 - Do not run destructive commands without asking for permission and explain. (eg: drop database (this can kill an entire system), delete files, etc.)
 
 ## CRITICAL: Code Change Approval Required
-
+Note: non critical docs are not counted as source code.
 Before ANY source code modification (create, edit, delete files), you MUST:
 
 1. **Explain what you plan to do** - list files to be created/modified/deleted

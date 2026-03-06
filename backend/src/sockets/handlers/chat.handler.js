@@ -49,7 +49,7 @@ async function handleChatMessage(io, socket) {
           return callback(ackError("NOT_A_MEMBER", "You are not a member of this conversation."));
         }
       }
-
+      // Validate Reply
       if (replyToMessageId !== null) {
         const replyTarget = await prisma.message.findUnique({
           where: { id: replyToMessageId },
