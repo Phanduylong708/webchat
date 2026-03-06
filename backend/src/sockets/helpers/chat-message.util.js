@@ -172,6 +172,31 @@ function parseEditMessagePayload(payload) {
   };
 }
 
+/**
+ * Parse and validate the deleteMessage payload IDs.
+ * Returns { ok, data?, error? }.
+ */
+function parseDeleteMessagePayload(payload) {
+  const raw = payload ?? {};
+  const conversationId = parseSocketInt(raw.conversationId ?? null);
+  const messageId = parseSocketInt(raw.messageId ?? null);
+
+  if (conversationId === null) {
+    return {
+      ok: false,
+      error: ackError("INVALID_CONVERSATION_ID", "conversationId must be a valid positive integer."),
+    };
+  }
+  if (messageId === null) {
+    return {
+      ok: false,
+      error: ackError("INVALID_MESSAGE_ID", "messageId must be a valid positive integer."),
+    };
+  }
+
+  return { ok: true, data: { conversationId, messageId } };
+}
+
 // ── Ack helper ──────────────────────────────────────────────────────────────
 
 /**
@@ -216,6 +241,7 @@ export {
   parseSocketInt,
   parseSendMessagePayload,
   parseEditMessagePayload,
+  parseDeleteMessagePayload,
   ackError,
   validateAttachmentsPreflight,
 };
