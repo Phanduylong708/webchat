@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { CornerUpLeft, MoreHorizontal, PencilLine } from "lucide-react";
+import { CornerUpLeft, MoreHorizontal, PencilLine, Trash2 } from "lucide-react";
 
 import type { DisplayMessage } from "@/types/chat.type";
 import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -9,6 +9,7 @@ type Props = {
   enabled: boolean;
   onReply?: (message: DisplayMessage) => void;
   onEdit?: (message: DisplayMessage) => void;
+  onDelete?: (message: DisplayMessage) => void;
   side?: "left" | "right";
   children: React.ReactNode;
 };
@@ -20,6 +21,7 @@ export default function MessageActionsMenu({
   enabled,
   onReply,
   onEdit,
+  onDelete,
   side = "left",
   children,
 }: Props) {
@@ -27,7 +29,8 @@ export default function MessageActionsMenu({
   const timerRef = useRef<number | null>(null);
   const longPressArmedRef = useRef(false);
 
-  const hasActions = typeof onReply === "function" || typeof onEdit === "function";
+  const hasActions =
+    typeof onReply === "function" || typeof onEdit === "function" || typeof onDelete === "function";
 
   const clearTimer = useCallback(() => {
     if (timerRef.current !== null) {
@@ -72,6 +75,10 @@ export default function MessageActionsMenu({
     onReply?.(message);
     setOpen(false);
   }, [message, onReply]);
+  const handleDelete = useCallback(() => {
+    onDelete?.(message);
+    setOpen(false);
+  }, [message, onDelete]);
 
   if (!enabled || !hasActions) {
     return <>{children}</>;
@@ -144,6 +151,16 @@ export default function MessageActionsMenu({
           >
             <PencilLine className="size-4 text-muted-foreground" />
             <span>Edit</span>
+          </button>
+        )}
+        {onDelete && (
+          <button
+            type="button"
+            onClick={handleDelete}
+            className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm text-destructive outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <Trash2 className="size-4 text-destructive" />
+            <span>Delete</span>
           </button>
         )}
       </PopoverContent>
