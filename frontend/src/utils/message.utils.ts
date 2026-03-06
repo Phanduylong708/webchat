@@ -127,6 +127,39 @@ export function updateMessageInMap(
   return updated;
 }
 
+// Clears loaded reply previews that point at a deleted message without reordering the list.
+export function clearReplyLinksInMap(
+  map: Map<number, DisplayMessage[]>,
+  conversationId: number,
+  deletedMessageId: number
+): Map<number, DisplayMessage[]> {
+  const messages = map.get(conversationId);
+  if (!messages) return map;
+
+  let didChange = false;
+  const nextMessages = messages.map((message) => {
+    const isReplyingToDeletedMessage =
+      message.replyToMessageId === deletedMessageId || message.replyTo?.id === deletedMessageId;
+
+    if (!isReplyingToDeletedMessage) {
+      return message;
+    }
+
+    didChange = true;
+    return {
+      ...message,
+      replyToMessageId: null,
+      replyTo: null,
+    };
+  });
+
+  if (!didChange) return map;
+
+  const updated = new Map(map);
+  updated.set(conversationId, nextMessages);
+  return updated;
+}
+
 export function buildOptimisticTextMessage({
   tempId,
   conversationId,

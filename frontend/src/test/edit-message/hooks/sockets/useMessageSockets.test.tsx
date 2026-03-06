@@ -79,4 +79,76 @@ describe("useMessageSockets", () => {
     expect(latest.get(1)?.[0].content).toBe("new");
     expect((latest.get(1)?.[0] as unknown as { _stableKey?: string })._stableKey).toBe("temp-1");
   });
+
+  it("removes deleted messages and clears reply links on messageDeleted", async () => {
+    const socket = new MockSocket();
+
+    const initial = new Map<number, DisplayMessage[]>([
+      [
+        1,
+        [
+          makeMessage({ id: 10, conversationId: 1, content: "target" }),
+          makeMessage({
+            id: 11,
+            conversationId: 1,
+            content: "reply",
+            replyToMessageId: 10,
+            replyTo: {
+              id: 10,
+              content: "target",
+              messageType: "TEXT",
+              sender: { id: 1, username: "alice", avatar: null },
+            },
+          }),
+        ],
+      ],
+    ]);
+
+    let latest = initial;
+
+    function Harness() {
+      const [state, setState] = useState(initial);
+      useMessageSockets({ socket: socket as unknown as never, setMessagesByConversation: setState });
+      useEffect(() => {
+        latest = state;
+      }, [state]);
+      return null;
+    }
+
+    render(<Harness />);
+    await act(async () => {});
+
+    act(() => {
+      socket.trigger("messageDeleted", { conversationId: 1, messageId: 10 });
+    });
+
+    expect((latest.get(1) ?? []).map((message) => message.id)).toEqual([11]);
+    expect(latest.get(1)?.[0].replyToMessageId).toBeNull();
+    expect(latest.get(1)?.[0].replyTo).toBeNull();
+  });
+
+  it("does not create an empty cache entry when messageDeleted arrives for an unloaded conversation", async () => {
+    const socket = new MockSocket();
+    const initial = new Map<number, DisplayMessage[]>([[1, [makeMessage({ id: 10, conversationId: 1 })]]]);
+    let latest = initial;
+
+    function Harness() {
+      const [state, setState] = useState(initial);
+      useMessageSockets({ socket: socket as unknown as never, setMessagesByConversation: setState });
+      useEffect(() => {
+        latest = state;
+      }, [state]);
+      return null;
+    }
+
+    render(<Harness />);
+    await act(async () => {});
+
+    act(() => {
+      socket.trigger("messageDeleted", { conversationId: 99, messageId: 10 });
+    });
+
+    expect(latest).toBe(initial);
+    expect(latest.has(99)).toBe(false);
+  });
 });
