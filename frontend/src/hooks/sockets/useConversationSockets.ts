@@ -18,6 +18,12 @@ type SystemMessageSetter = Dispatch<SetStateAction<Map<number, string>>>;
 
 type ActiveConversationSetter = Dispatch<SetStateAction<number | null>>;
 
+type MessageDeletedPayload = {
+  conversationId: number;
+  messageId: number;
+  nextLastMessage?: Messages | null;
+};
+
 interface UseConversationSocketsParams {
   socket: Socket | null;
   currentUserId: number | null;
@@ -127,6 +133,58 @@ export function useConversationSockets({
     socket.on("messageUpdated", handleMessageUpdated);
     return () => {
       socket.off("messageUpdated", handleMessageUpdated);
+    };
+  }, [socket, setConversations]);
+
+  // Backfill sidebar preview when the current last message gets deleted.
+  // No reordering: delete only changes preview content for the existing conversation row.
+  useEffect(() => {
+    if (!socket) return;
+    function handleMessageDeleted(payload: MessageDeletedPayload) {
+      setConversations((prev) => {
+        let didChange = false;
+
+        const nextConversations = prev.map((conversation) => {
+          if (conversation.id !== payload.conversationId) return conversation;
+          if (conversation.lastMessage?.id !== payload.messageId) return conversation;
+          if (!Object.prototype.hasOwnProperty.call(payload, "nextLastMessage")) {
+            return conversation;
+          }
+
+          didChange = true;
+          const nextLastMessage = payload.nextLastMessage;
+
+          if (nextLastMessage == null) {
+            return {
+              ...conversation,
+              lastMessage: null,
+            };
+          }
+
+          const previewText = derivePreviewText(nextLastMessage);
+          return {
+            ...conversation,
+            lastMessage: {
+              id: nextLastMessage.id,
+              content: nextLastMessage.content,
+              messageType: nextLastMessage.messageType,
+              previewText,
+              createdAt: nextLastMessage.createdAt,
+              sender: nextLastMessage.sender,
+              attachments: nextLastMessage.attachments?.map((attachment) => ({
+                mimeType: attachment.mimeType,
+              })),
+            },
+          };
+        });
+
+        return didChange ? nextConversations : prev;
+      });
+    }
+
+    socket.on("messageDeleted", handleMessageDeleted);
+    return () => {
+      socket.off("messageDeleted", handleMessageDeleted);
     };
   }, [socket, setConversations]);
 

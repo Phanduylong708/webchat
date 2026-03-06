@@ -39,6 +39,18 @@ function makeMessage(overrides: Partial<DisplayMessage> & { id: number; conversa
 
 afterEach(() => cleanup());
 
+function makeConversation(overrides: Partial<ConversationsResponse> & { id: number }): ConversationsResponse {
+  const { id, ...rest } = overrides;
+  return {
+    id,
+    title: null,
+    type: "PRIVATE",
+    otherUser: { id: id + 100, username: `user-${id}`, avatar: null },
+    lastMessage: null,
+    ...rest,
+  };
+}
+
 describe("useConversationSockets", () => {
   it("updates sidebar lastMessage preview on messageUpdated without reordering", async () => {
     const socket = new MockSocket();
@@ -119,5 +131,198 @@ describe("useConversationSockets", () => {
     expect(latest.map((c) => c.id)).toEqual([1, 2]);
     expect(latest[0].lastMessage?.content).toBe("new");
     expect(latest[0].lastMessage?.previewText).toBe("new");
+  });
+
+  it("backfills sidebar preview on messageDeleted without reordering conversations", async () => {
+    const socket = new MockSocket();
+
+    const initial: ConversationsResponse[] = [
+      makeConversation({
+        id: 1,
+        lastMessage: {
+          id: 10,
+          content: "preview",
+          messageType: "TEXT",
+          previewText: "preview",
+          createdAt: "2026-02-27T09:10:00.000Z",
+          sender: { id: 1, username: "alice", avatar: null },
+          attachments: [],
+        },
+      }),
+      makeConversation({
+        id: 2,
+        lastMessage: {
+          id: 20,
+          content: "later",
+          messageType: "TEXT",
+          previewText: "later",
+          createdAt: "2026-02-27T09:15:00.000Z",
+          sender: { id: 2, username: "bob", avatar: null },
+          attachments: [],
+        },
+      }),
+    ];
+
+    let latest = initial;
+
+    function Harness() {
+      const [conversations, setConversations] = useState(initial);
+      const [, setTypingByConversation] = useState(new Map());
+      const [, setSystemMessages] = useState(new Map());
+      const [, setActiveConversationId] = useState<number | null>(null);
+
+      useConversationSockets({
+        socket: socket as unknown as never,
+        currentUserId: 1,
+        setConversations,
+        setTypingByConversation,
+        setSystemMessages,
+        setActiveConversationId,
+      });
+
+      useEffect(() => {
+        latest = conversations;
+      }, [conversations]);
+
+      return null;
+    }
+
+    render(<Harness />);
+    await act(async () => {});
+
+    act(() => {
+      socket.trigger("messageDeleted", {
+        conversationId: 1,
+        messageId: 10,
+        nextLastMessage: makeMessage({
+          id: 9,
+          conversationId: 1,
+          content: "older",
+          createdAt: "2026-02-27T09:05:00.000Z",
+        }),
+      });
+    });
+
+    expect(latest.map((conversation) => conversation.id)).toEqual([1, 2]);
+    expect(latest[0].lastMessage?.id).toBe(9);
+    expect(latest[0].lastMessage?.previewText).toBe("older");
+    expect(latest[1].lastMessage?.id).toBe(20);
+  });
+
+  it("sets lastMessage to null when deleting the final preview message", async () => {
+    const socket = new MockSocket();
+
+    const initial: ConversationsResponse[] = [
+      makeConversation({
+        id: 1,
+        lastMessage: {
+          id: 10,
+          content: "preview",
+          messageType: "TEXT",
+          previewText: "preview",
+          createdAt: "2026-02-27T09:10:00.000Z",
+          sender: { id: 1, username: "alice", avatar: null },
+          attachments: [],
+        },
+      }),
+    ];
+
+    let latest = initial;
+
+    function Harness() {
+      const [conversations, setConversations] = useState(initial);
+      const [, setTypingByConversation] = useState(new Map());
+      const [, setSystemMessages] = useState(new Map());
+      const [, setActiveConversationId] = useState<number | null>(null);
+
+      useConversationSockets({
+        socket: socket as unknown as never,
+        currentUserId: 1,
+        setConversations,
+        setTypingByConversation,
+        setSystemMessages,
+        setActiveConversationId,
+      });
+
+      useEffect(() => {
+        latest = conversations;
+      }, [conversations]);
+
+      return null;
+    }
+
+    render(<Harness />);
+    await act(async () => {});
+
+    act(() => {
+      socket.trigger("messageDeleted", {
+        conversationId: 1,
+        messageId: 10,
+        nextLastMessage: null,
+      });
+    });
+
+    expect(latest[0].lastMessage).toBeNull();
+  });
+
+  it("ignores messageDeleted when the deleted message is not the current preview", async () => {
+    const socket = new MockSocket();
+
+    const initial: ConversationsResponse[] = [
+      makeConversation({
+        id: 1,
+        lastMessage: {
+          id: 10,
+          content: "preview",
+          messageType: "TEXT",
+          previewText: "preview",
+          createdAt: "2026-02-27T09:10:00.000Z",
+          sender: { id: 1, username: "alice", avatar: null },
+          attachments: [],
+        },
+      }),
+    ];
+
+    let latest = initial;
+
+    function Harness() {
+      const [conversations, setConversations] = useState(initial);
+      const [, setTypingByConversation] = useState(new Map());
+      const [, setSystemMessages] = useState(new Map());
+      const [, setActiveConversationId] = useState<number | null>(null);
+
+      useConversationSockets({
+        socket: socket as unknown as never,
+        currentUserId: 1,
+        setConversations,
+        setTypingByConversation,
+        setSystemMessages,
+        setActiveConversationId,
+      });
+
+      useEffect(() => {
+        latest = conversations;
+      }, [conversations]);
+
+      return null;
+    }
+
+    render(<Harness />);
+    await act(async () => {});
+
+    act(() => {
+      socket.trigger("messageDeleted", {
+        conversationId: 1,
+        messageId: 999,
+        nextLastMessage: makeMessage({
+          id: 9,
+          conversationId: 1,
+          content: "older",
+        }),
+      });
+    });
+
+    expect(latest).toBe(initial);
+    expect(latest[0].lastMessage?.id).toBe(10);
   });
 });
