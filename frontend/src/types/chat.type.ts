@@ -25,6 +25,21 @@ export interface PinSummary {
   latestPinnedMessage: LatestPinnedMessageSummary | null;
 }
 
+export interface PinnedMessageItem {
+  messageId: number;
+  conversationId: number;
+  pinnedAt: string;
+  pinnedBy: User;
+  message: {
+    id: number;
+    content: string | null;
+    messageType: MessageType;
+    createdAt: string;
+    sender: User;
+    attachments: Pick<AttachmentItem, "id" | "url" | "mimeType" | "originalFileName">[];
+  };
+}
+
 export type ReplyToPreview = {
   id: number;
   content: string | null;

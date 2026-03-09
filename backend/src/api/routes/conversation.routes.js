@@ -2,6 +2,7 @@ import { Router } from "express";
 import {
   getConversationsController,
   getConversationDetailsController,
+  getConversationPinsController,
   createGroupConversationController,
   addMemberToGroupController,
   leaveGroupController,
@@ -13,6 +14,12 @@ import { passport } from "../../shared/config/passport.config.js";
 export const conversationRoute = Router();
 
 conversationRoute.get("/", passport.authenticate("jwt", { session: false }), getConversationsController);
+
+conversationRoute.get(
+  "/:conversationId/pins",
+  passport.authenticate("jwt", { session: false }),
+  getConversationPinsController,
+);
 
 conversationRoute.get(
   "/:conversationId",

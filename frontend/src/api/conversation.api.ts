@@ -1,6 +1,11 @@
 import { api } from "@/lib/axios.config";
 import { handleApiError } from "@/utils/apiError.util";
-import type { ResponseType, ConversationsResponse, ConversationsDetail} from "@/types/chat.type";
+import type {
+  ResponseType,
+  ConversationsResponse,
+  ConversationsDetail,
+  PinnedMessageItem,
+} from "@/types/chat.type";
 
 async function getConversations(): Promise<ConversationsResponse[]> {
     try {
@@ -17,6 +22,15 @@ async function getConversationsDetails(conversationsId: number): Promise<Convers
         const response: ResponseType<{ conversation: ConversationsDetail }> = await api.get(`/conversations/${conversationsId}`);
         const conversation = response.data.conversation;
         return conversation;
+    } catch (error) {
+        throw handleApiError(error);
+    }
+}
+
+async function getConversationPins(conversationId: number): Promise<PinnedMessageItem[]> {
+    try {
+        const response: ResponseType<{ pins: PinnedMessageItem[] }> = await api.get(`/conversations/${conversationId}/pins`);
+        return response.data.pins;
     } catch (error) {
         throw handleApiError(error);
     }
@@ -63,4 +77,13 @@ async function startPrivateChatApi(recipientId: number): Promise<{ conversationI
     }
 }
 
-export { getConversations, getConversationsDetails, addMemberApi, createGroupApi, leaveGroupApi, removeMemberApi, startPrivateChatApi };
+export {
+    getConversations,
+    getConversationsDetails,
+    getConversationPins,
+    addMemberApi,
+    createGroupApi,
+    leaveGroupApi,
+    removeMemberApi,
+    startPrivateChatApi,
+};

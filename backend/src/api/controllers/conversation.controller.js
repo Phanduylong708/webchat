@@ -1,6 +1,7 @@
 import {
   getConversations,
   getConversationDetails,
+  getConversationPins,
   createGroupConversation,
   addMemberToGroup,
   leaveGroup,
@@ -34,6 +35,21 @@ async function getConversationDetailsController(req, res, next) {
       statusCode: 200,
       data: { conversation: conversationDetails },
       message: "Conversation details retrieved successfully",
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+async function getConversationPinsController(req, res, next) {
+  try {
+    const conversationId = parseId(req.params.conversationId, "conversation ID");
+    const currentUserId = req.user.id;
+    const pins = await getConversationPins(conversationId, currentUserId);
+    return sendSuccess(res, {
+      statusCode: 200,
+      data: { pins },
+      message: "Pinned messages retrieved successfully",
     });
   } catch (error) {
     next(error);
@@ -196,6 +212,7 @@ async function startPrivateConversationController(req, res, next) {
 export {
   getConversationsController,
   getConversationDetailsController,
+  getConversationPinsController,
   createGroupConversationController,
   addMemberToGroupController,
   leaveGroupController,

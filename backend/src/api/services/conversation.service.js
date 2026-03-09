@@ -248,6 +248,59 @@ async function getConversationDetails(conversationId, userId) {
   };
 }
 
+async function getConversationPins(conversationId, userId) {
+  const isMember = await prisma.conversationMember.findUnique({
+    where: {
+      userId_conversationId: { userId, conversationId },
+    },
+  });
+
+  if (!isMember) {
+    throw createHTTPError(403, "Not a member of conversation");
+  }
+
+  const pins = await prisma.conversationPin.findMany({
+    where: {
+      conversationId,
+      message: {
+        deletedAt: null,
+      },
+    },
+    orderBy: [{ pinnedAt: "desc" }, { id: "desc" }],
+    take: 10,
+    select: {
+      messageId: true,
+      conversationId: true,
+      pinnedAt: true,
+      pinnedBy: {
+        select: { id: true, username: true, avatar: true },
+      },
+      message: {
+        select: {
+          id: true,
+          content: true,
+          messageType: true,
+          createdAt: true,
+          sender: {
+            select: { id: true, username: true, avatar: true },
+          },
+          attachments: {
+            take: 1,
+            select: {
+              id: true,
+              url: true,
+              mimeType: true,
+              originalFileName: true,
+            },
+          },
+        },
+      },
+    },
+  });
+
+  return pins;
+}
+
 async function createGroupConversation(userId, title, memberIds) {
   //validate title
   if (!title || title.trim().length === 0) {
@@ -494,6 +547,7 @@ export {
   buildPinSummary,
   getConversations,
   getConversationDetails,
+  getConversationPins,
   createGroupConversation,
   addMemberToGroup,
   leaveGroup,
