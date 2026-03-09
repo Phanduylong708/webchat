@@ -15,7 +15,34 @@ function derivePreviewText(message) {
     if (firstAttachment.mimeType.startsWith("video/")) return "video";
     return "file";
   }
-  return "";
+  switch (message.messageType) {
+    case "IMAGE":
+      return "image";
+    case "VIDEO":
+      return "video";
+    case "FILE":
+      return "file";
+    default:
+      return "";
+  }
+}
+
+function buildPinSummary(pinnedCount, latestPin) {
+  if (!pinnedCount) {
+    return null;
+  }
+
+  return {
+    pinnedCount,
+    latestPinnedMessage: latestPin
+      ? {
+          id: latestPin.message.id,
+          previewText: derivePreviewText(latestPin.message),
+          messageType: latestPin.message.messageType,
+          pinnedAt: latestPin.pinnedAt.toISOString(),
+        }
+      : null,
+  };
 }
 
 async function getConversations(userId) {
@@ -46,6 +73,32 @@ async function getConversations(userId) {
               },
             },
           },
+          pins: {
+            where: { message: { deletedAt: null } },
+            orderBy: [{ pinnedAt: "desc" }, { id: "desc" }],
+            take: 1,
+            select: {
+              pinnedAt: true,
+              message: {
+                select: {
+                  id: true,
+                  content: true,
+                  messageType: true,
+                  attachments: {
+                    take: 1,
+                    select: { mimeType: true },
+                  },
+                },
+              },
+            },
+          },
+          _count: {
+            select: {
+              pins: {
+                where: { message: { deletedAt: null } },
+              },
+            },
+          },
         },
       },
     },
@@ -62,6 +115,7 @@ async function getConversations(userId) {
           previewText: derivePreviewText(rawLastMessage),
         }
       : null;
+    const pinSummary = buildPinSummary(conversation._count.pins, conversation.pins[0] ?? null);
 
     // If this is a PRIVATE conversation (1-on-1 chat)
     if (conversation.type === "PRIVATE") {
@@ -87,6 +141,8 @@ async function getConversations(userId) {
             }
           : null,
         lastMessage,
+        pinSummary,
+        pinPermission: conversation.pinPermission,
       };
     }
 
@@ -115,6 +171,8 @@ async function getConversations(userId) {
       memberCount: conversation.members.length,
       previewMembers,
       lastMessage,
+      pinSummary,
+      pinPermission: conversation.pinPermission,
     };
   });
 
@@ -140,6 +198,32 @@ async function getConversationDetails(conversationId, userId) {
           },
         },
       },
+      pins: {
+        where: { message: { deletedAt: null } },
+        orderBy: [{ pinnedAt: "desc" }, { id: "desc" }],
+        take: 1,
+        select: {
+          pinnedAt: true,
+          message: {
+            select: {
+              id: true,
+              content: true,
+              messageType: true,
+              attachments: {
+                take: 1,
+                select: { mimeType: true },
+              },
+            },
+          },
+        },
+      },
+      _count: {
+        select: {
+          pins: {
+            where: { message: { deletedAt: null } },
+          },
+        },
+      },
     },
   });
 
@@ -159,6 +243,8 @@ async function getConversationDetails(conversationId, userId) {
     title: conversation.title,
     creatorId: conversation.creatorId,
     members,
+    pinSummary: buildPinSummary(conversation._count.pins, conversation.pins[0] ?? null),
+    pinPermission: conversation.pinPermission,
   };
 }
 
@@ -276,13 +362,7 @@ async function addMemberToGroup(conversationId, currentUserId, newUserId) {
   return {
     conversationId,
     member: newUser,
-    conversation: {
-      id: updatedConversation.id,
-      type: updatedConversation.type,
-      title: updatedConversation.title,
-      creatorId: updatedConversation.creatorId,
-      members: updatedConversation.members,
-    },
+    conversation: updatedConversation,
   };
 }
 
@@ -411,6 +491,7 @@ async function findOrCreatePrivateConversation(userId, recipientId) {
 }
 
 export {
+  buildPinSummary,
   getConversations,
   getConversationDetails,
   createGroupConversation,

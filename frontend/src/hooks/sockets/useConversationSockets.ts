@@ -268,6 +268,8 @@ export function useConversationSockets({
           title: null,
           type: "PRIVATE",
           otherUser,
+          pinSummary: conv.pinSummary,
+          pinPermission: conv.pinPermission,
           lastMessage: null,
         };
       } else {
@@ -280,6 +282,8 @@ export function useConversationSockets({
           type: "GROUP",
           memberCount: conv.members.length,
           previewMembers,
+          pinSummary: conv.pinSummary,
+          pinPermission: conv.pinPermission,
           lastMessage: null,
         };
       }

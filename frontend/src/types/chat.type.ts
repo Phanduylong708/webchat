@@ -11,6 +11,19 @@ export interface User {
 }
 
 export type MessageType = "TEXT" | "IMAGE" | "VIDEO" | "FILE";
+export type PinPermission = "ALL_MEMBERS" | "CREATOR_ONLY";
+
+export interface LatestPinnedMessageSummary {
+  id: number;
+  previewText: string;
+  messageType: MessageType;
+  pinnedAt: string;
+}
+
+export interface PinSummary {
+  pinnedCount: number;
+  latestPinnedMessage: LatestPinnedMessageSummary | null;
+}
 
 export type ReplyToPreview = {
   id: number;
@@ -48,6 +61,8 @@ export interface ConversationsResponse {
   otherUser?: User;
   memberCount?: number;
   previewMembers?: User[];
+  pinSummary?: PinSummary | null;
+  pinPermission?: PinPermission;
   lastMessage: {
     id: number;
     content: string | null;
@@ -60,11 +75,13 @@ export interface ConversationsResponse {
 }
 
 export interface ConversationsDetail {
-    id: number;
-    title: string | null;
-    type: "PRIVATE" | "GROUP";
-    members: User[];
-    creatorId: number;
+  id: number;
+  title: string | null;
+  type: "PRIVATE" | "GROUP";
+  members: User[];
+  creatorId: number;
+  pinSummary: PinSummary | null;
+  pinPermission: PinPermission;
 }
 
 
