@@ -23,6 +23,7 @@ model User {
   friendshipsAsUser2   Friendship[]         @relation("FriendshipsAsUser2")
   messages             Message[]
   attachmentsUploaded  MessageAttachment[]
+  createdPins          ConversationPin[]    @relation("CreatedPins")
 }
 
 model Message {
@@ -40,6 +41,9 @@ model Message {
   replyTo          Message?            @relation("MessageReplies", fields: [replyToMessageId], references: [id], onDelete: SetNull)
   replies          Message[]           @relation("MessageReplies")
   attachments      MessageAttachment[]
+  pins             ConversationPin[]
+
+  @@unique([id, conversationId])
 }
 
 model MessageAttachment {
@@ -65,15 +69,31 @@ model MessageAttachment {
 }
 
 model Conversation {
-  id        Int                  @id @default(autoincrement())
-  title     String?
-  type      Type                 @default(PRIVATE)
-  creatorId Int
-  createdAt DateTime             @default(now())
-  updatedAt DateTime             @updatedAt
-  creator   User                 @relation("CreatedConversations", fields: [creatorId], references: [id], onDelete: Cascade)
-  members   ConversationMember[]
-  messages  Message[]
+  id            Int                  @id @default(autoincrement())
+  title         String?
+  type          Type                 @default(PRIVATE)
+  creatorId     Int
+  pinPermission PinPermission        @default(ALL_MEMBERS)
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+  creator       User                 @relation("CreatedConversations", fields: [creatorId], references: [id], onDelete: Cascade)
+  members       ConversationMember[]
+  messages      Message[]
+  pins          ConversationPin[]
+}
+
+model ConversationPin {
+  id             Int          @id @default(autoincrement())
+  conversationId Int
+  messageId      Int
+  pinnedByUserId Int
+  pinnedAt       DateTime     @default(now())
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  message        Message      @relation(fields: [messageId, conversationId], references: [id, conversationId], onDelete: Cascade)
+  pinnedBy       User         @relation("CreatedPins", fields: [pinnedByUserId], references: [id], onDelete: Cascade)
+
+  @@unique([conversationId, messageId])
+  @@index([conversationId, pinnedAt])
 }
 
 model ConversationMember {
@@ -113,4 +133,9 @@ enum MessageType {
 enum AttachmentStatus {
   PENDING
   ATTACHED
+}
+
+enum PinPermission {
+  ALL_MEMBERS
+  CREATOR_ONLY
 }
