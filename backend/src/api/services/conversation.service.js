@@ -27,6 +27,19 @@ function derivePreviewText(message) {
   }
 }
 
+function serializeLatestPinnedMessage(latestPin) {
+  if (!latestPin) {
+    return null;
+  }
+
+  return {
+    id: latestPin.message.id,
+    previewText: derivePreviewText(latestPin.message),
+    messageType: latestPin.message.messageType,
+    pinnedAt: latestPin.pinnedAt.toISOString(),
+  };
+}
+
 function buildPinSummary(pinnedCount, latestPin) {
   if (!pinnedCount) {
     return null;
@@ -34,14 +47,7 @@ function buildPinSummary(pinnedCount, latestPin) {
 
   return {
     pinnedCount,
-    latestPinnedMessage: latestPin
-      ? {
-          id: latestPin.message.id,
-          previewText: derivePreviewText(latestPin.message),
-          messageType: latestPin.message.messageType,
-          pinnedAt: latestPin.pinnedAt.toISOString(),
-        }
-      : null,
+    latestPinnedMessage: serializeLatestPinnedMessage(latestPin),
   };
 }
 
@@ -544,6 +550,7 @@ async function findOrCreatePrivateConversation(userId, recipientId) {
 }
 
 export {
+  serializeLatestPinnedMessage,
   buildPinSummary,
   getConversations,
   getConversationDetails,
