@@ -22,6 +22,8 @@ interface MessageItemProps {
   onRequestEdit?: (message: DisplayMessage) => void;
   onRequestReply?: (message: DisplayMessage) => void;
   onRequestDelete?: (message: DisplayMessage) => void;
+  onRequestPin?: (message: DisplayMessage) => void;
+  onRequestUnpin?: (message: DisplayMessage) => void;
 }
 
 const REPLY_HIGHLIGHT_TIMEOUT_MS = 800;
@@ -211,6 +213,8 @@ export default function MessageItem({
   onRequestEdit,
   onRequestReply,
   onRequestDelete,
+  onRequestPin,
+  onRequestUnpin,
 }: MessageItemProps): React.JSX.Element {
   const timestamp = new Date(message.createdAt).toLocaleTimeString("en-US", {
     hour: "2-digit",
@@ -260,6 +264,8 @@ export default function MessageItem({
             onReply={onRequestReply}
             onEdit={canEdit ? onRequestEdit : undefined}
             onDelete={canDelete ? onRequestDelete : undefined}
+            onPin={onRequestPin}
+            onUnpin={onRequestUnpin}
             side="left"
           >
             <div
@@ -311,7 +317,14 @@ export default function MessageItem({
         {isFirstInGroup && (
           <span className="text-xs text-muted-foreground mb-1">{message.sender.username}</span>
         )}
-        <MessageActionsMenu message={message} enabled={canOpenActions} onReply={onRequestReply} side="right">
+        <MessageActionsMenu
+          message={message}
+          enabled={canOpenActions}
+          onReply={onRequestReply}
+          onPin={onRequestPin}
+          onUnpin={onRequestUnpin}
+          side="right"
+        >
           <MessageContent
             message={message}
             bubbleClassName="bg-muted text-foreground px-3 py-2 rounded-tl-2xl rounded-tr-2xl rounded-br-2xl"

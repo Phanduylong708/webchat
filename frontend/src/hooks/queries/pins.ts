@@ -16,6 +16,7 @@ type PinMessageAck = {
 };
 
 const PIN_ACK_TIMEOUT_MS = 12_000;
+const CONVERSATION_PINS_STALE_TIME_MS = 30_000;
 
 const conversationPinsQueryKey = (conversationId: number) => ["conversation-pins", conversationId] as const;
 
@@ -24,6 +25,7 @@ export function useConversationPinsQuery(conversationId: number, enabled: boolea
     queryKey: conversationPinsQueryKey(conversationId),
     queryFn: () => getConversationPins(conversationId),
     enabled: enabled && Number.isInteger(conversationId) && conversationId > 0,
+    staleTime: CONVERSATION_PINS_STALE_TIME_MS,
     retry: false,
   });
 }

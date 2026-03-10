@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { CornerUpLeft, MoreHorizontal, PencilLine, Trash2 } from "lucide-react";
+import { CornerUpLeft, MoreHorizontal, PencilLine, Pin, PinOff, Trash2 } from "lucide-react";
 
 import type { DisplayMessage } from "@/types/chat.type";
 import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -10,6 +10,8 @@ type Props = {
   onReply?: (message: DisplayMessage) => void;
   onEdit?: (message: DisplayMessage) => void;
   onDelete?: (message: DisplayMessage) => void;
+  onPin?: (message: DisplayMessage) => void;
+  onUnpin?: (message: DisplayMessage) => void;
   side?: "left" | "right";
   children: React.ReactNode;
 };
@@ -22,6 +24,8 @@ export default function MessageActionsMenu({
   onReply,
   onEdit,
   onDelete,
+  onPin,
+  onUnpin,
   side = "left",
   children,
 }: Props) {
@@ -30,7 +34,11 @@ export default function MessageActionsMenu({
   const longPressArmedRef = useRef(false);
 
   const hasActions =
-    typeof onReply === "function" || typeof onEdit === "function" || typeof onDelete === "function";
+    typeof onReply === "function" ||
+    typeof onEdit === "function" ||
+    typeof onDelete === "function" ||
+    typeof onPin === "function" ||
+    typeof onUnpin === "function";
 
   const clearTimer = useCallback(() => {
     if (timerRef.current !== null) {
@@ -79,6 +87,14 @@ export default function MessageActionsMenu({
     onDelete?.(message);
     setOpen(false);
   }, [message, onDelete]);
+  const handlePin = useCallback(() => {
+    onPin?.(message);
+    setOpen(false);
+  }, [message, onPin]);
+  const handleUnpin = useCallback(() => {
+    onUnpin?.(message);
+    setOpen(false);
+  }, [message, onUnpin]);
 
   if (!enabled || !hasActions) {
     return <>{children}</>;
@@ -163,6 +179,26 @@ export default function MessageActionsMenu({
             <span>Delete</span>
           </button>
         )}
+        {onUnpin ? (
+          <button
+            type="button"
+            onClick={handleUnpin}
+            className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm text-foreground outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <PinOff className="size-4 text-muted-foreground" />
+            <span>Unpin</span>
+          </button>
+        ) : null}
+        {!onUnpin && onPin ? (
+          <button
+            type="button"
+            onClick={handlePin}
+            className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm text-foreground outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <Pin className="size-4 text-muted-foreground" />
+            <span>Pin</span>
+          </button>
+        ) : null}
       </PopoverContent>
     </Popover>
   );

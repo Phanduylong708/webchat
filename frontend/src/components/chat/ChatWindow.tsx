@@ -14,6 +14,8 @@ import PinnedMessagesBanner from "./PinnedMessagesBanner";
 import PinnedMessagesPanel from "./PinnedMessagesPanel";
 import type { DeleteMessageTarget } from "./DeleteMessageDialog";
 import { CallButton } from "@/components/call/CallButton";
+import { useConversationPinsQuery, usePinMessageMutation, useUnpinMessageMutation } from "@/hooks/queries/pins";
+import { toast } from "sonner";
 
 type MessageDeletedPayload = {
   conversationId: number;
@@ -24,6 +26,9 @@ function ChatWindow(): React.JSX.Element {
   const { conversations, activeConversationId, onlineUsers, systemMessages } = useConversation();
   const { socket } = useSocket();
   const activeConversations = conversations.find((c) => c.id === activeConversationId);
+  const pinsQuery = useConversationPinsQuery(activeConversationId ?? -1, true);
+  const pinMessageMutation = usePinMessageMutation();
+  const unpinMessageMutation = useUnpinMessageMutation();
 
   const [editTarget, setEditTarget] = useState<{
     conversationId: number;
@@ -93,6 +98,40 @@ function ChatWindow(): React.JSX.Element {
       messageId: message.id,
     });
   }, []);
+
+  const handleRequestPin = useCallback(
+    async (message: DisplayMessage) => {
+      if ("_optimistic" in message) return;
+
+      try {
+        await pinMessageMutation.mutateAsync({
+          conversationId: message.conversationId,
+          messageId: message.id,
+        });
+      } catch (error) {
+        const messageText = error instanceof Error ? error.message : "Failed to pin message";
+        toast.error(messageText);
+      }
+    },
+    [pinMessageMutation],
+  );
+
+  const handleRequestUnpin = useCallback(
+    async (message: DisplayMessage) => {
+      if ("_optimistic" in message) return;
+
+      try {
+        await unpinMessageMutation.mutateAsync({
+          conversationId: message.conversationId,
+          messageId: message.id,
+        });
+      } catch (error) {
+        const messageText = error instanceof Error ? error.message : "Failed to unpin message";
+        toast.error(messageText);
+      }
+    },
+    [unpinMessageMutation],
+  );
 
   const handleDeleteDialogOpenChange = useCallback((open: boolean) => {
     if (!open) {
@@ -173,6 +212,7 @@ function ChatWindow(): React.JSX.Element {
 
   const showGroupButtons = isGroup;
   const systemMessage = systemMessages.get(activeConversations.id);
+  const pinnedMessageIds = new Set((pinsQuery.data ?? []).map((item) => item.messageId));
 
   // Build avatar(s) for the header
   const previewMembers = activeConversations.previewMembers ?? [];
@@ -237,6 +277,9 @@ function ChatWindow(): React.JSX.Element {
         onRequestEdit={handleRequestEdit}
         onRequestReply={handleRequestReply}
         onRequestDelete={handleRequestDelete}
+        onRequestPin={handleRequestPin}
+        onRequestUnpin={handleRequestUnpin}
+        pinnedMessageIds={pinnedMessageIds}
         editingMessageId={editTarget?.messageId ?? null}
       />{" "}
       {/* message list */}

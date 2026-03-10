@@ -10,6 +10,9 @@ type Props = {
   onRequestEdit?: (message: DisplayMessage) => void;
   onRequestReply?: (message: DisplayMessage) => void;
   onRequestDelete?: (message: DisplayMessage) => void;
+  onRequestPin?: (message: DisplayMessage) => void;
+  onRequestUnpin?: (message: DisplayMessage) => void;
+  pinnedMessageIds?: ReadonlySet<number>;
   editingMessageId?: number | null;
 };
 
@@ -17,6 +20,9 @@ export default function MessageList({
   onRequestEdit,
   onRequestReply,
   onRequestDelete,
+  onRequestPin,
+  onRequestUnpin,
+  pinnedMessageIds,
   editingMessageId = null,
 }: Props) {
   const { messagesByConversation, loadingMessages, loadOlderMessages, pagination, error } = useMessage();
@@ -64,6 +70,7 @@ export default function MessageList({
           const nextMessage = messages[index + 1];
           const isFirstInGroup = !prevMessage || prevMessage.senderId !== message.senderId;
           const isLastInGroup = !nextMessage || nextMessage.senderId !== message.senderId;
+          const isPinned = pinnedMessageIds?.has(message.id) ?? false;
           const stableKey = "_stableKey" in message
             ? String(message._stableKey)
             : String(message.id);
@@ -82,6 +89,8 @@ export default function MessageList({
                 onRequestEdit={onRequestEdit}
                 onRequestReply={onRequestReply}
                 onRequestDelete={onRequestDelete}
+                onRequestPin={!isPinned ? onRequestPin : undefined}
+                onRequestUnpin={isPinned ? onRequestUnpin : undefined}
               />
             </div>
           );
