@@ -18,6 +18,10 @@ jest.mock("../../shared/prisma.js", () => ({
       update: jest.fn(),
       updateMany: jest.fn(),
     },
+    conversationPin: {
+      count: jest.fn(),
+      findFirst: jest.fn(),
+    },
   },
 }));
 
@@ -49,6 +53,11 @@ describe("chat.handler deleteMessage", () => {
       callback({
         message: {
           updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+        },
+        conversationPin: {
+          deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
+          count: jest.fn().mockResolvedValue(0),
+          findFirst: jest.fn().mockResolvedValue(null),
         },
       }),
     );
@@ -209,6 +218,11 @@ describe("chat.handler deleteMessage", () => {
           .mockResolvedValueOnce({ count: 0 })
           .mockResolvedValueOnce({ count: 0 }),
       },
+      conversationPin: {
+        deleteMany: jest.fn(),
+        count: jest.fn(),
+        findFirst: jest.fn(),
+      },
     };
     prisma.$transaction.mockImplementation(async (callback) => callback(tx));
 
@@ -261,6 +275,11 @@ describe("chat.handler deleteMessage", () => {
           .mockResolvedValueOnce({ count: 1 })
           .mockResolvedValueOnce({ count: 3 }),
       },
+      conversationPin: {
+        deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
+        count: jest.fn(),
+        findFirst: jest.fn(),
+      },
     };
     prisma.$transaction.mockImplementation(async (callback) => callback(tx));
     deleteCloudAssetBestEffort.mockResolvedValue(true);
@@ -282,6 +301,9 @@ describe("chat.handler deleteMessage", () => {
       where: { replyToMessageId: 10 },
       data: { replyToMessageId: null },
     });
+    expect(tx.conversationPin.deleteMany).toHaveBeenCalledWith({
+      where: { conversationId: 1, messageId: 10 },
+    });
     expect(mockSocket.join).toHaveBeenCalledWith("conversation_1");
     expect(mockIo.to).toHaveBeenCalledWith("conversation_1");
     expect(mockIo._mockEmit).toHaveBeenCalledWith("messageDeleted", {
@@ -289,6 +311,7 @@ describe("chat.handler deleteMessage", () => {
       messageId: 10,
       nextLastMessage: expect.objectContaining({ id: 9 }),
     });
+    expect(mockIo._mockEmit).not.toHaveBeenCalledWith("messageUnpinned", expect.anything());
     expect(mockCallback).toHaveBeenCalledWith({ success: true });
     expect(deleteCloudAssetBestEffort).toHaveBeenCalledWith("chat/asset-1");
   });
@@ -310,6 +333,11 @@ describe("chat.handler deleteMessage", () => {
           .mockResolvedValueOnce({ count: 1 })
           .mockResolvedValueOnce({ count: 0 }),
       },
+      conversationPin: {
+        deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
+        count: jest.fn(),
+        findFirst: jest.fn(),
+      },
     };
     prisma.$transaction.mockImplementation(async (callback) => callback(tx));
 
@@ -324,6 +352,110 @@ describe("chat.handler deleteMessage", () => {
       messageId: 10,
       nextLastMessage: null,
     });
+    expect(mockCallback).toHaveBeenCalledWith({ success: true });
+  });
+
+  it("removes the pin row and recomputes pinSummary when deleting the newest pinned message", async () => {
+    prisma.message.findUnique.mockResolvedValue({
+      id: 10,
+      conversationId: 1,
+      senderId: 1,
+      deletedAt: null,
+      attachments: [],
+    });
+    prisma.message.findFirst.mockResolvedValueOnce({ id: 10 }).mockResolvedValueOnce(null);
+
+    const tx = {
+      message: {
+        updateMany: jest
+          .fn()
+          .mockResolvedValueOnce({ count: 1 })
+          .mockResolvedValueOnce({ count: 2 }),
+      },
+      conversationPin: {
+        deleteMany: jest.fn().mockResolvedValue({ count: 1 }),
+        count: jest.fn().mockResolvedValue(2),
+        findFirst: jest.fn().mockResolvedValue({
+          pinnedAt: new Date("2026-03-04T09:05:00.000Z"),
+          message: {
+            id: 9,
+            content: "older pin",
+            messageType: "TEXT",
+            attachments: [],
+          },
+        }),
+      },
+    };
+    prisma.$transaction.mockImplementation(async (callback) => callback(tx));
+
+    await mockSocket._trigger(
+      "deleteMessage",
+      { conversationId: 1, messageId: 10 },
+      mockCallback,
+    );
+
+    expect(tx.conversationPin.deleteMany).toHaveBeenCalledWith({
+      where: { conversationId: 1, messageId: 10 },
+    });
+    expect(mockIo._mockEmit).toHaveBeenCalledWith("messageDeleted", {
+      conversationId: 1,
+      messageId: 10,
+      nextLastMessage: null,
+      pinSummary: {
+        pinnedCount: 2,
+        latestPinnedMessage: {
+          id: 9,
+          previewText: "older pin",
+          messageType: "TEXT",
+          pinnedAt: "2026-03-04T09:05:00.000Z",
+        },
+      },
+    });
+    expect(mockIo._mockEmit).not.toHaveBeenCalledWith("messageUnpinned", expect.anything());
+    expect(mockCallback).toHaveBeenCalledWith({ success: true });
+  });
+
+  it("clears pinSummary when deleting the final pinned message", async () => {
+    prisma.message.findUnique.mockResolvedValue({
+      id: 10,
+      conversationId: 1,
+      senderId: 1,
+      deletedAt: null,
+      attachments: [],
+    });
+    prisma.message.findFirst.mockResolvedValueOnce({ id: 10 }).mockResolvedValueOnce(null);
+
+    const tx = {
+      message: {
+        updateMany: jest
+          .fn()
+          .mockResolvedValueOnce({ count: 1 })
+          .mockResolvedValueOnce({ count: 0 }),
+      },
+      conversationPin: {
+        deleteMany: jest.fn().mockResolvedValue({ count: 1 }),
+        count: jest.fn().mockResolvedValue(0),
+        findFirst: jest.fn().mockResolvedValue(null),
+      },
+    };
+    prisma.$transaction.mockImplementation(async (callback) => callback(tx));
+
+    await mockSocket._trigger(
+      "deleteMessage",
+      { conversationId: 1, messageId: 10 },
+      mockCallback,
+    );
+
+    expect(mockIo._mockEmit).toHaveBeenCalledWith("messageDeleted", {
+      conversationId: 1,
+      messageId: 10,
+      nextLastMessage: null,
+      pinSummary: {
+        pinnedCount: 0,
+        latestPinnedMessage: null,
+      },
+    });
+    expect(mockIo._mockEmit).not.toHaveBeenCalledWith("messageUnpinned", expect.anything());
     expect(mockCallback).toHaveBeenCalledWith({ success: true });
   });
 });

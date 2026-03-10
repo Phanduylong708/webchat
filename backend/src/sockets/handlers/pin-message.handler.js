@@ -314,4 +314,4 @@ function registerPinMessageHandlers(io, socket) {
   });
 }
 
-export { registerPinMessageHandlers };
+export { registerPinMessageHandlers, getConversationPinState };

@@ -3,7 +3,7 @@ import { deleteCloudAssetBestEffort } from "../../api/services/media.service.js"
 import { prisma } from "../../shared/prisma.js";
 import { verifyMembership } from "../helpers/helpers.js";
 import { getConversationRoom, getUserRoom } from "../helpers/helpers.js";
-import { registerPinMessageHandlers } from "./pin-message.handler.js";
+import { getConversationPinState, registerPinMessageHandlers } from "./pin-message.handler.js";
 import {
   parseSendMessagePayload,
   parseEditMessagePayload,
@@ -326,7 +326,7 @@ async function handleChatMessage(io, socket) {
       });
 
       const now = new Date();
-      const deleted = await prisma.$transaction(async (tx) => {
+      const deleteResult = await prisma.$transaction(async (tx) => {
         const updateResult = await tx.message.updateMany({
           where: {
             id: messageId,
@@ -336,7 +336,7 @@ async function handleChatMessage(io, socket) {
         });
 
         if (updateResult.count !== 1) {
-          return false;
+          return { deleted: false, pinSummary: null };
         }
 
         await tx.message.updateMany({
@@ -344,10 +344,24 @@ async function handleChatMessage(io, socket) {
           data: { replyToMessageId: null },
         });
 
-        return true;
+        const removedPinResult = await tx.conversationPin.deleteMany({
+          where: {
+            conversationId,
+            messageId,
+          },
+        });
+
+        if (removedPinResult.count === 1) {
+          return {
+            deleted: true,
+            pinSummary: await getConversationPinState(tx, conversationId),
+          };
+        }
+
+        return { deleted: true, pinSummary: null };
       });
 
-      if (!deleted) {
+      if (!deleteResult.deleted) {
         return callback(ackError("MESSAGE_NOT_FOUND", "Message not found."));
       }
 
@@ -355,6 +369,10 @@ async function handleChatMessage(io, socket) {
         conversationId,
         messageId,
       };
+
+      if (deleteResult.pinSummary) {
+        payloadToEmit.pinSummary = deleteResult.pinSummary;
+      }
 
       if (beforeLast?.id === messageId) {
         const nextLastMessage = await prisma.message.findFirst({
