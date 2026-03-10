@@ -3,6 +3,7 @@ import { deleteCloudAssetBestEffort } from "../../api/services/media.service.js"
 import { prisma } from "../../shared/prisma.js";
 import { verifyMembership } from "../helpers/helpers.js";
 import { getConversationRoom, getUserRoom } from "../helpers/helpers.js";
+import { registerPinMessageHandlers } from "./pin-message.handler.js";
 import {
   parseSendMessagePayload,
   parseEditMessagePayload,
@@ -403,6 +404,7 @@ async function handleChatMessage(io, socket) {
       callback(ackError("INTERNAL_ERROR", "Internal server error."));
     }
   });
+  registerPinMessageHandlers(io, socket);
 
   // ── Typing indicators ───────────────────────────────────────────────────
 
