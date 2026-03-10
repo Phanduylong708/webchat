@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useConversation } from "@/hooks/context/useConversation";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -10,6 +10,8 @@ import MessageList from "./MessageList";
 import ChatInput from "./ChatInput";
 import GroupMembersDialog from "./GroupMembersDialog";
 import DeleteMessageDialog from "./DeleteMessageDialog";
+import PinnedMessagesBanner from "./PinnedMessagesBanner";
+import PinnedMessagesPanel from "./PinnedMessagesPanel";
 import type { DeleteMessageTarget } from "./DeleteMessageDialog";
 import { CallButton } from "@/components/call/CallButton";
 
@@ -34,6 +36,8 @@ function ChatWindow(): React.JSX.Element {
     replyTo: ReplyToPreview;
   } | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<DeleteMessageTarget | null>(null);
+  const [isPinnedPanelOpen, setIsPinnedPanelOpen] = useState(false);
+  const pinnedSurfaceRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (!activeConversationId) return;
@@ -46,6 +50,7 @@ function ChatWindow(): React.JSX.Element {
     if (deleteTarget && deleteTarget.conversationId !== activeConversationId) {
       setDeleteTarget(null);
     }
+    setIsPinnedPanelOpen(false);
   }, [activeConversationId, deleteTarget, editTarget, replyTarget]);
 
   const handleRequestEdit = useCallback((message: DisplayMessage) => {
@@ -95,6 +100,14 @@ function ChatWindow(): React.JSX.Element {
     }
   }, []);
 
+  const handleOpenPinnedPanel = useCallback(() => {
+    setIsPinnedPanelOpen((value) => !value);
+  }, []);
+
+  const handleClosePinnedPanel = useCallback(() => {
+    setIsPinnedPanelOpen(false);
+  }, []);
+
   const handleDeleteSuccess = useCallback(
     (target: DeleteMessageTarget) => {
       if (editTarget?.conversationId === target.conversationId && editTarget.messageId === target.messageId) {
@@ -120,6 +133,31 @@ function ChatWindow(): React.JSX.Element {
     };
   }, [replyTarget, socket]);
 
+  useEffect(() => {
+    if (!isPinnedPanelOpen) {
+      return;
+    }
+
+    function handlePointerDown(event: MouseEvent) {
+      if (!pinnedSurfaceRef.current?.contains(event.target as Node)) {
+        setIsPinnedPanelOpen(false);
+      }
+    }
+
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setIsPinnedPanelOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("keydown", handleEscape);
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [isPinnedPanelOpen]);
+
   if (!activeConversations) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
@@ -143,7 +181,7 @@ function ChatWindow(): React.JSX.Element {
     // main container
     <div className="flex flex-col h-full">
       {/* header container */}
-      <div className=" px-4 pb-2">
+      <div className="px-4 py-3">
         {/* header content, left and right */}
         <div className="flex items-center justify-between">
           {/* left content */}
@@ -187,12 +225,21 @@ function ChatWindow(): React.JSX.Element {
         </div>
       </div>
       <Separator />
+      <div ref={pinnedSurfaceRef} className="relative z-20">
+        <PinnedMessagesBanner pinSummary={activeConversations.pinSummary} onClick={handleOpenPinnedPanel} />
+        <PinnedMessagesPanel
+          conversation={activeConversations}
+          open={isPinnedPanelOpen}
+          onClose={handleClosePinnedPanel}
+        />
+      </div>
       <MessageList
         onRequestEdit={handleRequestEdit}
         onRequestReply={handleRequestReply}
         onRequestDelete={handleRequestDelete}
         editingMessageId={editTarget?.messageId ?? null}
-      /> {/* message list */}
+      />{" "}
+      {/* message list */}
       {/* system message, eg: typing indicator */}
       {systemMessage && (
         <div className="bg-muted px-4 py-2 text-xs text-muted-foreground">{systemMessage}</div>
