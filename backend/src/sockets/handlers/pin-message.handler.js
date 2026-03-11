@@ -1,4 +1,4 @@
-import { derivePreviewText, serializeLatestPinnedMessage } from "../../api/services/conversation.service.js";
+import { derivePreviewText, serializeLatestPinnedMessage } from "../../shared/utils/conversation.util.js";
 import { prisma } from "../../shared/prisma.js";
 import { verifyMembership, getConversationRoom } from "../helpers/helpers.js";
 import { parsePinMessagePayload, ackError } from "../helpers/chat-message.util.js";

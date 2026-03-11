@@ -13,10 +13,8 @@ jest.mock("../../shared/prisma.js", () => ({
 }));
 
 import { prisma } from "../../shared/prisma.js";
-import {
-  buildPinSummary,
-  getConversations,
-} from "../../api/services/conversation.service.js";
+import { buildPinSummary } from "../../shared/utils/conversation.util.js";
+import { getConversations } from "../../api/services/conversation.service.js";
 
 describe("conversation.service pin summary", () => {
   beforeEach(() => {
