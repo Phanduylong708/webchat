@@ -1,4 +1,4 @@
-import { derivePreviewText, serializeLatestPinnedMessage } from "../../shared/utils/conversation.util.js";
+import { derivePreviewText, getConversationPinState } from "../../shared/utils/conversation.util.js";
 import { prisma } from "../../shared/prisma.js";
 import { verifyMembership, getConversationRoom } from "../helpers/helpers.js";
 import { parsePinMessagePayload, ackError } from "../helpers/chat-message.util.js";
@@ -32,21 +32,6 @@ const PINNED_ITEM_SELECT = {
   },
 };
 
-const PIN_SUMMARY_SELECT = {
-  pinnedAt: true,
-  message: {
-    select: {
-      id: true,
-      content: true,
-      messageType: true,
-      attachments: {
-        take: 1,
-        select: { mimeType: true },
-      },
-    },
-  },
-};
-
 function canManagePins(conversation, currentUserId) {
   if (conversation.type === "PRIVATE") {
     return true;
@@ -70,30 +55,6 @@ function serializePinnedItem(pin) {
       sender: pin.message.sender,
       attachments: pin.message.attachments,
     },
-  };
-}
-
-async function getConversationPinState(tx, conversationId) {
-  const [pinnedCount, latestPin] = await Promise.all([
-    tx.conversationPin.count({
-      where: {
-        conversationId,
-        message: { deletedAt: null },
-      },
-    }),
-    tx.conversationPin.findFirst({
-      where: {
-        conversationId,
-        message: { deletedAt: null },
-      },
-      orderBy: [{ pinnedAt: "desc" }, { id: "desc" }],
-      select: PIN_SUMMARY_SELECT,
-    }),
-  ]);
-
-  return {
-    pinnedCount,
-    latestPinnedMessage: serializeLatestPinnedMessage(latestPin),
   };
 }
 
@@ -315,4 +276,4 @@ function registerPinMessageHandlers(io, socket) {
   });
 }
 
-export { registerPinMessageHandlers, getConversationPinState };
+export { registerPinMessageHandlers };

@@ -1,9 +1,8 @@
 import { findOrCreatePrivateConversation } from "../../api/services/conversation.service.js";
-import { deleteCloudAssetBestEffort } from "../../api/services/media.service.js";
+import { createMessage, editMessage, deleteMessage } from "../../api/services/message.service.js";
 import { prisma } from "../../shared/prisma.js";
-import { verifyMembership } from "../helpers/helpers.js";
-import { getConversationRoom, getUserRoom } from "../helpers/helpers.js";
-import { getConversationPinState, registerPinMessageHandlers } from "./pin-message.handler.js";
+import { verifyMembership, getConversationRoom, getUserRoom } from "../helpers/helpers.js";
+import { registerPinMessageHandlers } from "./pin-message.handler.js";
 import {
   parseSendMessagePayload,
   parseEditMessagePayload,
@@ -11,25 +10,6 @@ import {
   ackError,
   validateAttachmentsPreflight,
 } from "../helpers/chat-message.util.js";
-
-const ATTACHMENT_SELECT = {
-  id: true,
-  url: true,
-  publicId: true,
-  mimeType: true,
-  sizeBytes: true,
-  width: true,
-  height: true,
-  originalFileName: true,
-  createdAt: true,
-};
-
-const REPLY_TO_SELECT = {
-  id: true,
-  content: true,
-  messageType: true,
-  sender: { select: { id: true, username: true, avatar: true } },
-};
 
 async function handleChatMessage(io, socket) {
   socket.on("sendMessage", async (payload, callback) => {
@@ -71,17 +51,16 @@ async function handleChatMessage(io, socket) {
           return callback(ackError("NOT_A_MEMBER", "You are not a member of this conversation."));
         }
       }
-      // Validate Reply
+
+      // ── Validate reply target ─────────────────────────────────────────────
       if (replyToMessageId !== null) {
         const replyTarget = await prisma.message.findUnique({
           where: { id: replyToMessageId },
           select: { id: true, conversationId: true, deletedAt: true },
         });
-
         if (!replyTarget || replyTarget.deletedAt !== null) {
           return callback(ackError("REPLY_TO_NOT_FOUND", "Reply target not found."));
         }
-
         if (replyTarget.conversationId !== currentConversationId) {
           return callback(
             ackError("REPLY_TO_WRONG_CONVERSATION", "Reply target must be in the same conversation."),
@@ -95,68 +74,13 @@ async function handleChatMessage(io, socket) {
         if (preflightError) return callback(preflightError);
       }
 
-      // ── Atomic transaction ────────────────────────────────────────────────
-      const message = await prisma.$transaction(async (tx) => {
-        if (replyToMessageId !== null) {
-          const replyTarget = await tx.message.findUnique({
-            where: { id: replyToMessageId },
-            select: { id: true, deletedAt: true },
-          });
-
-          if (!replyTarget || replyTarget.deletedAt !== null) {
-            throw Object.assign(new Error("Reply target not found."), { code: "REPLY_TO_NOT_FOUND" });
-          }
-        }
-
-        const messageType = hasAttachments ? "IMAGE" : "TEXT";
-
-        const result = await tx.message.create({
-          data: {
-            conversationId: currentConversationId,
-            senderId: currentUserId,
-            content: hasContent ? trimmedContent : null,
-            messageType,
-            replyToMessageId: replyToMessageId ?? null,
-          },
-          include: {
-            sender: { select: { id: true, username: true, avatar: true } },
-            replyTo: { select: REPLY_TO_SELECT },
-          },
-        });
-
-        if (hasAttachments) {
-          // TOCTOU guard: re-validate inside transaction with strict conditions
-          const updateResult = await tx.messageAttachment.updateMany({
-            where: {
-              id: { in: attachmentIds },
-              uploadedByUserId: currentUserId,
-              status: "PENDING",
-              messageId: null,
-            },
-            data: { messageId: result.id, status: "ATTACHED" },
-          });
-
-          if (updateResult.count !== attachmentIds.length) {
-            throw Object.assign(
-              new Error("Attachment conflict: one or more attachments were already used."),
-              { code: "ATTACHMENT_CONFLICT" },
-            );
-          }
-
-          result.attachments = await tx.messageAttachment.findMany({
-            where: { messageId: result.id },
-            select: ATTACHMENT_SELECT,
-          });
-        } else {
-          result.attachments = [];
-        }
-
-        await tx.conversation.update({
-          where: { id: currentConversationId },
-          data: { updatedAt: new Date() },
-        });
-
-        return result;
+      // ── Create message via service ────────────────────────────────────────
+      const message = await createMessage(currentConversationId, currentUserId, {
+        trimmedContent,
+        hasContent,
+        attachmentIds,
+        hasAttachments,
+        replyToMessageId,
       });
 
       // ── Broadcast + ack ───────────────────────────────────────────────────
@@ -190,76 +114,21 @@ async function handleChatMessage(io, socket) {
         return callback(ackError("NOT_A_MEMBER", "You are not a member of this conversation."));
       }
 
-      const existing = await prisma.message.findUnique({
-        where: { id: messageId },
-        select: {
-          id: true,
-          conversationId: true,
-          senderId: true,
-          messageType: true,
-          createdAt: true,
-          deletedAt: true,
-        },
-      });
-
-      if (!existing || existing.conversationId !== conversationId || existing.deletedAt !== null) {
-        return callback(ackError("MESSAGE_NOT_FOUND", "Message not found."));
-      }
-      if (existing.senderId !== currentUserId) {
-        return callback(ackError("NOT_OWNER", "You can only edit your own messages."));
-      }
-
-      const now = new Date();
-
-      let nextContent = trimmedContent;
-      if (existing.messageType === "TEXT") {
-        if (trimmedContent.length === 0) {
-          return callback(ackError("INVALID_CONTENT", "Text content cannot be empty."));
-        }
-      } else if (existing.messageType === "IMAGE") {
-        nextContent = trimmedContent.length === 0 ? null : trimmedContent;
-      } else {
-        return callback(ackError("INVALID_CONTENT", "This message type cannot be edited."));
-      }
-
-      const updatedMessage = await prisma.$transaction(async (tx) => {
-        const updateResult = await tx.message.updateMany({
-          where: {
-            id: messageId,
-            deletedAt: null,
-          },
-          data: {
-            content: nextContent,
-            editedAt: now,
-          },
-        });
-
-        if (updateResult.count !== 1) {
-          return null;
-        }
-
-        return tx.message.findUnique({
-          where: { id: messageId },
-          include: {
-            sender: { select: { id: true, username: true, avatar: true } },
-            replyTo: { select: REPLY_TO_SELECT },
-            attachments: { select: ATTACHMENT_SELECT },
-          },
-        });
-      });
-
-      if (!updatedMessage) {
-        return callback(ackError("MESSAGE_NOT_FOUND", "Message not found."));
-      }
-
-      if (updatedMessage.deletedAt !== null) {
-        return callback(ackError("MESSAGE_NOT_FOUND", "Message not found."));
-      }
+      const updatedMessage = await editMessage(messageId, conversationId, currentUserId, trimmedContent);
 
       socket.join(getConversationRoom(conversationId));
       io.to(getConversationRoom(conversationId)).emit("messageUpdated", updatedMessage);
       callback({ success: true, message: updatedMessage });
     } catch (error) {
+      if (error.code === "MESSAGE_NOT_FOUND") {
+        return callback(ackError("MESSAGE_NOT_FOUND", error.message));
+      }
+      if (error.code === "NOT_OWNER") {
+        return callback(ackError("NOT_OWNER", error.message));
+      }
+      if (error.code === "INVALID_CONTENT") {
+        return callback(ackError("INVALID_CONTENT", error.message));
+      }
       console.error("Error handling editMessage:", error);
       callback(ackError("INTERNAL_ERROR", "Internal server error."));
     }
@@ -280,112 +149,31 @@ async function handleChatMessage(io, socket) {
         return callback(ackError("NOT_A_MEMBER", "You are not a member of this conversation."));
       }
 
-      const targetMessage = await prisma.message.findUnique({
-        where: { id: messageId },
-        select: {
-          id: true,
-          conversationId: true,
-          senderId: true,
-          deletedAt: true,
-          attachments: {
-            select: {
-              publicId: true,
-            },
-          },
-        },
-      });
+      const result = await deleteMessage(messageId, conversationId, currentUserId);
 
-      if (!targetMessage || targetMessage.conversationId !== conversationId || targetMessage.deletedAt !== null) {
-        return callback(ackError("MESSAGE_NOT_FOUND", "Message not found."));
+      const payloadToEmit = { conversationId, messageId };
+      if (result.pinSummary) {
+        payloadToEmit.pinSummary = result.pinSummary;
       }
-      if (targetMessage.senderId !== currentUserId) {
-        return callback(ackError("NOT_OWNER", "You can only delete your own messages."));
-      }
-
-      const beforeLast = await prisma.message.findFirst({
-        where: { conversationId, deletedAt: null },
-        orderBy: [{ createdAt: "desc" }, { id: "desc" }],
-        select: { id: true },
-      });
-
-      const now = new Date();
-      const deleteResult = await prisma.$transaction(async (tx) => {
-        const updateResult = await tx.message.updateMany({
-          where: {
-            id: messageId,
-            deletedAt: null,
-          },
-          data: { deletedAt: now },
-        });
-
-        if (updateResult.count !== 1) {
-          return { deleted: false, pinSummary: null };
-        }
-
-        await tx.message.updateMany({
-          where: { replyToMessageId: messageId },
-          data: { replyToMessageId: null },
-        });
-
-        const removedPinResult = await tx.conversationPin.deleteMany({
-          where: {
-            conversationId,
-            messageId,
-          },
-        });
-
-        if (removedPinResult.count === 1) {
-          return {
-            deleted: true,
-            pinSummary: await getConversationPinState(tx, conversationId),
-          };
-        }
-
-        return { deleted: true, pinSummary: null };
-      });
-
-      if (!deleteResult.deleted) {
-        return callback(ackError("MESSAGE_NOT_FOUND", "Message not found."));
-      }
-
-      const payloadToEmit = {
-        conversationId,
-        messageId,
-      };
-
-      if (deleteResult.pinSummary) {
-        payloadToEmit.pinSummary = deleteResult.pinSummary;
-      }
-
-      if (beforeLast?.id === messageId) {
-        const nextLastMessage = await prisma.message.findFirst({
-          where: { conversationId, deletedAt: null },
-          orderBy: [{ createdAt: "desc" }, { id: "desc" }],
-          include: {
-            sender: { select: { id: true, username: true, avatar: true } },
-            replyTo: { select: REPLY_TO_SELECT },
-            attachments: { select: ATTACHMENT_SELECT },
-          },
-        });
-
-        payloadToEmit.nextLastMessage = nextLastMessage ?? null;
+      if (result.nextLastMessage !== undefined) {
+        payloadToEmit.nextLastMessage = result.nextLastMessage;
       }
 
       socket.join(getConversationRoom(conversationId));
       io.to(getConversationRoom(conversationId)).emit("messageDeleted", payloadToEmit);
       callback({ success: true });
-
-      const publicIds = targetMessage.attachments
-        .map((attachment) => attachment.publicId)
-        .filter((publicId) => typeof publicId === "string" && publicId.length > 0);
-      if (publicIds.length > 0) {
-        void Promise.allSettled(publicIds.map((publicId) => deleteCloudAssetBestEffort(publicId)));
-      }
     } catch (error) {
+      if (error.code === "MESSAGE_NOT_FOUND") {
+        return callback(ackError("MESSAGE_NOT_FOUND", error.message));
+      }
+      if (error.code === "NOT_OWNER") {
+        return callback(ackError("NOT_OWNER", error.message));
+      }
       console.error("Error handling deleteMessage:", error);
       callback(ackError("INTERNAL_ERROR", "Internal server error."));
     }
   });
+
   registerPinMessageHandlers(io, socket);
 
   // ── Typing indicators ───────────────────────────────────────────────────
