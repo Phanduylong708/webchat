@@ -1,4 +1,22 @@
-import type { User } from "@/types/chat.type";
+import type { Messages, User } from "@/types/chat.type";
+
+// Derives a human-readable preview text from a message.
+// Returns content if present; otherwise a mime-family key ("image"/"video"/"file").
+export function derivePreviewText(message: Messages): string {
+  const text = message.content?.trim();
+  if (text) return text;
+
+  switch (message.messageType) {
+    case "IMAGE":
+      return "image";
+    case "VIDEO":
+      return "video";
+    case "FILE":
+      return "file";
+    default:
+      return "";
+  }
+}
 
 // Maintains the typing map per conversation by cloning Maps instead of mutating
 // in-place. This ensures React state updates correctly even with nested Map structures.

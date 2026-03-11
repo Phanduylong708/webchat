@@ -2,7 +2,6 @@ import { useEffect, type Dispatch, type SetStateAction } from "react";
 import { toast } from "sonner";
 import type { Socket } from "socket.io-client";
 import type {
-  AttachmentItem,
   ConversationsDetail,
   ConversationsResponse,
   PinSummary,
@@ -10,12 +9,16 @@ import type {
   User,
 } from "@/types/chat.type";
 import type { Messages } from "@/types/chat.type";
-import { queryClient } from "@/lib/queryClient";
-import { conversationPinsQueryKey } from "@/hooks/queries/pins";
 import {
   updateTypingMap,
   resolveLeavingUsername,
+  derivePreviewText,
 } from "@/utils/conversation.utils";
+import {
+  sortPinnedItemsDesc,
+  mapPinnedAttachments,
+  patchPinnedItemsCache,
+} from "@/utils/pin.util";
 
 type ConversationSetter = Dispatch<SetStateAction<ConversationsResponse[]>>;
 type TypingSetter = Dispatch<SetStateAction<Map<number, Map<number, string>>>>;
@@ -53,60 +56,6 @@ interface UseConversationSocketsParams {
   setActiveConversationId: ActiveConversationSetter;
 }
 
-function derivePreviewText(message: Messages): string {
-  const text = message.content?.trim();
-  if (text) return text;
-
-  switch (message.messageType) {
-    case "IMAGE":
-      return "image";
-    case "VIDEO":
-      return "video";
-    case "FILE":
-      return "file";
-    default:
-      return "";
-  }
-}
-
-function sortPinnedItemsDesc(items: PinnedMessageItem[]): PinnedMessageItem[] {
-  return [...items].sort((left, right) => {
-    const byPinnedAt = right.pinnedAt.localeCompare(left.pinnedAt);
-    if (byPinnedAt !== 0) return byPinnedAt;
-    return right.messageId - left.messageId;
-  });
-}
-
-function mapPinnedAttachments(
-  attachments: AttachmentItem[] | undefined,
-): PinnedMessageItem["message"]["attachments"] {
-  if (!attachments || attachments.length === 0) {
-    return [];
-  }
-
-  return attachments.map((attachment) => ({
-    id: attachment.id,
-    url: attachment.url,
-    mimeType: attachment.mimeType,
-    originalFileName: attachment.originalFileName,
-  }));
-}
-
-function patchPinnedItemsCache(
-  conversationId: number,
-  updater: (items: PinnedMessageItem[]) => PinnedMessageItem[],
-): void {
-  const key = conversationPinsQueryKey(conversationId);
-  const existing = queryClient.getQueryData<PinnedMessageItem[]>(key);
-  if (existing === undefined) {
-    return;
-  }
-
-  queryClient.setQueryData<PinnedMessageItem[] | undefined>(key, (items) => {
-    if (!items) return items;
-    return updater(items);
-  });
-}
 
 /**
  * Centralizes all socket listeners that impact conversation state.
@@ -169,48 +118,43 @@ export function useConversationSockets({
   useEffect(() => {
     if (!socket) return;
     function handleMessageUpdated(message: Messages) {
-      setConversations((prev) => {
-        return prev.map((c) => {
-          if (c.id !== message.conversationId) return c;
-          if (!c.lastMessage || c.lastMessage.id !== message.id) return c;
-
-          const previewText = derivePreviewText(message);
-          return {
-            ...c,
-            lastMessage: {
-              ...c.lastMessage,
-              content: message.content,
-              messageType: message.messageType,
-              previewText,
-              sender: message.sender,
-              attachments: message.attachments?.map((a) => ({ mimeType: a.mimeType })),
-            },
-          };
-        });
-      });
+      const previewText = derivePreviewText(message);
 
       setConversations((prev) =>
-        prev.map((conversation) => {
-          if (conversation.id !== message.conversationId) {
-            return conversation;
-          }
+        prev.map((c) => {
+          if (c.id !== message.conversationId) return c;
 
-          const latestPinned = conversation.pinSummary?.latestPinnedMessage;
-          if (!latestPinned || latestPinned.id !== message.id) {
-            return conversation;
-          }
+          const patchLastMessage =
+            c.lastMessage?.id === message.id
+              ? {
+                  lastMessage: {
+                    ...c.lastMessage,
+                    content: message.content,
+                    messageType: message.messageType,
+                    previewText,
+                    sender: message.sender,
+                    attachments: message.attachments?.map((a) => ({ mimeType: a.mimeType })),
+                  },
+                }
+              : null;
 
-          return {
-            ...conversation,
-            pinSummary: {
-              pinnedCount: conversation.pinSummary?.pinnedCount ?? 0,
-              latestPinnedMessage: {
-                ...latestPinned,
-                messageType: message.messageType,
-                previewText: derivePreviewText(message),
-              },
-            },
-          };
+          const latestPinned = c.pinSummary?.latestPinnedMessage;
+          const patchPinSummary =
+            latestPinned?.id === message.id
+              ? {
+                  pinSummary: {
+                    pinnedCount: c.pinSummary?.pinnedCount ?? 0,
+                    latestPinnedMessage: {
+                      ...latestPinned,
+                      messageType: message.messageType,
+                      previewText,
+                    },
+                  },
+                }
+              : null;
+
+          if (!patchLastMessage && !patchPinSummary) return c;
+          return { ...c, ...patchLastMessage, ...patchPinSummary };
         }),
       );
 

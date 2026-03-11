@@ -12,6 +12,25 @@ import {
   validateAttachmentsPreflight,
 } from "../helpers/chat-message.util.js";
 
+const ATTACHMENT_SELECT = {
+  id: true,
+  url: true,
+  publicId: true,
+  mimeType: true,
+  sizeBytes: true,
+  width: true,
+  height: true,
+  originalFileName: true,
+  createdAt: true,
+};
+
+const REPLY_TO_SELECT = {
+  id: true,
+  content: true,
+  messageType: true,
+  sender: { select: { id: true, username: true, avatar: true } },
+};
+
 async function handleChatMessage(io, socket) {
   socket.on("sendMessage", async (payload, callback) => {
     try {
@@ -101,14 +120,7 @@ async function handleChatMessage(io, socket) {
           },
           include: {
             sender: { select: { id: true, username: true, avatar: true } },
-            replyTo: {
-              select: {
-                id: true,
-                content: true,
-                messageType: true,
-                sender: { select: { id: true, username: true, avatar: true } },
-              },
-            },
+            replyTo: { select: REPLY_TO_SELECT },
           },
         });
 
@@ -133,17 +145,7 @@ async function handleChatMessage(io, socket) {
 
           result.attachments = await tx.messageAttachment.findMany({
             where: { messageId: result.id },
-            select: {
-              id: true,
-              url: true,
-              publicId: true,
-              mimeType: true,
-              sizeBytes: true,
-              width: true,
-              height: true,
-              originalFileName: true,
-              createdAt: true,
-            },
+            select: ATTACHMENT_SELECT,
           });
         } else {
           result.attachments = [];
@@ -240,27 +242,8 @@ async function handleChatMessage(io, socket) {
           where: { id: messageId },
           include: {
             sender: { select: { id: true, username: true, avatar: true } },
-            replyTo: {
-              select: {
-                id: true,
-                content: true,
-                messageType: true,
-                sender: { select: { id: true, username: true, avatar: true } },
-              },
-            },
-            attachments: {
-              select: {
-                id: true,
-                url: true,
-                publicId: true,
-                mimeType: true,
-                sizeBytes: true,
-                width: true,
-                height: true,
-                originalFileName: true,
-                createdAt: true,
-              },
-            },
+            replyTo: { select: REPLY_TO_SELECT },
+            attachments: { select: ATTACHMENT_SELECT },
           },
         });
       });
@@ -380,27 +363,8 @@ async function handleChatMessage(io, socket) {
           orderBy: [{ createdAt: "desc" }, { id: "desc" }],
           include: {
             sender: { select: { id: true, username: true, avatar: true } },
-            replyTo: {
-              select: {
-                id: true,
-                content: true,
-                messageType: true,
-                sender: { select: { id: true, username: true, avatar: true } },
-              },
-            },
-            attachments: {
-              select: {
-                id: true,
-                url: true,
-                publicId: true,
-                mimeType: true,
-                sizeBytes: true,
-                width: true,
-                height: true,
-                originalFileName: true,
-                createdAt: true,
-              },
-            },
+            replyTo: { select: REPLY_TO_SELECT },
+            attachments: { select: ATTACHMENT_SELECT },
           },
         });
 
@@ -426,11 +390,11 @@ async function handleChatMessage(io, socket) {
 
   // ── Typing indicators ───────────────────────────────────────────────────
 
-  socket.on("typing:start", async (payload) => {
+  async function handleTypingEvent(payload, isTyping) {
     try {
       const conversationId = parseInt(payload.conversationId, 10);
       if (isNaN(conversationId)) {
-        console.warn("Invalid conversationId in typing:start");
+        console.warn("Invalid conversationId in typing event");
         return;
       }
       const currentUserId = socket.data.user.id;
@@ -444,37 +408,15 @@ async function handleChatMessage(io, socket) {
         userId: currentUserId,
         username: currentUsername,
         conversationId,
-        isTyping: true,
+        isTyping,
       });
     } catch (error) {
-      console.warn("Error in typing:start handler:", error);
+      console.warn("Error in typing handler:", error);
     }
-  });
+  }
 
-  socket.on("typing:stop", async (payload) => {
-    try {
-      const conversationId = parseInt(payload.conversationId, 10);
-      if (isNaN(conversationId)) {
-        console.warn("Invalid conversationId in typing:stop");
-        return;
-      }
-      const currentUserId = socket.data.user.id;
-      const currentUsername = socket.data.user.username;
-      const isMember = await verifyMembership(currentUserId, conversationId);
-      if (!isMember) {
-        console.warn(`User ${currentUserId} is not a member of conversation ${conversationId}`);
-        return;
-      }
-      socket.to(getConversationRoom(conversationId)).emit("userTyping", {
-        userId: currentUserId,
-        username: currentUsername,
-        conversationId,
-        isTyping: false,
-      });
-    } catch (error) {
-      console.warn("Error in typing:stop handler:", error);
-    }
-  });
+  socket.on("typing:start", (payload) => handleTypingEvent(payload, true));
+  socket.on("typing:stop", (payload) => handleTypingEvent(payload, false));
 }
 
 export { handleChatMessage };
