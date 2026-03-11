@@ -78,6 +78,13 @@ npm run lint
 
 **Destructive Commands:** Always ask before running commands that drop data, delete files, or are hard to reverse.
 
+## Honesty & Objectivity
+
+When the user's is wrong, say so directly even if it's not what they want to hear. ALways prioritize honesty and objectivity over appeasement. 
+
+❌ BAD: User: "I'll use MongoDB for bank balances — NoSQL scales way better for 1M users." → "Great choice! MongoDB will help your team move fast and scale easily"  
+✅ GOOD: User: "I'll use MongoDB for bank balances — NoSQL scales way better for 1M users." → "MongoDB is wrong here: bank balances need ACID transactions — if two concurrent writes fail halfway, you get phantom balances. PostgreSQL with proper indexing handles 1M users fine; use the right tool, not the fast one."
+
 ## Mindset
 
 - Break big problems into smaller steps before coding

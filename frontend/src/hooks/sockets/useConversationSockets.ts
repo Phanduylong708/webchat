@@ -2,11 +2,16 @@ import { useEffect, type Dispatch, type SetStateAction } from "react";
 import { toast } from "sonner";
 import type { Socket } from "socket.io-client";
 import type {
+  AttachmentItem,
   ConversationsDetail,
   ConversationsResponse,
+  PinSummary,
+  PinnedMessageItem,
   User,
 } from "@/types/chat.type";
 import type { Messages } from "@/types/chat.type";
+import { queryClient } from "@/lib/queryClient";
+import { conversationPinsQueryKey } from "@/hooks/queries/pins";
 import {
   updateTypingMap,
   resolveLeavingUsername,
@@ -22,6 +27,21 @@ type MessageDeletedPayload = {
   conversationId: number;
   messageId: number;
   nextLastMessage?: Messages | null;
+  pinSummary?: PinSummary;
+};
+
+type MessagePinnedPayload = {
+  conversationId: number;
+  pinnedCount: number;
+  latestPinnedMessage: PinSummary["latestPinnedMessage"];
+  pinnedItem: PinnedMessageItem;
+};
+
+type MessageUnpinnedPayload = {
+  conversationId: number;
+  messageId: number;
+  pinnedCount: number;
+  latestPinnedMessage: PinSummary["latestPinnedMessage"];
 };
 
 interface UseConversationSocketsParams {
@@ -47,6 +67,45 @@ function derivePreviewText(message: Messages): string {
     default:
       return "";
   }
+}
+
+function sortPinnedItemsDesc(items: PinnedMessageItem[]): PinnedMessageItem[] {
+  return [...items].sort((left, right) => {
+    const byPinnedAt = right.pinnedAt.localeCompare(left.pinnedAt);
+    if (byPinnedAt !== 0) return byPinnedAt;
+    return right.messageId - left.messageId;
+  });
+}
+
+function mapPinnedAttachments(
+  attachments: AttachmentItem[] | undefined,
+): PinnedMessageItem["message"]["attachments"] {
+  if (!attachments || attachments.length === 0) {
+    return [];
+  }
+
+  return attachments.map((attachment) => ({
+    id: attachment.id,
+    url: attachment.url,
+    mimeType: attachment.mimeType,
+    originalFileName: attachment.originalFileName,
+  }));
+}
+
+function patchPinnedItemsCache(
+  conversationId: number,
+  updater: (items: PinnedMessageItem[]) => PinnedMessageItem[],
+): void {
+  const key = conversationPinsQueryKey(conversationId);
+  const existing = queryClient.getQueryData<PinnedMessageItem[]>(key);
+  if (existing === undefined) {
+    return;
+  }
+
+  queryClient.setQueryData<PinnedMessageItem[] | undefined>(key, (items) => {
+    if (!items) return items;
+    return updater(items);
+  });
 }
 
 /**
@@ -129,6 +188,53 @@ export function useConversationSockets({
           };
         });
       });
+
+      setConversations((prev) =>
+        prev.map((conversation) => {
+          if (conversation.id !== message.conversationId) {
+            return conversation;
+          }
+
+          const latestPinned = conversation.pinSummary?.latestPinnedMessage;
+          if (!latestPinned || latestPinned.id !== message.id) {
+            return conversation;
+          }
+
+          return {
+            ...conversation,
+            pinSummary: {
+              pinnedCount: conversation.pinSummary?.pinnedCount ?? 0,
+              latestPinnedMessage: {
+                ...latestPinned,
+                messageType: message.messageType,
+                previewText: derivePreviewText(message),
+              },
+            },
+          };
+        }),
+      );
+
+      patchPinnedItemsCache(message.conversationId, (items) => {
+        let didChange = false;
+        const nextItems = items.map((item) => {
+          if (item.messageId !== message.id) {
+            return item;
+          }
+
+          didChange = true;
+          return {
+            ...item,
+            message: {
+              ...item.message,
+              content: message.content,
+              messageType: message.messageType,
+              attachments: mapPinnedAttachments(message.attachments),
+            },
+          };
+        });
+
+        return didChange ? nextItems : items;
+      });
     }
     socket.on("messageUpdated", handleMessageUpdated);
     return () => {
@@ -180,11 +286,90 @@ export function useConversationSockets({
 
         return didChange ? nextConversations : prev;
       });
+
+      if (payload.pinSummary) {
+        setConversations((prev) =>
+          prev.map((conversation) =>
+            conversation.id === payload.conversationId
+              ? {
+                  ...conversation,
+                  pinSummary: payload.pinSummary ?? null,
+                }
+              : conversation,
+          ),
+        );
+      }
+
+      patchPinnedItemsCache(payload.conversationId, (items) => {
+        const nextItems = items.filter((item) => item.messageId !== payload.messageId);
+        return nextItems.length === items.length ? items : nextItems;
+      });
     }
 
     socket.on("messageDeleted", handleMessageDeleted);
     return () => {
       socket.off("messageDeleted", handleMessageDeleted);
+    };
+  }, [socket, setConversations]);
+
+  useEffect(() => {
+    if (!socket) return;
+
+    function handleMessagePinned(payload: MessagePinnedPayload) {
+      setConversations((prev) =>
+        prev.map((conversation) =>
+          conversation.id === payload.conversationId
+            ? {
+                ...conversation,
+                pinSummary: {
+                  pinnedCount: payload.pinnedCount,
+                  latestPinnedMessage: payload.latestPinnedMessage,
+                },
+              }
+            : conversation,
+        ),
+      );
+
+      patchPinnedItemsCache(payload.conversationId, (items) => {
+        const withoutMessage = items.filter((item) => item.messageId !== payload.pinnedItem.messageId);
+        const nextItems = sortPinnedItemsDesc([payload.pinnedItem, ...withoutMessage]);
+        return nextItems.slice(0, 10);
+      });
+    }
+
+    socket.on("messagePinned", handleMessagePinned);
+    return () => {
+      socket.off("messagePinned", handleMessagePinned);
+    };
+  }, [socket, setConversations]);
+
+  useEffect(() => {
+    if (!socket) return;
+
+    function handleMessageUnpinned(payload: MessageUnpinnedPayload) {
+      setConversations((prev) =>
+        prev.map((conversation) =>
+          conversation.id === payload.conversationId
+            ? {
+                ...conversation,
+                pinSummary: {
+                  pinnedCount: payload.pinnedCount,
+                  latestPinnedMessage: payload.latestPinnedMessage,
+                },
+              }
+            : conversation,
+        ),
+      );
+
+      patchPinnedItemsCache(payload.conversationId, (items) => {
+        const nextItems = items.filter((item) => item.messageId !== payload.messageId);
+        return nextItems.length === items.length ? items : nextItems;
+      });
+    }
+
+    socket.on("messageUnpinned", handleMessageUnpinned);
+    return () => {
+      socket.off("messageUnpinned", handleMessageUnpinned);
     };
   }, [socket, setConversations]);
 
