@@ -50,6 +50,7 @@ function makePinnedItem(overrides: Partial<PinnedMessageItem> & { messageId: num
     message: {
       id: messageId,
       content: `message-${messageId}`,
+      previewText: `message-${messageId}`,
       messageType: "TEXT",
       createdAt: "2026-03-10T07:00:00.000Z",
       sender: ALICE,
@@ -269,6 +270,7 @@ describe("useConversationSockets pin sync", () => {
         message: {
           id: 70,
           content: "before edit",
+          previewText: "before edit",
           messageType: "TEXT",
           createdAt: "2026-03-10T07:00:00.000Z",
           sender: ALICE,

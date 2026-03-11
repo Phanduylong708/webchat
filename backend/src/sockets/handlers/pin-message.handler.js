@@ -1,4 +1,4 @@
-import { serializeLatestPinnedMessage } from "../../api/services/conversation.service.js";
+import { derivePreviewText, serializeLatestPinnedMessage } from "../../api/services/conversation.service.js";
 import { prisma } from "../../shared/prisma.js";
 import { verifyMembership, getConversationRoom } from "../helpers/helpers.js";
 import { parsePinMessagePayload, ackError } from "../helpers/chat-message.util.js";
@@ -64,6 +64,7 @@ function serializePinnedItem(pin) {
     message: {
       id: pin.message.id,
       content: pin.message.content,
+      previewText: derivePreviewText(pin.message),
       messageType: pin.message.messageType,
       createdAt: pin.message.createdAt.toISOString(),
       sender: pin.message.sender,

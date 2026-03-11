@@ -227,6 +227,7 @@ export function useConversationSockets({
             message: {
               ...item.message,
               content: message.content,
+              previewText: derivePreviewText(message),
               messageType: message.messageType,
               attachments: mapPinnedAttachments(message.attachments),
             },

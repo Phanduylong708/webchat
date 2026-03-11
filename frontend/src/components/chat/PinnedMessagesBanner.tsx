@@ -1,5 +1,6 @@
 import { ChevronRight, Pin } from "lucide-react";
 import type { PinSummary } from "@/types/chat.type";
+import { toPinnedPreviewLabel } from "@/utils/pin.util";
 
 type PinnedMessagesBannerProps = {
   pinSummary: PinSummary | null | undefined;
@@ -16,7 +17,7 @@ export default function PinnedMessagesBanner({
 
   const label =
     pinSummary.pinnedCount === 1 ? "1 pinned message" : `${pinSummary.pinnedCount} pinned messages`;
-  const previewText = pinSummary.latestPinnedMessage?.previewText || "Pinned message";
+  const previewText = toPinnedPreviewLabel(pinSummary.latestPinnedMessage?.previewText);
 
   return (
     <button

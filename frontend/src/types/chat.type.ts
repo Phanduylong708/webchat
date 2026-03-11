@@ -33,6 +33,7 @@ export interface PinnedMessageItem {
   message: {
     id: number;
     content: string | null;
+    previewText: string;
     messageType: MessageType;
     createdAt: string;
     sender: User;

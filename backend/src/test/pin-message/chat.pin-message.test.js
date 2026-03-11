@@ -301,6 +301,7 @@ describe("chat.handler pinMessage/unpinMessage", () => {
         message: {
           id: 10,
           content: "hello world",
+          previewText: "hello world",
           messageType: "TEXT",
           createdAt: "2026-03-09T09:00:00.000Z",
           sender: { id: 2, username: "bob", avatar: null },

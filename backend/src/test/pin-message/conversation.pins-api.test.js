@@ -41,6 +41,7 @@ describe("conversation pins API", () => {
         message: {
           id: 5,
           content: "newest",
+          previewText: "newest",
           messageType: "TEXT",
           createdAt: new Date("2026-03-09T09:00:00.000Z"),
           sender: { id: 1, username: "alice", avatar: null },
@@ -55,6 +56,7 @@ describe("conversation pins API", () => {
         message: {
           id: 4,
           content: "older",
+          previewText: "older",
           messageType: "TEXT",
           createdAt: new Date("2026-03-08T09:00:00.000Z"),
           sender: { id: 2, username: "bob", avatar: null },
@@ -92,5 +94,28 @@ describe("conversation pins API", () => {
         },
       }),
     );
+  });
+
+  it("returns media preview fallback for pinned non-text messages", async () => {
+    prisma.conversationPin.findMany.mockResolvedValue([
+      {
+        messageId: 7,
+        conversationId: 10,
+        pinnedAt: new Date("2026-03-09T10:00:00.000Z"),
+        pinnedBy: { id: 1, username: "alice", avatar: null },
+        message: {
+          id: 7,
+          content: null,
+          messageType: "IMAGE",
+          createdAt: new Date("2026-03-09T09:00:00.000Z"),
+          sender: { id: 1, username: "alice", avatar: null },
+          attachments: [{ id: 1, url: "x", mimeType: "image/png", originalFileName: "a.png" }],
+        },
+      },
+    ]);
+
+    const result = await getConversationPins(10, 1);
+
+    expect(result[0].message.previewText).toBe("image");
   });
 });

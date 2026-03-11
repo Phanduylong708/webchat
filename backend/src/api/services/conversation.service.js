@@ -304,7 +304,13 @@ async function getConversationPins(conversationId, userId) {
     },
   });
 
-  return pins;
+  return pins.map((pin) => ({
+    ...pin,
+    message: {
+      ...pin.message,
+      previewText: derivePreviewText(pin.message),
+    },
+  }));
 }
 
 async function createGroupConversation(userId, title, memberIds) {
@@ -550,6 +556,7 @@ async function findOrCreatePrivateConversation(userId, recipientId) {
 }
 
 export {
+  derivePreviewText,
   serializeLatestPinnedMessage,
   buildPinSummary,
   getConversations,

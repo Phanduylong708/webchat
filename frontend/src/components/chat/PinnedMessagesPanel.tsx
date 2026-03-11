@@ -8,6 +8,7 @@ import { useAuth } from "@/hooks/context/useAuth";
 import { useConversationPinsQuery, useUnpinMessageMutation } from "@/hooks/queries/pins";
 import type { ConversationsResponse, PinnedMessageItem } from "@/types/chat.type";
 import { getAvatarFallback, getOptimizedAvatarUrl } from "@/utils/image.util";
+import { toPinnedPreviewLabel } from "@/utils/pin.util";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 type PinnedMessagesPanelProps = {
@@ -90,7 +91,7 @@ function PinnedMessageRow({
             <span className="shrink-0 text-xs text-muted-foreground">{formatPinnedTime(item.pinnedAt)}</span>
           </span>
           <span className="mt-0.5 block text-sm leading-snug text-muted-foreground line-clamp-2">
-            {item.message.content || "Pinned message"}
+            {item.message.content || toPinnedPreviewLabel(item.message.previewText)}
           </span>
         </span>
       </button>
@@ -177,44 +178,44 @@ export default function PinnedMessagesPanel({
               open ? "pointer-events-auto" : ""
             }`}
           >
-        <div className="flex items-center justify-between px-4 py-2 text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
-          <span>Pinned</span>
-          <span className="normal-case tracking-normal">Click to view in chat</span>
-        </div>
+            <div className="flex items-center justify-between px-4 py-2 text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+              <span>Pinned</span>
+              <span className="normal-case tracking-normal">Click to view in chat</span>
+            </div>
 
-        <ScrollArea className="max-h-[360px]">
-          <div className="space-y-2 px-3 pb-3">
-            {pinsQuery.isLoading && (
-              <div className="flex items-center justify-center gap-2 px-4 py-12 text-sm text-muted-foreground">
-                <Loader2 className="size-4 animate-spin" />
-                <span>Loading pinned messages...</span>
+            <ScrollArea className="max-h-[360px]">
+              <div className="space-y-2 px-3 pb-3">
+                {pinsQuery.isLoading && (
+                  <div className="flex items-center justify-center gap-2 px-4 py-12 text-sm text-muted-foreground">
+                    <Loader2 className="size-4 animate-spin" />
+                    <span>Loading pinned messages...</span>
+                  </div>
+                )}
+
+                {pinsQuery.isError && (
+                  <div className="px-4 py-10 text-center text-sm text-destructive">
+                    Failed to load pinned messages.
+                  </div>
+                )}
+
+                {!pinsQuery.isLoading && !pinsQuery.isError && pinsQuery.data?.length === 0 && (
+                  <div className="px-4 py-10 text-center text-sm text-muted-foreground">
+                    No pinned messages yet.
+                  </div>
+                )}
+
+                {pinsQuery.data?.map((item) => (
+                  <PinnedMessageRow
+                    key={item.messageId}
+                    item={item}
+                    canUnpin={canManagePins}
+                    isUnpinning={unpinMutation.isPending}
+                    onJump={handleJump}
+                    onUnpin={handleUnpin}
+                  />
+                ))}
               </div>
-            )}
-
-            {pinsQuery.isError && (
-              <div className="px-4 py-10 text-center text-sm text-destructive">
-                Failed to load pinned messages.
-              </div>
-            )}
-
-            {!pinsQuery.isLoading && !pinsQuery.isError && pinsQuery.data?.length === 0 && (
-              <div className="px-4 py-10 text-center text-sm text-muted-foreground">
-                No pinned messages yet.
-              </div>
-            )}
-
-            {pinsQuery.data?.map((item) => (
-              <PinnedMessageRow
-                key={item.messageId}
-                item={item}
-                canUnpin={canManagePins}
-                isUnpinning={unpinMutation.isPending}
-                onJump={handleJump}
-                onUnpin={handleUnpin}
-              />
-            ))}
-          </div>
-        </ScrollArea>
+            </ScrollArea>
           </div>
         </div>
       </div>
