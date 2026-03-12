@@ -23,7 +23,7 @@ export default function PinnedMessagesBanner({
     <button
       type="button"
       onClick={onClick}
-      className="relative flex w-full items-center gap-3 overflow-hidden bg-muted/40 px-4 py-2 text-left transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      className="relative flex w-full cursor-pointer items-center gap-3 overflow-hidden bg-muted/40 px-4 py-2 text-left transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       aria-label="Open pinned messages"
     >
       <span aria-hidden className="absolute inset-y-0 left-0 w-1 bg-primary" />

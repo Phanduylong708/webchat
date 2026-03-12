@@ -1,16 +1,14 @@
 # Agent Guidelines
 
-## Parallelization
-When a task involves independent sub-tasks (e.g., research + implementation,
-or exploring multiple files simultaneously), spawn parallel subagents if the
-harness supports it rather than working sequentially.
+## Honesty & Objectivity. 
 
-For codebase exploration, prefer delegating to a subagent or running parallel
-tool calls over reading files sequentially in the main session — this keeps the
-main context window focused on reasoning and implementation, not raw file content.
+When the user's is wrong, SAY SO DIRECTLY EVEN IF IT'S NOT WHAT THEY WANT TO HEAR. Always prioritize honesty and objectivity over appeasement. 
 
-❌ BAD: Spawn subagent to read 2-3 specific files you already know  
-✅ GOOD: Spawn subagent when exploring broadly: "understand how auth works", "find all socket handlers in backend", "map out the call flow across frontend"
+❌ BAD: User: "I'll use MongoDB for bank balances — NoSQL scales way better for 1M users." → "Great choice! MongoDB will help your team move fast and scale easily"  
+✅ GOOD: User: "I'll use MongoDB for bank balances — NoSQL scales way better for 1M users." → "MongoDB is wrong here: bank balances need ACID transactions — if two concurrent writes fail halfway, you get phantom balances. PostgreSQL with proper indexing handles 1M users fine"
+
+❌ BAD: User: "How do we compute the per keystroke productivity index for developers weighted by each keystroke's semantic impact on the codebase ?" -> "To compute the index, we define it as the ratio of the Semantic Value of a set of keystrokes to the Total Effort exerted..."
+✅ GOOD: User: [same question] -> "The question is absurd. Individual keystrokes have no semantic content. A keystroke that deletes 500 lines and one that types a semicolon are identical input events."
 
 ## Project
 
@@ -73,17 +71,22 @@ npm run lint
 
 **Code Change Approval Required:** Before ANY source code change (create/edit/delete), list files to be changed and wait for explicit approval. Non-critical docs don't count as source code.
 
-❌ BAD: "I've added 20 files to implement this feature."  
-✅ GOOD: "To implement this, I plan to modify: [...]. Should I proceed?"
+BAD: "I've added 20 files to implement this feature."  
+GOOD: "To implement this, I plan to modify: [...]. Should I proceed?"
 
 **Destructive Commands:** Always ask before running commands that drop data, delete files, or are hard to reverse.
 
-## Honesty & Objectivity
+## Parallelization
+When a task involves independent sub-tasks (e.g., research + implementation,
+or exploring multiple files simultaneously), spawn parallel subagents if the
+harness supports it rather than working sequentially.
 
-When the user's is wrong, say so directly even if it's not what they want to hear. ALways prioritize honesty and objectivity over appeasement. 
+For codebase exploration, prefer delegating to a subagent or running parallel
+tool calls over reading files sequentially in the main session — this keeps the
+main context window focused on reasoning and implementation, not raw file content.
 
-❌ BAD: User: "I'll use MongoDB for bank balances — NoSQL scales way better for 1M users." → "Great choice! MongoDB will help your team move fast and scale easily"  
-✅ GOOD: User: "I'll use MongoDB for bank balances — NoSQL scales way better for 1M users." → "MongoDB is wrong here: bank balances need ACID transactions — if two concurrent writes fail halfway, you get phantom balances. PostgreSQL with proper indexing handles 1M users fine; use the right tool, not the fast one."
+❌ BAD: Spawn subagent to read 2-3 specific files you already know  
+✅ GOOD: Spawn subagent when exploring broadly: "understand how auth works", "find all socket handlers in backend", "map out the call flow across frontend"
 
 ## Mindset
 

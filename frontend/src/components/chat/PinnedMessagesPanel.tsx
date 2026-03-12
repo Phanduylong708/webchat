@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Loader2, X } from "lucide-react";
+import { Loader2, PinOff } from "lucide-react";
 import { toast } from "sonner";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { getConversationsDetails } from "@/api/conversation.api";
@@ -71,12 +71,12 @@ function PinnedMessageRow({
   onUnpin: (messageId: number) => void;
 }): React.JSX.Element {
   return (
-    <div className="relative overflow-hidden rounded-lg bg-background/70">
+    <div className="group relative overflow-hidden rounded-lg bg-background/70">
       <span aria-hidden className="absolute inset-y-0 left-0 w-0.5 bg-primary/80" />
       <button
         type="button"
         onClick={() => onJump(item.messageId)}
-        className="flex w-full items-start gap-2.5 px-3 py-1.5 text-left transition-colors hover:bg-muted/35"
+        className="flex w-full cursor-pointer items-start gap-2.5 px-3 py-1.5 text-left transition-colors hover:bg-muted/35"
       >
         <Avatar className="mt-0.5 size-8 shrink-0">
           <AvatarImage src={getOptimizedAvatarUrl(item.message.sender.avatar, 40)} />
@@ -101,10 +101,10 @@ function PinnedMessageRow({
           type="button"
           onClick={() => onUnpin(item.messageId)}
           disabled={isUnpinning}
-          className="absolute right-2 top-1.5 inline-flex items-center gap-1 rounded-md bg-background/90 px-1.5 py-0.5 text-xs text-muted-foreground transition-colors hover:text-foreground disabled:cursor-not-allowed disabled:opacity-80"
+          aria-label="Unpin message"
+          className="absolute right-2 top-2 inline-flex cursor-pointer items-center justify-center rounded-md bg-background/95 p-1.5 text-muted-foreground opacity-0 shadow-sm backdrop-blur-sm transition-all hover:bg-muted hover:text-foreground group-hover:opacity-100 disabled:cursor-not-allowed disabled:opacity-100"
         >
-          {isUnpinning ? <Loader2 className="size-3 animate-spin" /> : <X className="size-3" />}
-          <span>Unpin</span>
+          {isUnpinning ? <Loader2 className="size-3.5 animate-spin" /> : <PinOff className="size-3.5" />}
         </button>
       )}
     </div>
