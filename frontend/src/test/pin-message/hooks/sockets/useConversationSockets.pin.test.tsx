@@ -1,10 +1,12 @@
 import { act, cleanup, render } from "@testing-library/react";
-import { useEffect, useState } from "react";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { ConversationsResponse, Messages, PinnedMessageItem, User } from "@/types/chat.type";
 import { queryClient } from "@/lib/queryClient";
 import { conversationPinsQueryKey } from "@/hooks/queries/pins";
+import { conversationsQueryKey } from "@/hooks/queries/conversations";
 import { useConversationSockets } from "@/hooks/sockets/useConversationSockets";
 
 class MockSocket {
@@ -78,34 +80,34 @@ function makeMessage(overrides: Partial<Messages> & { id: number; conversationId
 
 function mountConversationHook(initialConversations: ConversationsResponse[]) {
   const socket = new MockSocket();
-  let latestConversations = initialConversations;
+
+  queryClient.setQueryData(conversationsQueryKey(1), initialConversations);
 
   function Harness() {
-    const [conversations, setConversations] = useState(initialConversations);
-    const [, setTypingByConversation] = useState(new Map());
-    const [, setSystemMessages] = useState(new Map());
-    const [, setActiveConversationId] = useState<number | null>(null);
+    const [, setTypingByConversation] = useState(new Map<number, Map<number, string>>());
+    const [, setSystemMessages] = useState(new Map<number, string>());
 
     useConversationSockets({
       socket: socket as unknown as never,
       currentUserId: 1,
-      setConversations,
       setTypingByConversation,
       setSystemMessages,
-      setActiveConversationId,
+      clearActiveConversation: vi.fn(),
     });
-
-    useEffect(() => {
-      latestConversations = conversations;
-    }, [conversations]);
 
     return null;
   }
 
-  render(<Harness />);
+  render(
+    <QueryClientProvider client={queryClient}>
+      <Harness />
+    </QueryClientProvider>,
+  );
+
   return {
     socket,
-    getConversations: () => latestConversations,
+    getConversations: () =>
+      queryClient.getQueryData<ConversationsResponse[]>(conversationsQueryKey(1)) ?? [],
   };
 }
 

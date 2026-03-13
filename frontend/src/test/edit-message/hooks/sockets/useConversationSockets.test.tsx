@@ -1,8 +1,11 @@
 import { act, cleanup, render } from "@testing-library/react";
-import { useEffect, useState } from "react";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { ConversationsResponse, DisplayMessage } from "@/types/chat.type";
+import { queryClient } from "@/lib/queryClient";
+import { conversationsQueryKey } from "@/hooks/queries/conversations";
 import { useConversationSockets } from "../../../../hooks/sockets/useConversationSockets";
 
 class MockSocket {
@@ -37,8 +40,6 @@ function makeMessage(overrides: Partial<DisplayMessage> & { id: number; conversa
   return { ...base, ...overrides } as DisplayMessage;
 }
 
-afterEach(() => cleanup());
-
 function makeConversation(overrides: Partial<ConversationsResponse> & { id: number }): ConversationsResponse {
   const { id, ...rest } = overrides;
   return {
@@ -49,6 +50,15 @@ function makeConversation(overrides: Partial<ConversationsResponse> & { id: numb
     lastMessage: null,
     ...rest,
   };
+}
+
+afterEach(() => {
+  queryClient.clear();
+  cleanup();
+});
+
+function getConversations() {
+  return queryClient.getQueryData<ConversationsResponse[]>(conversationsQueryKey(1)) ?? [];
 }
 
 describe("useConversationSockets", () => {
@@ -88,31 +98,28 @@ describe("useConversationSockets", () => {
       },
     ];
 
-    let latest = initial;
+    queryClient.setQueryData(conversationsQueryKey(1), initial);
 
     function Harness() {
-      const [conversations, setConversations] = useState(initial);
-      const [, setTypingByConversation] = useState(new Map());
-      const [, setSystemMessages] = useState(new Map());
-      const [, setActiveConversationId] = useState<number | null>(null);
+      const [, setTypingByConversation] = useState(new Map<number, Map<number, string>>());
+      const [, setSystemMessages] = useState(new Map<number, string>());
 
       useConversationSockets({
         socket: socket as unknown as never,
         currentUserId: 1,
-        setConversations,
         setTypingByConversation,
         setSystemMessages,
-        setActiveConversationId,
+        clearActiveConversation: vi.fn(),
       });
-
-      useEffect(() => {
-        latest = conversations;
-      }, [conversations]);
 
       return null;
     }
 
-    render(<Harness />);
+    render(
+      <QueryClientProvider client={queryClient}>
+        <Harness />
+      </QueryClientProvider>,
+    );
     await act(async () => {});
 
     expect(socket.on).toHaveBeenCalledWith("messageUpdated", expect.any(Function));
@@ -128,6 +135,7 @@ describe("useConversationSockets", () => {
       socket.trigger("messageUpdated", updated);
     });
 
+    const latest = getConversations();
     expect(latest.map((c) => c.id)).toEqual([1, 2]);
     expect(latest[0].lastMessage?.content).toBe("new");
     expect(latest[0].lastMessage?.previewText).toBe("new");
@@ -163,31 +171,28 @@ describe("useConversationSockets", () => {
       }),
     ];
 
-    let latest = initial;
+    queryClient.setQueryData(conversationsQueryKey(1), initial);
 
     function Harness() {
-      const [conversations, setConversations] = useState(initial);
-      const [, setTypingByConversation] = useState(new Map());
-      const [, setSystemMessages] = useState(new Map());
-      const [, setActiveConversationId] = useState<number | null>(null);
+      const [, setTypingByConversation] = useState(new Map<number, Map<number, string>>());
+      const [, setSystemMessages] = useState(new Map<number, string>());
 
       useConversationSockets({
         socket: socket as unknown as never,
         currentUserId: 1,
-        setConversations,
         setTypingByConversation,
         setSystemMessages,
-        setActiveConversationId,
+        clearActiveConversation: vi.fn(),
       });
-
-      useEffect(() => {
-        latest = conversations;
-      }, [conversations]);
 
       return null;
     }
 
-    render(<Harness />);
+    render(
+      <QueryClientProvider client={queryClient}>
+        <Harness />
+      </QueryClientProvider>,
+    );
     await act(async () => {});
 
     act(() => {
@@ -203,6 +208,7 @@ describe("useConversationSockets", () => {
       });
     });
 
+    const latest = getConversations();
     expect(latest.map((conversation) => conversation.id)).toEqual([1, 2]);
     expect(latest[0].lastMessage?.id).toBe(9);
     expect(latest[0].lastMessage?.previewText).toBe("older");
@@ -227,31 +233,28 @@ describe("useConversationSockets", () => {
       }),
     ];
 
-    let latest = initial;
+    queryClient.setQueryData(conversationsQueryKey(1), initial);
 
     function Harness() {
-      const [conversations, setConversations] = useState(initial);
-      const [, setTypingByConversation] = useState(new Map());
-      const [, setSystemMessages] = useState(new Map());
-      const [, setActiveConversationId] = useState<number | null>(null);
+      const [, setTypingByConversation] = useState(new Map<number, Map<number, string>>());
+      const [, setSystemMessages] = useState(new Map<number, string>());
 
       useConversationSockets({
         socket: socket as unknown as never,
         currentUserId: 1,
-        setConversations,
         setTypingByConversation,
         setSystemMessages,
-        setActiveConversationId,
+        clearActiveConversation: vi.fn(),
       });
-
-      useEffect(() => {
-        latest = conversations;
-      }, [conversations]);
 
       return null;
     }
 
-    render(<Harness />);
+    render(
+      <QueryClientProvider client={queryClient}>
+        <Harness />
+      </QueryClientProvider>,
+    );
     await act(async () => {});
 
     act(() => {
@@ -262,7 +265,7 @@ describe("useConversationSockets", () => {
       });
     });
 
-    expect(latest[0].lastMessage).toBeNull();
+    expect(getConversations()[0].lastMessage).toBeNull();
   });
 
   it("ignores messageDeleted when the deleted message is not the current preview", async () => {
@@ -283,31 +286,28 @@ describe("useConversationSockets", () => {
       }),
     ];
 
-    let latest = initial;
+    queryClient.setQueryData(conversationsQueryKey(1), initial);
 
     function Harness() {
-      const [conversations, setConversations] = useState(initial);
-      const [, setTypingByConversation] = useState(new Map());
-      const [, setSystemMessages] = useState(new Map());
-      const [, setActiveConversationId] = useState<number | null>(null);
+      const [, setTypingByConversation] = useState(new Map<number, Map<number, string>>());
+      const [, setSystemMessages] = useState(new Map<number, string>());
 
       useConversationSockets({
         socket: socket as unknown as never,
         currentUserId: 1,
-        setConversations,
         setTypingByConversation,
         setSystemMessages,
-        setActiveConversationId,
+        clearActiveConversation: vi.fn(),
       });
-
-      useEffect(() => {
-        latest = conversations;
-      }, [conversations]);
 
       return null;
     }
 
-    render(<Harness />);
+    render(
+      <QueryClientProvider client={queryClient}>
+        <Harness />
+      </QueryClientProvider>,
+    );
     await act(async () => {});
 
     act(() => {
@@ -322,7 +322,7 @@ describe("useConversationSockets", () => {
       });
     });
 
-    expect(latest).toBe(initial);
+    const latest = getConversations();
     expect(latest[0].lastMessage?.id).toBe(10);
   });
 });
