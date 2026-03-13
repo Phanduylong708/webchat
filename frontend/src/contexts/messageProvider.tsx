@@ -1,5 +1,7 @@
 import { useState, useCallback, type JSX, useMemo } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import type { Messages, DisplayMessage, OptimisticMessage, SendMessageInput } from "@/types/chat.type";
+import type { ConversationsResponse } from "@/types/chat.type";
 import { getMessages } from "@/api/message.api";
 import useSocket from "@/hooks/context/useSocket";
 import { useAuth } from "@/hooks/context/useAuth";
@@ -11,7 +13,9 @@ import {
   replaceMessageInMap,
   updateOptimisticInMap,
 } from "@/utils/message.utils";
+import { applyNewMessageToConversationList } from "@/utils/conversation.utils";
 import { emitWithAckTimeout } from "@/utils/socketAck.util";
+import { conversationsQueryKey } from "@/hooks/queries/conversations";
 import { MessageContext } from "./messageContext";
 
 interface SendMessageAck {
@@ -81,6 +85,7 @@ function MessageProvider({ children }: { children: React.ReactNode }): JSX.Eleme
 
   const { socket } = useSocket();
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   useMessageSockets({ socket, setMessagesByConversation });
 
   function markOptimisticFailed(conversationId: number, tempId: number): void {
@@ -157,8 +162,26 @@ function MessageProvider({ children }: { children: React.ReactNode }): JSX.Eleme
       });
 
       reconcileOptimisticMessage(normalized.conversationId, tempId, ack.message!);
+
+      // Patch the conversation list cache for the sender.
+      // Receivers get this update via the socket newMessage broadcast, but the
+      // backend uses socket.to(room) which excludes the sender.
+      const serverMessage = ack.message!;
+      const userId = user.id;
+      queryClient.setQueryData<ConversationsResponse[]>(
+        conversationsQueryKey(userId),
+        (prev) => {
+          if (!prev) return prev;
+          const patched = applyNewMessageToConversationList(prev, serverMessage);
+          // Conversation not found in cache — invalidate so the list re-fetches.
+          if (patched === prev) {
+            void queryClient.invalidateQueries({ queryKey: conversationsQueryKey(userId) });
+          }
+          return patched;
+        },
+      );
     },
-    [socket, user],
+    [socket, user, queryClient],
   );
 
   const fetchMessages = useCallback(

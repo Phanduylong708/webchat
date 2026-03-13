@@ -13,6 +13,7 @@ import {
   updateTypingMap,
   resolveLeavingUsername,
   derivePreviewText,
+  applyNewMessageToConversationList,
 } from "@/utils/conversation.utils";
 import {
   sortPinnedItemsDesc,
@@ -97,30 +98,7 @@ export function useConversationSockets({
         conversationsQueryKey(userId),
         (prev) => {
           if (!prev) return prev;
-          const conversation = prev.find((c) => c.id === message.conversationId);
-          if (!conversation) return prev;
-
-          const previewText = derivePreviewText(message);
-          const newLastMessage = {
-            id: message.id,
-            content: message.content,
-            messageType: message.messageType,
-            previewText,
-            createdAt: message.createdAt,
-            sender: message.sender,
-            attachments: message.attachments?.map((a) => ({ mimeType: a.mimeType })),
-          };
-
-          const updated = prev.map((c) =>
-            c.id === message.conversationId ? { ...c, lastMessage: newLastMessage } : c,
-          );
-
-          // Resort so most-recently-messaged conversation floats to top.
-          return updated.sort((a, b) => {
-            const timeA = a.lastMessage?.createdAt ?? "";
-            const timeB = b.lastMessage?.createdAt ?? "";
-            return timeB.localeCompare(timeA);
-          });
+          return applyNewMessageToConversationList(prev, message);
         },
       );
     }

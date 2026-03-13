@@ -1,4 +1,4 @@
-import type { Messages, User } from "@/types/chat.type";
+import type { ConversationsResponse, Messages, User } from "@/types/chat.type";
 
 // Derives a human-readable preview text from a message.
 // Returns content if present; otherwise a mime-family key ("image"/"video"/"file").
@@ -40,12 +40,6 @@ export function updateTypingMap(
   return updated;
 }
 
-// Returns the best available username for system messages when a member leaves.
-// Preference order:
-// 1. Username provided in socket payload (definitive source)
-// 2. Matching member from preview list (best effort if payload lacks user)
-// 3. First preview member (fallback to some name to avoid anonymous text)
-// 4. Default to generic "A member"
 export function resolveLeavingUsername(
   payloadUser: User | undefined,
   fallbackMembers: User[],
@@ -65,4 +59,41 @@ export function resolveLeavingUsername(
     return fallbackMembers[0].username;
   }
   return "A member";
+}
+
+/**
+ * Pure helper: patches the conversation list when a new message arrives.
+ * Used by both the socket newMessage handler (for receivers) and the send
+ * ack path (for the sender, who is excluded from the socket broadcast).
+ *
+ * Returns the same array reference if the conversation is not found.
+ */
+export function applyNewMessageToConversationList(
+  prev: ConversationsResponse[],
+  message: Messages,
+): ConversationsResponse[] {
+  const conversation = prev.find((c) => c.id === message.conversationId);
+  if (!conversation) return prev;
+
+  const previewText = derivePreviewText(message);
+  const newLastMessage = {
+    id: message.id,
+    content: message.content,
+    messageType: message.messageType,
+    previewText,
+    createdAt: message.createdAt,
+    sender: message.sender,
+    attachments: message.attachments?.map((a) => ({ mimeType: a.mimeType })),
+  };
+
+  const updated = prev.map((c) =>
+    c.id === message.conversationId ? { ...c, lastMessage: newLastMessage } : c,
+  );
+
+  // Resort so most-recently-messaged conversation floats to top.
+  return updated.sort((a, b) => {
+    const timeA = a.lastMessage?.createdAt ?? "";
+    const timeB = b.lastMessage?.createdAt ?? "";
+    return timeB.localeCompare(timeA);
+  });
 }
