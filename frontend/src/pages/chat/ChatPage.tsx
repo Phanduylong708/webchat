@@ -1,8 +1,8 @@
 import { ConversationProvider } from "@/contexts/conversationProvider";
+import { ConversationUiProvider } from "@/contexts/conversationUiProvider";
 import { MessageProvider } from "@/contexts/messageProvider";
-import { useEffect, useRef } from "react";
-import { useLocation } from "react-router-dom";
-import { useConversation } from "@/hooks/context/useConversation";
+import { useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useMessage } from "@/hooks/context/useMessage";
 import ConversationListPanel from "@/components/layout/ConversationListPanel";
 import ChatWindow from "@/components/chat/ChatWindow";
@@ -11,35 +11,26 @@ import MainContentPanel from "@/components/layout/MainContentPanel";
 export default function ChatPage(): React.JSX.Element {
   return (
     <ConversationProvider>
-      <MessageProvider>
-        <ChatPageContent />
-      </MessageProvider>
+      <ConversationUiProvider>
+        <MessageProvider>
+          <ChatPageContent />
+        </MessageProvider>
+      </ConversationUiProvider>
     </ConversationProvider>
   );
 }
 
 function ChatPageContent(): React.JSX.Element {
-  const location = useLocation();
-  const { activeConversationId, conversations, loadingConversations, selectConversation } = useConversation();
+  const [searchParams] = useSearchParams();
+  const activeConversationId = Number(searchParams.get("conversationId")) || null;
   const { fetchMessages } = useMessage();
-  const hasAutoSelected = useRef(false);
-
-  useEffect(() => {
-    const selectId = (location.state as { selectConversationId?: number } | null)?.selectConversationId;
-    if (selectId && !loadingConversations && !hasAutoSelected.current) {
-      const exists = conversations.some(c => c.id === selectId);
-      if (exists) {
-        selectConversation(selectId);
-        hasAutoSelected.current = true;
-      }
-    }
-  }, [location.state, loadingConversations, conversations, selectConversation]);
 
   useEffect(() => {
     if (activeConversationId) {
       fetchMessages(activeConversationId);
     }
   }, [activeConversationId, fetchMessages]);
+
   return (
     <div className="grid grid-cols-[300px_minmax(0,1fr)] h-screen">
       <ConversationListPanel />
