@@ -1,7 +1,6 @@
 import { useEffect, type Dispatch, type SetStateAction } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import type { Socket } from "socket.io-client";
 import type {
   ConversationsDetail,
   ConversationsResponse,
@@ -21,6 +20,8 @@ import {
   patchPinnedItemsCache,
 } from "@/utils/pin.util";
 import { conversationsQueryKey } from "@/hooks/queries/conversations";
+import useSocket from "@/hooks/context/useSocket";
+import { useAuth } from "@/hooks/context/useAuth";
 
 type TypingSetter = Dispatch<SetStateAction<Map<number, Map<number, string>>>>;
 type SystemMessageSetter = Dispatch<SetStateAction<Map<number, string>>>;
@@ -47,8 +48,6 @@ type MessageUnpinnedPayload = {
 };
 
 interface UseConversationSocketsParams {
-  socket: Socket | null;
-  currentUserId: number | null;
   setTypingByConversation: TypingSetter;
   setSystemMessages: SystemMessageSetter;
   /**
@@ -65,13 +64,14 @@ interface UseConversationSocketsParams {
  * Ephemeral UI state (typing, system messages) is patched via setter props.
  */
 export function useConversationSockets({
-  socket,
-  currentUserId,
   setTypingByConversation,
   setSystemMessages,
   clearActiveConversation,
 }: UseConversationSocketsParams): void {
   const queryClient = useQueryClient();
+  const { socket } = useSocket();
+  const { user } = useAuth();
+  const currentUserId = user?.id ?? null;
 
   // Re-sync the conversation list after a socket reconnect.
   // Required safety net for staleTime: Infinity — without this a dropped

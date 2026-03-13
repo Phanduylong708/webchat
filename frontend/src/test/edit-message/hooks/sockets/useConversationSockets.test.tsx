@@ -8,6 +8,8 @@ import { queryClient } from "@/lib/queryClient";
 import { conversationsQueryKey } from "@/hooks/queries/conversations";
 import { useConversationSockets } from "../../../../hooks/sockets/useConversationSockets";
 
+// --- Mock useSocket and useAuth so hook can self-provision socket/userId ---
+
 class MockSocket {
   handlers = new Map<string, (...args: unknown[]) => void>();
   on = vi.fn((event: string, handler: (...args: unknown[]) => void) => {
@@ -24,6 +26,23 @@ class MockSocket {
     handler?.(...args);
   }
 }
+
+const mockSocket = new MockSocket();
+
+vi.mock("@/hooks/context/useSocket", () => ({
+  default: () => ({
+    socket: mockSocket,
+    isConnected: true,
+    presenceByUserId: new Map(),
+    error: null,
+  }),
+}));
+
+vi.mock("@/hooks/context/useAuth", () => ({
+  useAuth: () => ({ user: { id: 1, username: "alice", avatar: null } }),
+}));
+
+// ---------------------------------------------------------------------------
 
 function makeMessage(overrides: Partial<DisplayMessage> & { id: number; conversationId: number }): DisplayMessage {
   const base: DisplayMessage = {
@@ -55,16 +74,38 @@ function makeConversation(overrides: Partial<ConversationsResponse> & { id: numb
 afterEach(() => {
   queryClient.clear();
   cleanup();
+  mockSocket.handlers.clear();
+  mockSocket.on.mockClear();
+  mockSocket.off.mockClear();
 });
 
 function getConversations() {
   return queryClient.getQueryData<ConversationsResponse[]>(conversationsQueryKey(1)) ?? [];
 }
 
+function Harness() {
+  const [, setTypingByConversation] = useState(new Map<number, Map<number, string>>());
+  const [, setSystemMessages] = useState(new Map<number, string>());
+
+  useConversationSockets({
+    setTypingByConversation,
+    setSystemMessages,
+    clearActiveConversation: vi.fn(),
+  });
+
+  return null;
+}
+
+function mountHarness() {
+  render(
+    <QueryClientProvider client={queryClient}>
+      <Harness />
+    </QueryClientProvider>,
+  );
+}
+
 describe("useConversationSockets", () => {
   it("updates sidebar lastMessage preview on messageUpdated without reordering", async () => {
-    const socket = new MockSocket();
-
     const initial: ConversationsResponse[] = [
       {
         id: 1,
@@ -99,30 +140,10 @@ describe("useConversationSockets", () => {
     ];
 
     queryClient.setQueryData(conversationsQueryKey(1), initial);
-
-    function Harness() {
-      const [, setTypingByConversation] = useState(new Map<number, Map<number, string>>());
-      const [, setSystemMessages] = useState(new Map<number, string>());
-
-      useConversationSockets({
-        socket: socket as unknown as never,
-        currentUserId: 1,
-        setTypingByConversation,
-        setSystemMessages,
-        clearActiveConversation: vi.fn(),
-      });
-
-      return null;
-    }
-
-    render(
-      <QueryClientProvider client={queryClient}>
-        <Harness />
-      </QueryClientProvider>,
-    );
+    mountHarness();
     await act(async () => {});
 
-    expect(socket.on).toHaveBeenCalledWith("messageUpdated", expect.any(Function));
+    expect(mockSocket.on).toHaveBeenCalledWith("messageUpdated", expect.any(Function));
 
     const updated = makeMessage({
       id: 10,
@@ -132,7 +153,7 @@ describe("useConversationSockets", () => {
     });
 
     act(() => {
-      socket.trigger("messageUpdated", updated);
+      mockSocket.trigger("messageUpdated", updated);
     });
 
     const latest = getConversations();
@@ -142,8 +163,6 @@ describe("useConversationSockets", () => {
   });
 
   it("backfills sidebar preview on messageDeleted without reordering conversations", async () => {
-    const socket = new MockSocket();
-
     const initial: ConversationsResponse[] = [
       makeConversation({
         id: 1,
@@ -172,31 +191,11 @@ describe("useConversationSockets", () => {
     ];
 
     queryClient.setQueryData(conversationsQueryKey(1), initial);
-
-    function Harness() {
-      const [, setTypingByConversation] = useState(new Map<number, Map<number, string>>());
-      const [, setSystemMessages] = useState(new Map<number, string>());
-
-      useConversationSockets({
-        socket: socket as unknown as never,
-        currentUserId: 1,
-        setTypingByConversation,
-        setSystemMessages,
-        clearActiveConversation: vi.fn(),
-      });
-
-      return null;
-    }
-
-    render(
-      <QueryClientProvider client={queryClient}>
-        <Harness />
-      </QueryClientProvider>,
-    );
+    mountHarness();
     await act(async () => {});
 
     act(() => {
-      socket.trigger("messageDeleted", {
+      mockSocket.trigger("messageDeleted", {
         conversationId: 1,
         messageId: 10,
         nextLastMessage: makeMessage({
@@ -216,8 +215,6 @@ describe("useConversationSockets", () => {
   });
 
   it("sets lastMessage to null when deleting the final preview message", async () => {
-    const socket = new MockSocket();
-
     const initial: ConversationsResponse[] = [
       makeConversation({
         id: 1,
@@ -234,31 +231,11 @@ describe("useConversationSockets", () => {
     ];
 
     queryClient.setQueryData(conversationsQueryKey(1), initial);
-
-    function Harness() {
-      const [, setTypingByConversation] = useState(new Map<number, Map<number, string>>());
-      const [, setSystemMessages] = useState(new Map<number, string>());
-
-      useConversationSockets({
-        socket: socket as unknown as never,
-        currentUserId: 1,
-        setTypingByConversation,
-        setSystemMessages,
-        clearActiveConversation: vi.fn(),
-      });
-
-      return null;
-    }
-
-    render(
-      <QueryClientProvider client={queryClient}>
-        <Harness />
-      </QueryClientProvider>,
-    );
+    mountHarness();
     await act(async () => {});
 
     act(() => {
-      socket.trigger("messageDeleted", {
+      mockSocket.trigger("messageDeleted", {
         conversationId: 1,
         messageId: 10,
         nextLastMessage: null,
@@ -269,8 +246,6 @@ describe("useConversationSockets", () => {
   });
 
   it("ignores messageDeleted when the deleted message is not the current preview", async () => {
-    const socket = new MockSocket();
-
     const initial: ConversationsResponse[] = [
       makeConversation({
         id: 1,
@@ -287,31 +262,11 @@ describe("useConversationSockets", () => {
     ];
 
     queryClient.setQueryData(conversationsQueryKey(1), initial);
-
-    function Harness() {
-      const [, setTypingByConversation] = useState(new Map<number, Map<number, string>>());
-      const [, setSystemMessages] = useState(new Map<number, string>());
-
-      useConversationSockets({
-        socket: socket as unknown as never,
-        currentUserId: 1,
-        setTypingByConversation,
-        setSystemMessages,
-        clearActiveConversation: vi.fn(),
-      });
-
-      return null;
-    }
-
-    render(
-      <QueryClientProvider client={queryClient}>
-        <Harness />
-      </QueryClientProvider>,
-    );
+    mountHarness();
     await act(async () => {});
 
     act(() => {
-      socket.trigger("messageDeleted", {
+      mockSocket.trigger("messageDeleted", {
         conversationId: 1,
         messageId: 999,
         nextLastMessage: makeMessage({

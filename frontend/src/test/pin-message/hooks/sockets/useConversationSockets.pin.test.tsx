@@ -9,6 +9,8 @@ import { conversationPinsQueryKey } from "@/hooks/queries/pins";
 import { conversationsQueryKey } from "@/hooks/queries/conversations";
 import { useConversationSockets } from "@/hooks/sockets/useConversationSockets";
 
+// --- Mock useSocket and useAuth so hook can self-provision socket/userId ---
+
 class MockSocket {
   handlers = new Map<string, (...args: unknown[]) => void>();
   on = vi.fn((event: string, handler: (...args: unknown[]) => void) => {
@@ -25,6 +27,23 @@ class MockSocket {
     handler?.(...args);
   }
 }
+
+const mockSocket = new MockSocket();
+
+vi.mock("@/hooks/context/useSocket", () => ({
+  default: () => ({
+    socket: mockSocket,
+    isConnected: true,
+    presenceByUserId: new Map(),
+    error: null,
+  }),
+}));
+
+vi.mock("@/hooks/context/useAuth", () => ({
+  useAuth: () => ({ user: { id: 1, username: "alice", avatar: null } }),
+}));
+
+// ---------------------------------------------------------------------------
 
 const ALICE: User = { id: 1, username: "alice", avatar: null };
 const BOB: User = { id: 2, username: "bob", avatar: null };
@@ -79,8 +98,6 @@ function makeMessage(overrides: Partial<Messages> & { id: number; conversationId
 }
 
 function mountConversationHook(initialConversations: ConversationsResponse[]) {
-  const socket = new MockSocket();
-
   queryClient.setQueryData(conversationsQueryKey(1), initialConversations);
 
   function Harness() {
@@ -88,8 +105,6 @@ function mountConversationHook(initialConversations: ConversationsResponse[]) {
     const [, setSystemMessages] = useState(new Map<number, string>());
 
     useConversationSockets({
-      socket: socket as unknown as never,
-      currentUserId: 1,
       setTypingByConversation,
       setSystemMessages,
       clearActiveConversation: vi.fn(),
@@ -105,7 +120,6 @@ function mountConversationHook(initialConversations: ConversationsResponse[]) {
   );
 
   return {
-    socket,
     getConversations: () =>
       queryClient.getQueryData<ConversationsResponse[]>(conversationsQueryKey(1)) ?? [],
   };
@@ -114,6 +128,9 @@ function mountConversationHook(initialConversations: ConversationsResponse[]) {
 afterEach(() => {
   queryClient.clear();
   cleanup();
+  mockSocket.handlers.clear();
+  mockSocket.on.mockClear();
+  mockSocket.off.mockClear();
 });
 
 describe("useConversationSockets pin sync", () => {
@@ -122,7 +139,7 @@ describe("useConversationSockets pin sync", () => {
       makeConversation({ id: 1 }),
       makeConversation({ id: 2 }),
     ];
-    const { socket, getConversations } = mountConversationHook(initial);
+    const { getConversations } = mountConversationHook(initial);
     queryClient.setQueryData(conversationPinsQueryKey(1), []);
 
     await act(async () => {});
@@ -133,7 +150,7 @@ describe("useConversationSockets pin sync", () => {
     });
 
     act(() => {
-      socket.trigger("messagePinned", {
+      mockSocket.trigger("messagePinned", {
         conversationId: 1,
         pinnedCount: 1,
         latestPinnedMessage: {
@@ -171,7 +188,7 @@ describe("useConversationSockets pin sync", () => {
         },
       }),
     ];
-    const { socket, getConversations } = mountConversationHook(initial);
+    const { getConversations } = mountConversationHook(initial);
     queryClient.setQueryData(conversationPinsQueryKey(1), [
       makePinnedItem({ messageId: 51, pinnedAt: "2026-03-10T09:00:00.000Z" }),
       makePinnedItem({ messageId: 50, pinnedAt: "2026-03-10T08:00:00.000Z" }),
@@ -180,7 +197,7 @@ describe("useConversationSockets pin sync", () => {
     await act(async () => {});
 
     act(() => {
-      socket.trigger("messageUnpinned", {
+      mockSocket.trigger("messageUnpinned", {
         conversationId: 1,
         messageId: 51,
         pinnedCount: 1,
@@ -217,7 +234,7 @@ describe("useConversationSockets pin sync", () => {
         },
       }),
     ];
-    const { socket, getConversations } = mountConversationHook(initial);
+    const { getConversations } = mountConversationHook(initial);
     queryClient.setQueryData(conversationPinsQueryKey(1), [
       makePinnedItem({ messageId: 61, pinnedAt: "2026-03-10T09:00:00.000Z" }),
       makePinnedItem({ messageId: 60, pinnedAt: "2026-03-10T08:00:00.000Z" }),
@@ -226,7 +243,7 @@ describe("useConversationSockets pin sync", () => {
     await act(async () => {});
 
     act(() => {
-      socket.trigger("messageDeleted", {
+      mockSocket.trigger("messageDeleted", {
         conversationId: 1,
         messageId: 61,
         pinSummary: {
@@ -265,7 +282,7 @@ describe("useConversationSockets pin sync", () => {
         },
       }),
     ];
-    const { socket, getConversations } = mountConversationHook(initial);
+    const { getConversations } = mountConversationHook(initial);
     queryClient.setQueryData(conversationPinsQueryKey(1), [
       makePinnedItem({
         messageId: 70,
@@ -284,7 +301,7 @@ describe("useConversationSockets pin sync", () => {
     await act(async () => {});
 
     act(() => {
-      socket.trigger(
+      mockSocket.trigger(
         "messageUpdated",
         makeMessage({
           id: 70,
