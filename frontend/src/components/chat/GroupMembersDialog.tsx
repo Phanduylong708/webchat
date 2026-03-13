@@ -1,7 +1,8 @@
 import { useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Search, Users } from "lucide-react";
 import { useAuth } from "@/hooks/context/useAuth";
-import { useConversation } from "@/hooks/context/useConversation";
+import { useLeaveGroupMutation, useRemoveMemberMutation } from "@/hooks/queries/conversations";
 import { getConversationsDetails } from "@/api/conversation.api";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -35,11 +36,12 @@ export default function GroupMembersDialog({ conversationId }: GroupMembersDialo
   const [loadError, setLoadError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [removingIds, setRemovingIds] = useState<Set<number>>(new Set());
-  const [isLeavingGroup, setIsLeavingGroup] = useState(false);
   const [leaveError, setLeaveError] = useState<string | null>(null);
 
   const { user: currentUser } = useAuth();
-  const { removeMember, leaveGroup } = useConversation();
+  const leaveGroupMutation = useLeaveGroupMutation();
+  const removeMemberMutation = useRemoveMemberMutation();
+  const [, setSearchParams] = useSearchParams();
 
   async function handleOpen(open: boolean) {
     setIsOpen(open);
@@ -61,31 +63,33 @@ export default function GroupMembersDialog({ conversationId }: GroupMembersDialo
 
   async function handleRemove(userId: number) {
     setRemovingIds((prev) => new Set(prev).add(userId));
-    const { success, message } = await removeMember(conversationId, userId);
-    if (success) {
+    try {
+      await removeMemberMutation.mutateAsync({ conversationId, userId });
       // Optimistically remove from local details list
       setDetails((prev) => (prev ? { ...prev, members: prev.members.filter((m) => m.id !== userId) } : prev));
-    } else {
-      // Surface error briefly — could also use toast
-      console.error("Failed to remove member:", message);
+    } catch (error) {
+      console.error("Failed to remove member:", error);
+    } finally {
+      setRemovingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(userId);
+        return next;
+      });
     }
-    setRemovingIds((prev) => {
-      const next = new Set(prev);
-      next.delete(userId);
-      return next;
-    });
   }
 
   async function handleLeave() {
-    setIsLeavingGroup(true);
     setLeaveError(null);
-    const { success, message } = await leaveGroup(conversationId);
-    if (success) {
+    try {
+      await leaveGroupMutation.mutateAsync(conversationId);
       setIsOpen(false);
-    } else {
-      setLeaveError(message ?? "Failed to leave group");
+      setSearchParams((p) => {
+        p.delete("conversationId");
+        return p;
+      });
+    } catch (error) {
+      setLeaveError(error instanceof Error ? error.message : "Failed to leave group");
     }
-    setIsLeavingGroup(false);
   }
 
   const isCreator = currentUser?.id === details?.creatorId;
@@ -211,10 +215,10 @@ export default function GroupMembersDialog({ conversationId }: GroupMembersDialo
               <AlertDialogCancel>Cancel</AlertDialogCancel>
               <AlertDialogAction
                 onClick={() => void handleLeave()}
-                disabled={isLeavingGroup}
+                disabled={leaveGroupMutation.isPending}
                 className="bg-destructive hover:bg-destructive/90 cursor-pointer"
               >
-                {isLeavingGroup ? "Leaving…" : "Leave"}
+                {leaveGroupMutation.isPending ? "Leaving…" : "Leave"}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

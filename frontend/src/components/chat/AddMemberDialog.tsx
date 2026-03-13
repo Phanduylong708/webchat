@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useConversation } from "@/hooks/context/useConversation";
+import { useAddMemberMutation } from "@/hooks/queries/conversations";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -31,11 +31,11 @@ export default function AddMemberDialog({
   onSuccess,
 }: AddMemberDialogProps): React.JSX.Element {
   const [isOpen, setIsOpen] = useState(false);
-  const [selectedFriendId, setSelectedFriendId] = useState<number | null>(null); // Single select
-  const [currentMembers, setCurrentMembers] = useState<User[]>([]); // Members trong group
+  const [selectedFriendId, setSelectedFriendId] = useState<number | null>(null);
+  const [currentMembers, setCurrentMembers] = useState<User[]>([]);
   const [isLoadingMembers, setIsLoadingMembers] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
-  const { addMember } = useConversation();
+  const addMemberMutation = useAddMemberMutation();
   const friendsQuery = useFriendsQuery();
   const friends = friendsQuery.data ?? [];
 
@@ -73,18 +73,16 @@ export default function AddMemberDialog({
     if (!selectedFriendId) return;
     setLocalError(null);
 
-    const { success, message } = await addMember(conversationId, selectedFriendId);
-
-    if (success) {
-      // Success: close dialog, reset
+    try {
+      await addMemberMutation.mutateAsync({ conversationId, userId: selectedFriendId });
       setIsOpen(false);
       setSelectedFriendId(null);
       onSuccess?.();
-    } else {
-      // Error: show message
-      setLocalError(message || "Failed to add member");
+    } catch (error) {
+      setLocalError(error instanceof Error ? error.message : "Failed to add member");
     }
   }
+
   return (
     <Dialog
       open={isOpen}
@@ -153,8 +151,8 @@ export default function AddMemberDialog({
           {localError && <p className="text-sm text-destructive">{localError}</p>}
 
           <DialogFooter>
-            <Button type="submit" disabled={!selectedFriendId}>
-              Add member
+            <Button type="submit" disabled={!selectedFriendId || addMemberMutation.isPending}>
+              {addMemberMutation.isPending ? "Adding..." : "Add member"}
             </Button>
           </DialogFooter>
         </form>

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useConversation } from "@/hooks/context/useConversation";
+import { useCreateGroupMutation } from "@/hooks/queries/conversations";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -23,31 +23,22 @@ export default function CreateGroupDialog(): React.JSX.Element {
   const [title, setTitle] = useState("");
   const [selectedFriendIds, setSelectedFriendIds] = useState<number[]>([]);
   const [localError, setLocalError] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const friendsQuery = useFriendsQuery();
   const friends = friendsQuery.data ?? [];
-  const { createGroup } = useConversation();
+  const createGroupMutation = useCreateGroupMutation();
   const isValid = title.trim() !== "" && selectedFriendIds.length >= 2;
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setLocalError(null);
-    setIsSubmitting(true);
 
     try {
-      const { success, message } = await createGroup(title, selectedFriendIds);
-
-      if (success) {
-        // Success: close dialog, reset form
-        setIsOpen(false);
-        setTitle("");
-        setSelectedFriendIds([]);
-      } else {
-        // Error: show message
-        setLocalError(message || "Failed to create group");
-      }
-    } finally {
-      setIsSubmitting(false);
+      await createGroupMutation.mutateAsync({ title, memberIds: selectedFriendIds });
+      setIsOpen(false);
+      setTitle("");
+      setSelectedFriendIds([]);
+    } catch (error) {
+      setLocalError(error instanceof Error ? error.message : "Failed to create group");
     }
   }
 
@@ -59,6 +50,7 @@ export default function CreateGroupDialog(): React.JSX.Element {
       return [...prev, friendId];
     });
   }
+
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
@@ -81,7 +73,7 @@ export default function CreateGroupDialog(): React.JSX.Element {
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               required
-              disabled={isSubmitting}
+              disabled={createGroupMutation.isPending}
             />
           </div>
 
@@ -135,8 +127,8 @@ export default function CreateGroupDialog(): React.JSX.Element {
           {localError && <div className="text-sm text-destructive">{localError}</div>}
 
           <DialogFooter>
-            <Button type="submit" disabled={!isValid || isSubmitting}>
-              {isSubmitting ? "Creating..." : "Create Group"}
+            <Button type="submit" disabled={!isValid || createGroupMutation.isPending}>
+              {createGroupMutation.isPending ? "Creating..." : "Create Group"}
             </Button>
           </DialogFooter>
         </form>
