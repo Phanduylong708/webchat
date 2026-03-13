@@ -128,25 +128,6 @@ export type OptimisticMessage = Messages & OptimisticMeta;
 export type DisplayMessage = Messages | OptimisticMessage;
 
 
-export interface ConversationState {
-  conversations: ConversationsResponse[];
-  activeConversationId: number | null;
-  loadingConversations: boolean;
-  error: string | null;
-}
-
-export interface ConversationContextValue extends ConversationState {
-  fetchConversations: () => Promise<void>;
-  selectConversation: (id: number) => Promise<void>;
-  onlineUsers: Set<number>;
-  typingByConversation: Map<number, Map<number, string>>;
-  systemMessages: Map<number, string>;
-  createGroup: (title: string, memberIds: number[]) => Promise<{ success: boolean; message?: string }>;
-  addMember: (conversationId: number, userId: number) => Promise<{ success: boolean; message?: string }>;
-  leaveGroup: (conversationId: number) => Promise<{success: boolean; message?: string }>;
-  removeMember: (conversationId: number, userId: number) => Promise<{ success: boolean; message?: string }>;
-}
-
 
 export interface MessageState {
   messagesByConversation: Map<number, DisplayMessage[]>; // cache messages per conversation
