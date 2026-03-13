@@ -28,7 +28,7 @@ export default function FriendProfile({ friend, onClearSelection }: FriendProfil
   async function handleSendMessage(): Promise<void> {
     try {
       const { conversationId } = await startPrivateChatApi(friend.id);
-      navigate("/chat", { state: { selectConversationId: conversationId } });
+      navigate(`/chat?conversationId=${conversationId}`);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Failed to start chat";
       toast.error(message);
