@@ -1,4 +1,6 @@
-import { useConversation } from "@/hooks/context/useConversation";
+import { useSearchParams } from "react-router-dom";
+import { useConversationsQuery } from "@/hooks/queries/conversations";
+import { useOnlineUsers } from "@/hooks/useOnlineUsers";
 import type { ConversationsResponse } from "@/types/chat.type";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { StackedAvatars } from "../ui/stacked-avatars";
@@ -18,11 +20,15 @@ function formatPreviewText(preview: string): string {
   const normalized = preview.trim().toLowerCase();
   return PREVIEW_DISPLAY[normalized] ?? preview;
 }
+
 function ConversationItem({ conversation }: { conversation: ConversationsResponse }): React.JSX.Element {
-  const { selectConversation, activeConversationId, onlineUsers } = useConversation();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeId = Number(searchParams.get("conversationId")) || null;
+  const onlineUsers = useOnlineUsers();
+
   const isGroup = conversation.type === "GROUP";
   const firstPreview = conversation.previewMembers?.[0];
-  const isActive = conversation.id === activeConversationId;
+  const isActive = conversation.id === activeId;
   const otherUser = conversation.otherUser;
 
   const isPrivate = conversation.type === "PRIVATE";
@@ -39,6 +45,7 @@ function ConversationItem({ conversation }: { conversation: ConversationsRespons
       : "U";
 
   const title = isGroup ? (conversation.title ?? "Unnamed Group") : (otherUser?.username ?? "Unknown user");
+
   return (
     <div
       className={`group flex items-center gap-3 p-3 rounded-lg border border-transparent cursor-pointer transition-all ${
@@ -46,7 +53,7 @@ function ConversationItem({ conversation }: { conversation: ConversationsRespons
           ? "bg-primary/10 border-primary/20 shadow-sm"
           : "bg-background hover:bg-accent/50 hover:border-accent-foreground/10"
       }`}
-      onClick={() => selectConversation(conversation.id)}
+      onClick={() => setSearchParams({ conversationId: String(conversation.id) })}
     >
       {isGroup ? (
         <StackedAvatars users={conversation.previewMembers ?? []} size={24} overlap={8} />
@@ -90,15 +97,15 @@ function ConversationItem({ conversation }: { conversation: ConversationsRespons
 }
 
 export default function ConversationListPanel(): React.JSX.Element {
-  const { conversations, loadingConversations, error } = useConversation();
+  const { data: conversations = [], isLoading, error } = useConversationsQuery();
 
   function renderConversationList(): React.JSX.Element {
-    if (loadingConversations) {
+    if (isLoading) {
       return <div className="text-center text-muted-foreground py-8">Loading...</div>;
     }
 
     if (error && conversations.length === 0) {
-      return <div className="text-center text-destructive py-8">Error: {error}</div>;
+      return <div className="text-center text-destructive py-8">Error: {error.message}</div>;
     }
 
     if (conversations.length === 0) {

@@ -1,5 +1,5 @@
+import { useSearchParams } from "react-router-dom";
 import { useMessage } from "@/hooks/context/useMessage";
-import { useConversation } from "@/hooks/context/useConversation";
 import { useAuth } from "@/hooks/context/useAuth";
 import type { DisplayMessage } from "@/types/chat.type";
 import MessageItem from "./MessageItem";
@@ -25,10 +25,13 @@ export default function MessageList({
   pinnedMessageIds,
   editingMessageId = null,
 }: Props) {
+  const [searchParams] = useSearchParams();
+  const activeConversationId = Number(searchParams.get("conversationId")) || null;
+
   const { messagesByConversation, loadingMessages, loadOlderMessages, pagination, error } = useMessage();
-  const { activeConversationId } = useConversation();
   const paginationInfo = activeConversationId ? pagination.get(activeConversationId) : undefined;
   const { user } = useAuth();
+
   if (!activeConversationId) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
@@ -36,7 +39,9 @@ export default function MessageList({
       </div>
     );
   }
+
   const messages = messagesByConversation.get(activeConversationId) || [];
+
   if (loadingMessages) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -52,6 +57,7 @@ export default function MessageList({
   if (messages.length === 0) {
     return <div className="text-center text-muted-foreground py-8">No messages yet</div>;
   }
+
   return (
     //prettier-ignore
     <div id="scrollableDiv" className="flex flex-col-reverse flex-1 overflow-y-auto px-4 py-6">

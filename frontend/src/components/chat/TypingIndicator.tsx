@@ -1,11 +1,11 @@
-import { useConversation } from "@/hooks/context/useConversation";
+import { useConversationUi } from "@/hooks/context/useConversationUi";
 
 export default function TypingIndicator({
   conversationId,
 }: {
   conversationId: number;
 }): React.JSX.Element {
-  const { typingByConversation } = useConversation();
+  const { typingByConversation } = useConversationUi();
   const typingSet = typingByConversation.get(conversationId);
   const usernames = Array.from(typingSet?.values() || []);
 
