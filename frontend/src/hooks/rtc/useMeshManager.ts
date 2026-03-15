@@ -23,6 +23,7 @@ export function useMeshManager({
   useEffect(() => {
     // Guard: no callId means no active call, signal not ready and skip initialization
     if (!callId) {
+      console.debug("[useMeshManager] skip init: missing callId");
       onReady?.(false);
       return;
     }
@@ -55,6 +56,7 @@ export function useMeshManager({
     };
 
     // Initialize the MeshRTCManager instance with callbacks
+    console.debug("[useMeshManager] creating manager", { callId });
     managerRef.current = new MeshRTCManager({
       rtcConfig,
       // Register callbacks that bridge manager events to React state updates
@@ -86,6 +88,7 @@ export function useMeshManager({
     // Cleanup: disconnect all peers and clear manager reference
     return () => {
       if (managerRef.current) {
+        console.debug("[useMeshManager] disposing manager", { callId });
         managerRef.current.disconnectAll();
         managerRef.current = null;
       }

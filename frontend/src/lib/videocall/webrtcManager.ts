@@ -157,6 +157,21 @@ export class MeshRTCManager {
   private localStream: MediaStream | null;
   private peerConnections: Map<string, PeerData>;
 
+  private logPeerState(event: string, peerId: string, connection: RTCPeerConnection): void {
+    if (!this.logger?.debug) {
+      return;
+    }
+
+    this.logger.debug(`[MeshRTCManager] ${event}`, {
+      peerId,
+      signalingState: connection.signalingState,
+      connectionState: connection.connectionState,
+      iceConnectionState: connection.iceConnectionState,
+      localDescriptionType: connection.localDescription?.type ?? null,
+      remoteDescriptionType: connection.remoteDescription?.type ?? null,
+    });
+  }
+
   constructor(config: MeshRTCManagerConfig = {}) {
     // Use nullish coalescing (??) to provide defaults for undefined/null values
     this.rtcConfig = config.rtcConfig ?? {};
@@ -272,11 +287,13 @@ export class MeshRTCManager {
     options?: RTCOfferOptions
   ): Promise<RTCSessionDescription> {
     const connection = this.ensurePeer(peerId);
+    this.logPeerState("createOffer:before", peerId, connection);
 
     // Create the SDP offer
     const offer = await connection.createOffer(options);
     // Set it as our local description (starts ICE gathering)
     await connection.setLocalDescription(offer);
+    this.logPeerState("createOffer:after", peerId, connection);
 
     // Verify the local description was set successfully
     // After successful setLocalDescription, this should never be null
@@ -337,9 +354,11 @@ export class MeshRTCManager {
     answerOptions?: RTCOfferOptions
   ): Promise<RTCSessionDescription> {
     const connection = this.ensurePeer(peerId);
+    this.logPeerState("handleRemoteOffer:before", peerId, connection);
 
     // Step 1: Set the remote offer as the remote description
     await connection.setRemoteDescription(new RTCSessionDescription(remoteSdp));
+    this.logPeerState("handleRemoteOffer:afterRemoteDescription", peerId, connection);
 
     // Step 2: Process any ICE candidates that arrived before the remote description
     // (candidates must be added after remote description is set)
@@ -350,6 +369,7 @@ export class MeshRTCManager {
 
     // Step 4: Set our answer as the local description
     await connection.setLocalDescription(answer);
+    this.logPeerState("handleRemoteOffer:afterLocalDescription", peerId, connection);
 
     // Verify the local description was set successfully
     if (!connection.localDescription) {
@@ -370,9 +390,11 @@ export class MeshRTCManager {
     if (!peerData) {
       throw new Error(`Cannot apply answer, peer ${peerId} not found`);
     }
+    this.logPeerState("handleRemoteAnswer:before", peerId, peerData.connection);
     await peerData.connection.setRemoteDescription(
       new RTCSessionDescription(remoteSdp)
     );
+    this.logPeerState("handleRemoteAnswer:after", peerId, peerData.connection);
     await this.flushPendingCandidates(peerId);
   }
 
@@ -459,6 +481,7 @@ export class MeshRTCManager {
       senders: new Map(), // Track RTCRtpSenders for replaceTrack()
     };
     this.peerConnections.set(peerId, peerData);
+    this.logPeerState("createPeer:created", peerId, connection);
 
     // Notify consumer that a new peer was created
     if (this.callbacks.onPeerCreated) {

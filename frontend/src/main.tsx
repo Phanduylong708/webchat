@@ -50,9 +50,7 @@ const router = createBrowserRouter([
       { path: "login", element: <LoginPage /> },
       { path: "signup", element: <SignUp /> },
       // Dev routes - only accessible in development
-      ...(import.meta.env.DEV
-        ? [{ path: "dev/whiteboard", element: <WhiteboardTestPage /> }]
-        : []),
+      ...(import.meta.env.DEV ? [{ path: "dev/whiteboard", element: <WhiteboardTestPage /> }] : []),
     ],
   },
 ]);
@@ -62,5 +60,5 @@ createRoot(document.getElementById("root")!).render(
     <QueryClientProvider client={queryClient}>
       <RouterProvider router={router} />
     </QueryClientProvider>
-  </StrictMode>
+  </StrictMode>,
 );

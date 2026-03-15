@@ -24,6 +24,18 @@ export function useRTCSignaling({
   getManager,
   isManagerReady,
 }: UseRTCSignalingParams): void {
+  const logSignaling = useCallback(
+    (message: string, details: Record<string, unknown> = {}) => {
+      console.debug("[useRTCSignaling]", message, {
+        callId,
+        currentUserId,
+        isManagerReady,
+        ...details,
+      });
+    },
+    [callId, currentUserId, isManagerReady]
+  );
+
   // Use ref for getManager to avoid dependency churn
   const getManagerRef = useRef(getManager);
   getManagerRef.current = getManager;
@@ -46,6 +58,12 @@ export function useRTCSignaling({
     async (payload: CallOfferPayload, manager: MeshRTCManager, emitSocket: Socket, userId: number) => {
       const peerId = buildPeerId(payload.fromUserId);
       try {
+        logSignaling("processOffer:start", {
+          peerId,
+          fromUserId: payload.fromUserId,
+          toUserId: payload.toUserId,
+          offerType: payload.offer.type,
+        });
         const answer = await manager.handleRemoteOffer(peerId, payload.offer);
         const answerPayload: CallAnswerPayload = {
           callId: payload.callId,
@@ -53,12 +71,18 @@ export function useRTCSignaling({
           toUserId: payload.fromUserId,
           answer: answer,
         };
+        logSignaling("processOffer:emitAnswer", {
+          peerId,
+          fromUserId: userId,
+          toUserId: payload.fromUserId,
+          answerType: answer.type,
+        });
         emitSocket.emit("call:answer", answerPayload);
       } catch (err) {
         console.error("[useRTCSignaling] Failed to process offer:", err);
       }
     },
-    [buildPeerId]
+    [buildPeerId, logSignaling]
   );
 
   // Process a single answer
@@ -66,12 +90,22 @@ export function useRTCSignaling({
     async (payload: CallAnswerPayload, manager: MeshRTCManager) => {
       const peerId = buildPeerId(payload.fromUserId);
       try {
+        logSignaling("processAnswer:start", {
+          peerId,
+          fromUserId: payload.fromUserId,
+          toUserId: payload.toUserId,
+          answerType: payload.answer.type,
+        });
         await manager.handleRemoteAnswer(peerId, payload.answer);
+        logSignaling("processAnswer:done", {
+          peerId,
+          fromUserId: payload.fromUserId,
+        });
       } catch (err) {
         console.error("[useRTCSignaling] Failed to process answer:", err);
       }
     },
-    [buildPeerId]
+    [buildPeerId, logSignaling]
   );
 
   // Process a single candidate
@@ -101,6 +135,7 @@ export function useRTCSignaling({
     // Flush offer queue
     const offers = offerQueueRef.current.splice(0);
     if (offers.length > 0) {
+      logSignaling("flushOfferQueue", { count: offers.length });
       for (const offer of offers) {
         void processOffer(offer, manager, currentSocket, userId);
       }
@@ -109,6 +144,7 @@ export function useRTCSignaling({
     // Flush answer queue
     const answers = answerQueueRef.current.splice(0);
     if (answers.length > 0) {
+      logSignaling("flushAnswerQueue", { count: answers.length });
       for (const answer of answers) {
         void processAnswer(answer, manager);
       }
@@ -117,6 +153,7 @@ export function useRTCSignaling({
     // Flush candidate queue
     const candidates = candidateQueueRef.current.splice(0);
     if (candidates.length > 0) {
+      logSignaling("flushCandidateQueue", { count: candidates.length });
       for (const candidate of candidates) {
         void processCandidate(candidate, manager);
       }
@@ -136,10 +173,21 @@ export function useRTCSignaling({
       // Ignore offers for different calls
       if (payload.callId !== callId) return;
 
+      logSignaling("handleOffer:received", {
+        peerId: buildPeerId(payload.fromUserId),
+        fromUserId: payload.fromUserId,
+        toUserId: payload.toUserId,
+        offerType: payload.offer.type,
+      });
+
       const manager = getManagerRef.current();
       if (!manager) {
         // Queue offer for later processing
         offerQueueRef.current.push(payload);
+        logSignaling("handleOffer:queued", {
+          peerId: buildPeerId(payload.fromUserId),
+          queueLength: offerQueueRef.current.length,
+        });
         return;
       }
 
@@ -150,7 +198,7 @@ export function useRTCSignaling({
     return () => {
       currentSocket.off("call:offer", handleOffer);
     };
-  }, [socket, callId, currentUserId, processOffer]);
+  }, [socket, callId, currentUserId, processOffer, buildPeerId, logSignaling]);
 
   // Handle incoming answer: apply to peer connection
   useEffect(() => {
@@ -164,10 +212,21 @@ export function useRTCSignaling({
       // Ignore answers for different calls
       if (payload.callId !== callId) return;
 
+      logSignaling("handleAnswer:received", {
+        peerId: buildPeerId(payload.fromUserId),
+        fromUserId: payload.fromUserId,
+        toUserId: payload.toUserId,
+        answerType: payload.answer.type,
+      });
+
       const manager = getManagerRef.current();
       if (!manager) {
         // Queue answer for later processing
         answerQueueRef.current.push(payload);
+        logSignaling("handleAnswer:queued", {
+          peerId: buildPeerId(payload.fromUserId),
+          queueLength: answerQueueRef.current.length,
+        });
         return;
       }
 
@@ -178,7 +237,7 @@ export function useRTCSignaling({
     return () => {
       socket.off("call:answer", handleAnswer);
     };
-  }, [socket, callId, currentUserId, processAnswer]);
+  }, [socket, callId, currentUserId, processAnswer, buildPeerId, logSignaling]);
 
   // Handle incoming ICE candidate: add to peer connection
   useEffect(() => {
@@ -192,10 +251,20 @@ export function useRTCSignaling({
       // Ignore candidates for different calls
       if (payload.callId !== callId) return;
 
+      logSignaling("handleCandidate:received", {
+        peerId: buildPeerId(payload.fromUserId),
+        fromUserId: payload.fromUserId,
+        toUserId: payload.toUserId,
+      });
+
       const manager = getManagerRef.current();
       if (!manager) {
         // Queue candidate for later processing
         candidateQueueRef.current.push(payload);
+        logSignaling("handleCandidate:queued", {
+          peerId: buildPeerId(payload.fromUserId),
+          queueLength: candidateQueueRef.current.length,
+        });
         return;
       }
 
@@ -206,7 +275,7 @@ export function useRTCSignaling({
     return () => {
       socket.off("call:candidate", handleCandidate);
     };
-  }, [socket, callId, currentUserId, processCandidate]);
+  }, [socket, callId, currentUserId, processCandidate, buildPeerId, logSignaling]);
 
   // NOTE: onIceCandidate callback is now registered at manager construction time
   // in RTCProvider/useMeshManager to ensure it's set before ICE gathering starts.

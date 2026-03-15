@@ -21,6 +21,20 @@ export function useRTCPeerLifecycle({
   isManagerReady,
   isLocalStreamSynced,
 }: UseRTCPeerLifecycleParams): void {
+  const logLifecycle = useCallback(
+    (message: string, details: Record<string, unknown> = {}) => {
+      console.debug("[useRTCPeerLifecycle]", message, {
+        callId,
+        currentUserId,
+        isManagerReady,
+        isLocalStreamSynced,
+        participantIds: participants.map((p) => p.id),
+        ...details,
+      });
+    },
+    [callId, currentUserId, isLocalStreamSynced, isManagerReady, participants]
+  );
+
   // Track if we've done initial offer creation (first time joining)
   const hasInitializedRef = useRef(false);
   // Track previous participants to detect adds/removes
@@ -63,15 +77,18 @@ export function useRTCPeerLifecycle({
     // Scenario A: First initialization - I'm the new joiner, offer to ALL existing
     if (!hasInitializedRef.current) {
       hasInitializedRef.current = true;
+      logLifecycle("initialOfferSweep:start", { targetCount: currentIds.size });
       for (const userId of currentIds) {
         const peerId = buildPeerId(userId);
 
         // Guard: skip if peer already exists (idempotent)
         if (manager.hasPeer(peerId)) {
+          logLifecycle("initialOfferSweep:skipExistingPeer", { peerId, userId });
           continue;
         }
 
         // Create peer and send offer
+        logLifecycle("initialOfferSweep:createOffer", { peerId, userId });
         void createOfferForPeer(manager, socket, callId, currentUserId, userId, peerId);
       }
     } else {
@@ -82,10 +99,12 @@ export function useRTCPeerLifecycle({
 
         // Guard: skip if peer already exists
         if (manager.hasPeer(peerId)) {
+          logLifecycle("participantAdded:skipExistingPeer", { peerId, userId });
           continue;
         }
 
         // Just ensure peer exists (prepare for incoming offer)
+        logLifecycle("participantAdded:ensurePeer", { peerId, userId });
         manager.ensurePeer(peerId);
       }
 
@@ -93,6 +112,7 @@ export function useRTCPeerLifecycle({
       const removedIds = [...prevIds].filter((id) => !currentIds.has(id));
       for (const userId of removedIds) {
         const peerId = buildPeerId(userId);
+        logLifecycle("participantRemoved:removePeer", { peerId, userId });
         manager.removePeer(peerId);
       }
     }
