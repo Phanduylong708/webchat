@@ -1,6 +1,6 @@
+import "dotenv/config";
 import express from "express";
 import cors from "cors";
-import dotenv from "dotenv";
 import { createServer } from "node:http";
 import { initializeSocketServer } from "./sockets/index.js";
 import { passport } from "./shared/config/passport.config.js";
@@ -13,8 +13,6 @@ import { messageRoute } from "./api/routes/message.routes.js";
 import { mediaRoutes } from "./api/routes/media.routes.js";
 import { cleanupStalePendingAttachments } from "./api/services/media.service.js";
 import redis from "./shared/config/redis.config.js";
-
-dotenv.config();
 
 const app = express();
 app.use(express.json());
