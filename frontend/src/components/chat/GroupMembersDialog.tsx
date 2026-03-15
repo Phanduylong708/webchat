@@ -1,9 +1,15 @@
 import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Search, Users } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/context/useAuth";
-import { useLeaveGroupMutation, useRemoveMemberMutation } from "@/hooks/queries/conversations";
-import { getConversationsDetails } from "@/api/conversation.api";
+import {
+  useLeaveGroupMutation,
+  useRemoveMemberMutation,
+  useConversationDetailsQuery,
+  conversationDetailsQueryKey,
+} from "@/hooks/queries/conversations";
+import type { ConversationsDetail } from "@/hooks/queries/conversations";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -23,7 +29,6 @@ import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 import AddMemberDialog from "./AddMemberDialog";
 import { getOptimizedAvatarUrl, getAvatarFallback } from "@/utils/image.util";
-import type { ConversationsDetail } from "@/types/chat.type";
 
 interface GroupMembersDialogProps {
   conversationId: number;
@@ -31,33 +36,27 @@ interface GroupMembersDialogProps {
 
 export default function GroupMembersDialog({ conversationId }: GroupMembersDialogProps): React.JSX.Element {
   const [isOpen, setIsOpen] = useState(false);
-  const [details, setDetails] = useState<ConversationsDetail | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [loadError, setLoadError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [removingIds, setRemovingIds] = useState<Set<number>>(new Set());
   const [leaveError, setLeaveError] = useState<string | null>(null);
 
   const { user: currentUser } = useAuth();
+  const queryClient = useQueryClient();
   const leaveGroupMutation = useLeaveGroupMutation();
   const removeMemberMutation = useRemoveMemberMutation();
   const [, setSearchParams] = useSearchParams();
 
-  async function handleOpen(open: boolean) {
+  const detailsQuery = useConversationDetailsQuery(conversationId, isOpen);
+  const details = detailsQuery.data ?? null;
+
+  function handleOpen(open: boolean) {
     setIsOpen(open);
     if (open) {
       setSearchQuery("");
       setLeaveError(null);
-      setIsLoading(true);
-      setLoadError(null);
-      try {
-        const data = await getConversationsDetails(conversationId);
-        setDetails(data);
-      } catch {
-        setLoadError("Failed to load members. Please try again.");
-      } finally {
-        setIsLoading(false);
-      }
+    } else {
+      // Clear any in-flight remove indicators so they don't linger on reopen.
+      setRemovingIds(new Set());
     }
   }
 
@@ -65,8 +64,15 @@ export default function GroupMembersDialog({ conversationId }: GroupMembersDialo
     setRemovingIds((prev) => new Set(prev).add(userId));
     try {
       await removeMemberMutation.mutateAsync({ conversationId, userId });
-      // Optimistically remove from local details list
-      setDetails((prev) => (prev ? { ...prev, members: prev.members.filter((m) => m.id !== userId) } : prev));
+      // Optimistic patch: remove member from details cache immediately.
+      // useRemoveMemberMutation.onSuccess will invalidate as safety net.
+      queryClient.setQueryData<ConversationsDetail>(
+        conversationDetailsQueryKey(conversationId),
+        (prev) => {
+          if (!prev) return prev;
+          return { ...prev, members: prev.members.filter((m) => m.id !== userId) };
+        },
+      );
     } catch (error) {
       console.error("Failed to remove member:", error);
     } finally {
@@ -123,12 +129,18 @@ export default function GroupMembersDialog({ conversationId }: GroupMembersDialo
 
         {/* Member list */}
         <ScrollArea className="max-h-64">
-          {isLoading && <p className="text-sm text-muted-foreground text-center py-8">Loading members...</p>}
-          {loadError && <p className="text-sm text-destructive text-center py-8">{loadError}</p>}
-          {!isLoading && !loadError && filteredMembers.length === 0 && (
+          {detailsQuery.isLoading && (
+            <p className="text-sm text-muted-foreground text-center py-8">Loading members...</p>
+          )}
+          {detailsQuery.isError && (
+            <p className="text-sm text-destructive text-center py-8">
+              Failed to load members. Please try again.
+            </p>
+          )}
+          {!detailsQuery.isLoading && !detailsQuery.isError && filteredMembers.length === 0 && (
             <p className="text-sm text-muted-foreground text-center py-8">No members found.</p>
           )}
-          {!isLoading && !loadError && filteredMembers.length > 0 && (
+          {!detailsQuery.isLoading && !detailsQuery.isError && filteredMembers.length > 0 && (
             <div className="space-y-1 pr-2">
               {filteredMembers.map((member) => {
                 const isThisCreator = member.id === details?.creatorId;
@@ -173,7 +185,7 @@ export default function GroupMembersDialog({ conversationId }: GroupMembersDialo
 
         <Separator />
 
-        {/* Add Member — full-width outlined button as custom trigger, refetches list on success */}
+        {/* Add Member — full-width outlined button as custom trigger */}
         <AddMemberDialog
           conversationId={conversationId}
           trigger={
@@ -181,14 +193,6 @@ export default function GroupMembersDialog({ conversationId }: GroupMembersDialo
               + Add Member
             </Button>
           }
-          onSuccess={async () => {
-            try {
-              const data = await getConversationsDetails(conversationId);
-              setDetails(data);
-            } catch {
-              // silently ignore — list will just be slightly stale
-            }
-          }}
         />
 
         <Separator />

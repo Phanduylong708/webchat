@@ -5,13 +5,16 @@ import {
   addMemberApi,
   leaveGroupApi,
   removeMemberApi,
+  getConversationsDetails,
 } from "@/api/conversation.api";
-import type { ConversationsResponse } from "@/types/chat.type";
+import type { ConversationsDetail, ConversationsResponse } from "@/types/chat.type";
 import { useAuth } from "@/hooks/context/useAuth";
 
 const CONVERSATIONS_GC_TIME = 60 * 60 * 1000;
 
 export const conversationsQueryKey = (userId: number) => ["conversations", userId] as const;
+export const conversationDetailsQueryKey = (conversationId: number) =>
+  ["conversation-details", conversationId] as const;
 
 export function useConversationsQuery() {
   const { user } = useAuth();
@@ -21,6 +24,20 @@ export function useConversationsQuery() {
     queryKey: userId ? conversationsQueryKey(userId) : (["conversations", "unauthenticated"] as const),
     queryFn: getConversations,
     enabled: !!userId,
+    staleTime: Infinity,
+    gcTime: CONVERSATIONS_GC_TIME,
+    retry: false,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+  });
+}
+
+export function useConversationDetailsQuery(conversationId: number, enabled = true) {
+  return useQuery({
+    queryKey: conversationDetailsQueryKey(conversationId),
+    queryFn: () => getConversationsDetails(conversationId),
+    enabled: Boolean(conversationId) && enabled,
     staleTime: Infinity,
     gcTime: CONVERSATIONS_GC_TIME,
     retry: false,
@@ -55,10 +72,13 @@ export function useAddMemberMutation() {
   return useMutation({
     mutationFn: ({ conversationId, userId: targetUserId }: { conversationId: number; userId: number }) =>
       addMemberApi(conversationId, targetUserId),
-    onSuccess: () => {
+    onSuccess: (_, { conversationId }) => {
       if (!userId) return;
       void queryClient.invalidateQueries({
         queryKey: conversationsQueryKey(userId),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: conversationDetailsQueryKey(conversationId),
       });
     },
   });
@@ -77,13 +97,24 @@ export function useLeaveGroupMutation() {
         if (!prev) return prev;
         return prev.filter((c) => c.id !== conversationId);
       });
+      queryClient.removeQueries({ queryKey: conversationDetailsQueryKey(conversationId) });
     },
   });
 }
 
 export function useRemoveMemberMutation() {
+  const queryClient = useQueryClient();
+
   return useMutation({
     mutationFn: ({ conversationId, userId }: { conversationId: number; userId: number }) =>
       removeMemberApi(conversationId, userId),
+    onSuccess: (_, { conversationId }) => {
+      void queryClient.invalidateQueries({
+        queryKey: conversationDetailsQueryKey(conversationId),
+      });
+    },
   });
 }
+
+// Re-export ConversationsDetail so consumers can import from one place
+export type { ConversationsDetail };

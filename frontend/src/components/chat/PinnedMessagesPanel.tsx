@@ -1,11 +1,10 @@
 import { useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { Loader2, PinOff } from "lucide-react";
 import { toast } from "sonner";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { getConversationsDetails } from "@/api/conversation.api";
 import { useAuth } from "@/hooks/context/useAuth";
 import { useConversationPinsQuery, useUnpinMessageMutation } from "@/hooks/queries/pins";
+import { useConversationDetailsQuery } from "@/hooks/queries/conversations";
 import type { ConversationsResponse, PinnedMessageItem } from "@/types/chat.type";
 import { getAvatarFallback, getOptimizedAvatarUrl } from "@/utils/image.util";
 import { toPinnedPreviewLabel } from "@/utils/pin.util";
@@ -123,12 +122,7 @@ export default function PinnedMessagesPanel({
   const needsCreatorLookup =
     open && conversation.type === "GROUP" && conversation.pinPermission === "CREATOR_ONLY";
 
-  const conversationDetailsQuery = useQuery({
-    queryKey: ["conversation-details", conversation.id],
-    queryFn: () => getConversationsDetails(conversation.id),
-    enabled: needsCreatorLookup,
-    retry: false,
-  });
+  const conversationDetailsQuery = useConversationDetailsQuery(conversation.id, needsCreatorLookup);
 
   const canManagePins = useMemo(() => {
     if (conversation.type === "PRIVATE") {

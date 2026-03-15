@@ -4,7 +4,7 @@ import type { Socket } from "socket.io-client";
 import { toast } from "sonner";
 import type { ConversationsDetail, ConversationsResponse, User } from "@/types/chat.type";
 import { resolveLeavingUsername } from "@/utils/conversation.utils";
-import { conversationsQueryKey } from "@/hooks/queries/conversations";
+import { conversationsQueryKey, conversationDetailsQueryKey } from "@/hooks/queries/conversations";
 
 type SystemMessageSetter = Dispatch<SetStateAction<Map<number, string>>>;
 
@@ -24,10 +24,12 @@ export function useMembershipSync({
   const queryClient = useQueryClient();
 
   // Keep preview member list + counts in sync when someone is added.
+  // Also patches the details cache so GroupMembersDialog stays fresh.
   useEffect(() => {
     if (!socket || !currentUserId) return;
     const userId = currentUserId;
     function handleMemberAdded(payload: { conversationId: number; member: User }) {
+      // Patch list cache (previewMembers + memberCount)
       queryClient.setQueryData<ConversationsResponse[]>(
         conversationsQueryKey(userId),
         (prev) => {
@@ -35,7 +37,6 @@ export function useMembershipSync({
           return prev.map((c) => {
             if (c.id !== payload.conversationId) return c;
             const existingMembers = c.previewMembers ?? [];
-            // Prevent duplicates if socket event arrives multiple times.
             const alreadyExists = existingMembers.some((m) => m.id === payload.member.id);
             if (alreadyExists) return c;
             return {
@@ -46,6 +47,17 @@ export function useMembershipSync({
           });
         },
       );
+
+      // Patch details cache — append member if not already present.
+      queryClient.setQueryData<ConversationsDetail>(
+        conversationDetailsQueryKey(payload.conversationId),
+        (prev) => {
+          if (!prev) return prev;
+          const alreadyExists = prev.members.some((m) => m.id === payload.member.id);
+          if (alreadyExists) return prev;
+          return { ...prev, members: [...prev.members, payload.member] };
+        },
+      );
     }
     socket.on("memberAdded", handleMemberAdded);
     return () => {
@@ -54,6 +66,7 @@ export function useMembershipSync({
   }, [socket, currentUserId, queryClient]);
 
   // Add brand-new conversations when the backend notifies the user was added.
+  // Also seeds the details cache so an immediate dialog open doesn't need a network round-trip.
   useEffect(() => {
     if (!socket || !currentUserId) return;
     const userId = currentUserId;
@@ -95,6 +108,12 @@ export function useMembershipSync({
           return [newConv, ...prev];
         },
       );
+
+      // Seed details cache from socket payload — avoids a network fetch if dialog opens immediately.
+      queryClient.setQueryData<ConversationsDetail>(
+        conversationDetailsQueryKey(conv.id),
+        (prev) => prev ?? conv,
+      );
     }
     socket.on("addedToConversation", handleAdded);
     return () => {
@@ -134,6 +153,20 @@ export function useMembershipSync({
         },
       );
 
+      // Patch details cache — filter leaving member out.
+      const leavingUserId = payload.user?.id ?? payload.userId;
+      if (leavingUserId) {
+        queryClient.setQueryData<ConversationsDetail>(
+          conversationDetailsQueryKey(payload.conversationId),
+          (prev) => {
+            if (!prev) return prev;
+            const next = prev.members.filter((m) => m.id !== leavingUserId);
+            if (next.length === prev.members.length) return prev;
+            return { ...prev, members: next };
+          },
+        );
+      }
+
       if (messageText) {
         setSystemMessages((prev) => {
           const updated = new Map(prev);
@@ -149,6 +182,8 @@ export function useMembershipSync({
   }, [socket, currentUserId, queryClient, setSystemMessages]);
 
   // Remove the conversation and notify the user when they are kicked from a group.
+  // Also removes the details cache entry — no point keeping stale data for a conversation
+  // the user no longer has access to.
   useEffect(() => {
     if (!socket || !currentUserId) return;
     const userId = currentUserId;
@@ -167,6 +202,7 @@ export function useMembershipSync({
         },
       );
 
+      queryClient.removeQueries({ queryKey: conversationDetailsQueryKey(payload.conversationId) });
       clearActiveConversation(payload.conversationId);
       toast.info(`You were removed from ${groupTitle}`);
     }

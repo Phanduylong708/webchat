@@ -36,7 +36,7 @@ export function useConversationSockets({
   const { user } = useAuth();
   const currentUserId = user?.id ?? null;
 
-  // Re-sync the conversation list after a socket reconnect.
+  // Re-sync both caches after a socket reconnect.
   // Required safety net for staleTime: Infinity — without this a dropped
   // connection leaves the cache stale indefinitely.
   useEffect(() => {
@@ -44,6 +44,9 @@ export function useConversationSockets({
     const userId = currentUserId;
     function handleReconnect() {
       void queryClient.invalidateQueries({ queryKey: conversationsQueryKey(userId) });
+      // Invalidate all cached conversation-details entries so any open dialogs
+      // refetch after reconnect rather than showing stale member lists.
+      void queryClient.invalidateQueries({ queryKey: ["conversation-details"] });
     }
     socket.on("connect", handleReconnect);
     return () => {

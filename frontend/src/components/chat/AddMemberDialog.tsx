@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { useAddMemberMutation } from "@/hooks/queries/conversations";
+import { useState } from "react";
+import { useAddMemberMutation, useConversationDetailsQuery } from "@/hooks/queries/conversations";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -15,53 +15,30 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { getOptimizedAvatarUrl, getAvatarFallback } from "@/utils/image.util";
 import { UserPlus } from "lucide-react";
-import { getConversationsDetails } from "@/api/conversation.api";
-import type { User } from "@/types/chat.type";
 import { useFriendsQuery } from "@/hooks/queries/friends";
 
 interface AddMemberDialogProps {
   conversationId: number;
   trigger?: React.ReactNode;
-  onSuccess?: () => void;
 }
 
 export default function AddMemberDialog({
   conversationId,
   trigger,
-  onSuccess,
 }: AddMemberDialogProps): React.JSX.Element {
   const [isOpen, setIsOpen] = useState(false);
   const [selectedFriendId, setSelectedFriendId] = useState<number | null>(null);
-  const [currentMembers, setCurrentMembers] = useState<User[]>([]);
-  const [isLoadingMembers, setIsLoadingMembers] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
+
   const addMemberMutation = useAddMemberMutation();
   const friendsQuery = useFriendsQuery();
   const friends = friendsQuery.data ?? [];
 
-  useEffect(() => {
-    if (isOpen) {
-      async function loadMembers() {
-        setIsLoadingMembers(true);
-        setLocalError(null);
-        try {
-          const details = await getConversationsDetails(conversationId);
-          setCurrentMembers(details.members);
-        } catch (error) {
-          console.error("Error loading members:", error);
-          setLocalError("Failed to load members");
-        } finally {
-          setIsLoadingMembers(false);
-        }
-      }
+  const detailsQuery = useConversationDetailsQuery(conversationId, isOpen);
+  const currentMembers = detailsQuery.data?.members ?? [];
 
-      void loadMembers();
-    }
-  }, [isOpen, conversationId]);
-
-  const safeMembers = currentMembers ?? [];
   const availableFriends = friends.filter(
-    (friend) => !safeMembers.some((member) => member.id === friend.id),
+    (friend) => !currentMembers.some((member) => member.id === friend.id),
   );
 
   function handleSelectFriend(friendId: number | null) {
@@ -77,11 +54,12 @@ export default function AddMemberDialog({
       await addMemberMutation.mutateAsync({ conversationId, userId: selectedFriendId });
       setIsOpen(false);
       setSelectedFriendId(null);
-      onSuccess?.();
     } catch (error) {
       setLocalError(error instanceof Error ? error.message : "Failed to add member");
     }
   }
+
+  const isLoading = detailsQuery.isLoading || friendsQuery.isLoading;
 
   return (
     <Dialog
@@ -109,9 +87,9 @@ export default function AddMemberDialog({
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <ScrollArea className="h-48 border rounded-md p-2">
-            {isLoadingMembers || friendsQuery.isLoading ? (
+            {isLoading ? (
               <p className="text-sm text-muted-foreground py-6 text-center">Loading...</p>
-            ) : friendsQuery.error && friends.length === 0 ? (
+            ) : friendsQuery.isError && friends.length === 0 ? (
               <div className="text-sm text-muted-foreground py-6 text-center space-y-2">
                 <p>Error loading friends.</p>
                 <Button type="button" variant="outline" onClick={() => void friendsQuery.refetch()}>
