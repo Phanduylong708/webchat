@@ -5,7 +5,8 @@ import {
   cloudinary,
   ensureCloudinaryConfigured,
 } from "../../shared/config/cloudinary.config.js";
-import { cacheGet, cacheSet, cacheDel } from "../../shared/utils/cache.utils.js";
+import { cacheGet, cacheSet, cacheDel } from "../../shared/utils/cache.util.js";
+import { invalidateUserCache } from "../../shared/utils/auth-cache.util.js";
 
 async function searchUserByUsername(username) {
   const cacheKey = `user:search:${username}`;
@@ -87,6 +88,7 @@ async function uploadMyAvatar(userId, avatarBuffer) {
     throw error;
   }
   await cacheDel(`user:search:${updatedUser.username}`);
+  await invalidateUserCache(userId);
   return updatedUser;
 }
 

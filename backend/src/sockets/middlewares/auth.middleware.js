@@ -1,5 +1,5 @@
-import { prisma } from "../../shared/prisma.js";
 import { verifyToken } from "../../shared/utils/jwt.util.js";
+import { getCachedUser } from "../../shared/utils/auth-cache.util.js";
 
 async function socketAuthMiddleware(socket, next) {
   try {
@@ -12,10 +12,7 @@ async function socketAuthMiddleware(socket, next) {
       return next(makeError("Unauthorized Socket", "AUTH_INVALID_TOKEN"));
     }
     const userId = payload.sub;
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { id: true, email: true, username: true, avatar: true },
-    });
+    const user = await getCachedUser(userId);
     if (!user) {
       return next(makeError("Unauthorized Socket", "AUTH_USER_NOT_FOUND"));
     }

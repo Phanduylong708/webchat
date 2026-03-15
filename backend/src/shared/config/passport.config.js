@@ -3,7 +3,8 @@ import { Strategy as LocalStrategy } from "passport-local";
 import { findUserByIdentifier } from "../../api/services/auth.service.js";
 import { comparePassword } from "../utils/hash.util.js";
 import { Strategy as JwtStrategy, ExtractJwt } from "passport-jwt";
-import { prisma } from "../prisma.js";
+import { getCachedUser } from "../utils/auth-cache.util.js";
+import { getJwtSecret } from "../utils/jwt.util.js";
 
 passport.use(
   "login",
@@ -32,21 +33,12 @@ passport.use(
 );
 const opts = {
   jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
-  secretOrKey: process.env.JWT_SECRET,
+  secretOrKey: getJwtSecret(),
 };
 passport.use(
   new JwtStrategy(opts, async (jwt_payload, done) => {
     try {
-      const user = await prisma.user.findUnique({
-        where: { id: jwt_payload.sub },
-        select: {
-          id: true,
-          email: true,
-          username: true,
-          createdAt: true,
-          avatar: true,
-        },
-      });
+      const user = await getCachedUser(jwt_payload.sub);
       if (!user) {
         return done(null, false, { message: "User not found" });
       }
