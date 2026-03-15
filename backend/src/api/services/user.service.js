@@ -5,8 +5,16 @@ import {
   cloudinary,
   ensureCloudinaryConfigured,
 } from "../../shared/config/cloudinary.config.js";
+import { cacheGet, cacheSet, cacheDel } from "../../shared/utils/cache.utils.js";
 
 async function searchUserByUsername(username) {
+  const cacheKey = `user:search:${username}`;
+
+  const cacheUser = await cacheGet(cacheKey);
+  if (cacheUser) {
+    return cacheUser;
+  }
+
   const existingUser = await prisma.user.findUnique({
     where: { username },
     select: {
@@ -20,6 +28,8 @@ async function searchUserByUsername(username) {
   if (!existingUser) {
     throw createHTTPError(404, "User not found");
   }
+
+  await cacheSet(cacheKey, existingUser, 60);
   return existingUser;
 }
 
@@ -40,7 +50,7 @@ function uploadImageBufferToCloudinary(buffer) {
           return reject(createHTTPError(502, "Cloud upload failed"));
         }
         return resolve(result);
-      }
+      },
     );
 
     uploadStream.end(buffer);
@@ -76,7 +86,7 @@ async function uploadMyAvatar(userId, avatarBuffer) {
     }
     throw error;
   }
-
+  await cacheDel(`user:search:${updatedUser.username}`);
   return updatedUser;
 }
 

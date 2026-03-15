@@ -12,6 +12,7 @@ import { conversationRoute } from "./api/routes/conversation.routes.js";
 import { messageRoute } from "./api/routes/message.routes.js";
 import { mediaRoutes } from "./api/routes/media.routes.js";
 import { cleanupStalePendingAttachments } from "./api/services/media.service.js";
+import redis from "./shared/config/redis.config.js";
 
 dotenv.config();
 
@@ -44,20 +45,29 @@ app.use((err, req, res, next) => {
   console.error("Server Error:", err);
   sendErrors(res, { statusCode, message });
 });
+// Connect to Redis before starting the server
+async function startServer() {
+  try {
+    await redis.connect();
+    console.log("Connected to Redis successfully");
+  } catch (error) {
+    console.error("Failed to connect to Redis:", error.message);
+  }
 
-httpServer.listen(process.env.PORT || 3000, () => {
-  console.log(`Server is running on port ${process.env.PORT || 3000}`);
-
-  // Non-blocking startup cleanup for stale pending attachments
-  cleanupStalePendingAttachments()
-    .then(({ deletedCount, cloudErrors }) => {
-      if (deletedCount > 0) {
-        console.log(
-          `[startup-cleanup] Removed ${deletedCount} stale pending attachment(s) (cloud errors: ${cloudErrors})`,
-        );
-      }
-    })
-    .catch((error) => {
-      console.warn("[startup-cleanup] Failed to clean stale attachments:", error.message);
-    });
-});
+  httpServer.listen(process.env.PORT || 3000, () => {
+    console.log(`Server is running on port ${process.env.PORT || 3000}`);
+    // Non-blocking startup cleanup for stale pending attachments
+    cleanupStalePendingAttachments()
+      .then(({ deletedCount, cloudErrors }) => {
+        if (deletedCount > 0) {
+          console.log(
+            `[startup-cleanup] Removed ${deletedCount} stale pending attachment(s) (cloud errors: ${cloudErrors})`,
+          );
+        }
+      })
+      .catch((error) => {
+        console.warn("[startup-cleanup] Failed to clean stale attachments:", error.message);
+      });
+  });
+}
+startServer();
