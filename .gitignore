@@ -60,7 +60,7 @@ frontend/docs/*
 .agent/*
 backups/
 AGENTS.md
-
+whitelist/*
 # Whitelisted files
 !LLM_HANDOFF.md
 !cursorrule.mdc
