@@ -15,6 +15,8 @@ import { cleanupStalePendingAttachments } from "./api/services/media.service.js"
 import redis from "./shared/config/redis.config.js";
 
 const app = express();
+// Trust the first proxy (Nginx/Cloudflare) so req.ip resolves to the real client IP
+app.set("trust proxy", 1);
 app.use(express.json());
 app.use(cors());
 app.use(passport.initialize());

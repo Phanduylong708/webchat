@@ -3,10 +3,15 @@ import { Router } from "express";
 import { passport } from "../../shared/config/passport.config.js";
 import { sendErrors, sendSuccess } from "../../shared/utils/response.util.js";
 import { generateToken } from "../../shared/utils/jwt.util.js";
+import { createRateLimiter } from "../../shared/middlewares/rateLimiter.middleware.js";
+
 const authRoutes = Router();
 
-authRoutes.post("/register", registerController);
-authRoutes.post("/login", (req, res) => {
+const loginLimiter = createRateLimiter({ limit: 10, windowSec: 900, keyPrefix: "login" });
+const registerLimiter = createRateLimiter({ limit: 5, windowSec: 3600, keyPrefix: "register" });
+
+authRoutes.post("/register", registerLimiter, registerController);
+authRoutes.post("/login", loginLimiter, (req, res) => {
   passport.authenticate("login", { session: false }, (err, user, info) => {
     if (err) {
       return sendErrors(res, {

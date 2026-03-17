@@ -3,6 +3,15 @@ import { MeshRTCManager } from "@/lib/videocall/webrtcManager";
 import { parsePeerId } from "@/utils/helper.util";
 import type { UseMeshManagerParams } from "@/types/rtc.type";
 
+function getRTCConfig(): RTCConfiguration {
+  try {
+    return JSON.parse(import.meta.env.VITE_ICE) as RTCConfiguration;
+  } catch (error) {
+    console.error("[useMeshManager] Invalid VITE_ICE config", error);
+    return { iceServers: [] };
+  }
+}
+
 /**
  * Custom hook to manage MeshRTCManager lifecycle.
  * Initializes the manager when callId is present, cleans up when null or unmount.
@@ -28,32 +37,7 @@ export function useMeshManager({
       return;
     }
 
-    // Hardcoded ICE servers for dev (STUN + TURN)
-    const rtcConfig: RTCConfiguration = {
-      iceServers: [
-        { urls: "stun:stun.l.google.com:19302" },
-        {
-          urls: "turn:global.relay.metered.ca:80",
-          username: "2e443680734afc39881f13d1",
-          credential: "Nf1eMJCl71r4alsd",
-        },
-        {
-          urls: "turn:global.relay.metered.ca:80?transport=tcp",
-          username: "2e443680734afc39881f13d1",
-          credential: "Nf1eMJCl71r4alsd",
-        },
-        {
-          urls: "turn:global.relay.metered.ca:443",
-          username: "2e443680734afc39881f13d1",
-          credential: "Nf1eMJCl71r4alsd",
-        },
-        {
-          urls: "turns:global.relay.metered.ca:443?transport=tcp",
-          username: "2e443680734afc39881f13d1",
-          credential: "Nf1eMJCl71r4alsd",
-        },
-      ],
-    };
+    const rtcConfig = getRTCConfig();
 
     // Initialize the MeshRTCManager instance with callbacks
     console.debug("[useMeshManager] creating manager", { callId });

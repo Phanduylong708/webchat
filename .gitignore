@@ -59,6 +59,7 @@ frontend/docs/*
 .codex/*
 .agent/*
 backups/
+AGENTS.md
 
 # Whitelisted files
 !LLM_HANDOFF.md

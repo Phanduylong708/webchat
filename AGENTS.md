@@ -77,9 +77,9 @@ GOOD: "To implement this, I plan to modify: [...]. Should I proceed?"
 **Destructive Commands:** Always ask before running commands that drop data, delete files, or are hard to reverse.
 
 ## Parallelization
-When a task involves independent sub-tasks (e.g., research + implementation,
-or exploring multiple files simultaneously), spawn parallel subagents if the
-harness supports it rather than working sequentially.
+Only when a task involves independent sub-tasks or large-scope (e.g., research + implementation,
+or exploring multiple files simultaneously), spawn parallel subagents if the harness supports it rather than working sequentially. Do not use parallelization for anything that requires shared mental model between user and agent (e.g, reading docs, discussing, planning, etc)
+
 
 For codebase exploration, prefer delegating to a subagent or running parallel
 tool calls over reading files sequentially in the main session — this keeps the
