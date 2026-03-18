@@ -119,7 +119,7 @@ export function useRTCPeerLifecycle({
 
     // Update previous participants ref
     prevParticipantIdsRef.current = currentIds;
-  }, [socket, callId, currentUserId, participants, isManagerReady, isLocalStreamSynced, buildPeerId]);
+  }, [socket, callId, currentUserId, participants, isManagerReady, isLocalStreamSynced, buildPeerId, logLifecycle]);
 }
 
 /**

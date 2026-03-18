@@ -158,7 +158,7 @@ export function useRTCSignaling({
         void processCandidate(candidate, manager);
       }
     }
-  }, [isManagerReady, socket, currentUserId, processOffer, processAnswer, processCandidate]);
+  }, [isManagerReady, socket, currentUserId, processOffer, processAnswer, processCandidate, logSignaling]);
 
   // Handle incoming offer: create answer and emit
   useEffect(() => {
