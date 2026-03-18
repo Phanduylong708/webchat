@@ -2,6 +2,7 @@ import { derivePreviewText, getConversationPinState } from "../../shared/utils/c
 import { prisma } from "../../shared/prisma.js";
 import { verifyMembership, getConversationRoom } from "../helpers/helpers.js";
 import { parsePinMessagePayload, ackError } from "../helpers/chat-message.util.js";
+import { checkRateLimit } from "../../shared/middlewares/rateLimiter.middleware.js";
 
 const PINNED_ITEM_SELECT = {
   messageId: true,
@@ -63,11 +64,20 @@ function registerPinMessageHandlers(io, socket) {
     try {
       if (typeof callback !== "function") return;
 
+      const currentUserId = socket.data.user.id;
+      const { allowed, retryAfter } = await checkRateLimit({
+        key: `rl:pinMessage:${currentUserId}`,
+        limit: 5,
+        windowSec: 30,
+      });
+      if (!allowed) {
+        return callback(ackError("RATE_LIMITED", `Too many requests. Try again in ${retryAfter}s.`));
+      }
+
       const parsed = parsePinMessagePayload(payload);
       if (!parsed.ok) return callback(parsed.error);
 
       const { conversationId, messageId } = parsed.data;
-      const currentUserId = socket.data.user.id;
 
       const isMember = await verifyMembership(currentUserId, conversationId);
       if (!isMember) {
@@ -200,11 +210,20 @@ function registerPinMessageHandlers(io, socket) {
     try {
       if (typeof callback !== "function") return;
 
+      const currentUserId = socket.data.user.id;
+      const { allowed, retryAfter } = await checkRateLimit({
+        key: `rl:unpinMessage:${currentUserId}`,
+        limit: 5,
+        windowSec: 30,
+      });
+      if (!allowed) {
+        return callback(ackError("RATE_LIMITED", `Too many requests. Try again in ${retryAfter}s.`));
+      }
+
       const parsed = parsePinMessagePayload(payload);
       if (!parsed.ok) return callback(parsed.error);
 
       const { conversationId, messageId } = parsed.data;
-      const currentUserId = socket.data.user.id;
 
       const isMember = await verifyMembership(currentUserId, conversationId);
       if (!isMember) {

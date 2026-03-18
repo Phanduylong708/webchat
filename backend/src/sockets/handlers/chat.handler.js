@@ -10,11 +10,22 @@ import {
   ackError,
   validateAttachmentsPreflight,
 } from "../helpers/chat-message.util.js";
+import { checkRateLimit } from "../../shared/middlewares/rateLimiter.middleware.js";
 
 async function handleChatMessage(io, socket) {
   socket.on("sendMessage", async (payload, callback) => {
     try {
       if (typeof callback !== "function") return;
+
+      const currentUserId = socket.data.user.id;
+      const { allowed, retryAfter } = await checkRateLimit({
+        key: `rl:sendMessage:${currentUserId}`,
+        limit: 20,
+        windowSec: 10,
+      });
+      if (!allowed) {
+        return callback(ackError("RATE_LIMITED", `Too many requests. Try again in ${retryAfter}s.`));
+      }
 
       // ── Parse & validate payload ──────────────────────────────────────────
       const parsed = parseSendMessagePayload(payload);
@@ -30,7 +41,6 @@ async function handleChatMessage(io, socket) {
         replyToMessageId,
       } = parsed.data;
 
-      const currentUserId = socket.data.user.id;
       let currentConversationId = conversationId;
 
       // ── Resolve conversation ──────────────────────────────────────────────
@@ -103,11 +113,20 @@ async function handleChatMessage(io, socket) {
     try {
       if (typeof callback !== "function") return;
 
+      const currentUserId = socket.data.user.id;
+      const { allowed, retryAfter } = await checkRateLimit({
+        key: `rl:editMessage:${currentUserId}`,
+        limit: 10,
+        windowSec: 10,
+      });
+      if (!allowed) {
+        return callback(ackError("RATE_LIMITED", `Too many requests. Try again in ${retryAfter}s.`));
+      }
+
       const parsed = parseEditMessagePayload(payload);
       if (!parsed.ok) return callback(parsed.error);
 
       const { conversationId, messageId, trimmedContent } = parsed.data;
-      const currentUserId = socket.data.user.id;
 
       const isMember = await verifyMembership(currentUserId, conversationId);
       if (!isMember) {
@@ -138,11 +157,20 @@ async function handleChatMessage(io, socket) {
     try {
       if (typeof callback !== "function") return;
 
+      const currentUserId = socket.data.user.id;
+      const { allowed, retryAfter } = await checkRateLimit({
+        key: `rl:deleteMessage:${currentUserId}`,
+        limit: 10,
+        windowSec: 10,
+      });
+      if (!allowed) {
+        return callback(ackError("RATE_LIMITED", `Too many requests. Try again in ${retryAfter}s.`));
+      }
+
       const parsed = parseDeleteMessagePayload(payload);
       if (!parsed.ok) return callback(parsed.error);
 
       const { conversationId, messageId } = parsed.data;
-      const currentUserId = socket.data.user.id;
 
       const isMember = await verifyMembership(currentUserId, conversationId);
       if (!isMember) {
