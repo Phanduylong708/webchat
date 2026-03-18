@@ -11,21 +11,23 @@ import {
   createMockCallback,
 } from "../mocks/socket.mock.js";
 
-// Mock helpers module
 jest.mock("../../sockets/helpers/helpers.js", () => ({
   verifyMembership: jest.fn(),
   getConversationRoom: jest.fn((id) => `conversation_${id}`),
   getCallRoom: jest.fn((id) => `call_${id}`),
+  maybeAck: jest.fn((cb, payload) => cb && cb(payload)),
+  getConversationType: jest.fn().mockResolvedValue("direct"),
+  getConversationMemberIds: jest.fn().mockResolvedValue([1, 2]),
+  getOnlineUserIds: jest.fn((_io, ids) => ids),
 }));
 
-// Mock crypto.randomUUID
 jest.mock("crypto", () => ({
   randomUUID: jest.fn(() => "mock-uuid-1234"),
 }));
 
 import { verifyMembership } from "../../sockets/helpers/helpers.js";
 
-describe("call.handler", () => {
+describe("call.handler lifecycle", () => {
   let mockIo;
   let mockSocket;
   let mockCallback;
@@ -38,10 +40,7 @@ describe("call.handler", () => {
     });
     mockCallback = createMockCallback();
 
-    // Clear call sessions
     callSessions.clear();
-
-    // Reset mocks
     jest.clearAllMocks();
     verifyMembership.mockResolvedValue(true);
   });
@@ -108,29 +107,29 @@ describe("call.handler", () => {
       });
     });
 
-    it("should create call session and emit to conversation room", async () => {
+    it("should create call session and notify conversation room", async () => {
+      const roomEmit = jest.fn();
+      mockSocket.to.mockReturnValue({ emit: roomEmit });
+
       await mockSocket._trigger(
         "call:initiate",
         { conversationId: 1 },
         mockCallback
       );
 
-      // Check callback was called with success
       expect(mockCallback).toHaveBeenCalledWith({
         success: true,
         callId: "mock-uuid-1234",
       });
 
-      // Check session was created
       expect(callSessions.has("mock-uuid-1234")).toBe(true);
       const session = callSessions.get("mock-uuid-1234");
       expect(session.conversationId).toBe(1);
       expect(session.initiatorId).toBe(1);
       expect(session.status).toBe("ringing");
 
-      // Check emit to conversation room
-      expect(mockIo.to).toHaveBeenCalledWith("conversation_1");
-      expect(mockIo._mockEmit).toHaveBeenCalledWith("call:initiate", {
+      expect(mockSocket.to).toHaveBeenCalledWith("conversation_1");
+      expect(roomEmit).toHaveBeenCalledWith("call:initiate", {
         callId: "mock-uuid-1234",
         conversationId: 1,
         caller: mockSocket.data.user,
@@ -161,13 +160,9 @@ describe("call.handler", () => {
 
       expect(callSessions.has("mock-uuid-1234")).toBe(true);
 
-      // Fast forward time
       jest.advanceTimersByTime(CALL_TIMEOUT_MS);
 
-      // Session should be cleaned up
       expect(callSessions.has("mock-uuid-1234")).toBe(false);
-
-      // Check call:end was emitted with timeout reason
       expect(mockIo._mockEmit).toHaveBeenCalledWith("call:end", {
         callId: "mock-uuid-1234",
         conversationId: 1,
@@ -179,7 +174,6 @@ describe("call.handler", () => {
   describe("call:join", () => {
     beforeEach(async () => {
       handleCall(mockIo, mockSocket);
-      // First create a call session
       await mockSocket._trigger(
         "call:initiate",
         { conversationId: 1 },
@@ -216,26 +210,45 @@ describe("call.handler", () => {
       expect(mockSocket.join).not.toHaveBeenCalled();
     });
 
-    it("should join call room and emit join event", async () => {
-      await mockSocket._trigger("call:join", { callId: "mock-uuid-1234" });
+    it("should join call room and return call context", async () => {
+      const joinCallback = createMockCallback();
 
-      // Check socket joined the room
+      await mockSocket._trigger(
+        "call:join",
+        { callId: "mock-uuid-1234" },
+        joinCallback
+      );
+
       expect(mockSocket.join).toHaveBeenCalledWith("call_mock-uuid-1234");
-
-      // Check participant was added
-      const session = callSessions.get("mock-uuid-1234");
-      expect(session.participantsAccepted.has(1)).toBe(true);
-
-      // Check emit
       expect(mockIo.to).toHaveBeenCalledWith("call_mock-uuid-1234");
-      expect(mockIo._mockEmit).toHaveBeenCalledWith("call:join", {
-        callId: "mock-uuid-1234",
-        user: mockSocket.data.user,
+      expect(mockIo._mockEmit).toHaveBeenCalledWith(
+        "call:join",
+        expect.objectContaining({
+          callId: "mock-uuid-1234",
+          user: expect.objectContaining({ id: 1, username: "alice" }),
+        })
+      );
+
+      expect(joinCallback).toHaveBeenCalledWith({
+        success: true,
+        conversationId: 1,
+        conversationType: "direct",
+        isInitiator: true,
+        participants: [
+          {
+            id: 1,
+            username: "alice",
+            avatar: null,
+            audioMuted: true,
+            videoMuted: true,
+            videoSource: "camera",
+          },
+        ],
+        status: "ringing",
       });
     });
 
     it("should clear timeout and change status when non-initiator joins", async () => {
-      // Create a second socket for another user
       const mockSocket2 = createMockSocket({
         user: { id: 2, username: "bob", email: "bob@test.com" },
       });
@@ -257,7 +270,6 @@ describe("call.handler", () => {
 
       await mockSocket._trigger("call:join", { callId: "mock-uuid-1234" });
 
-      // Status and timeout should remain unchanged (initiator joining)
       expect(session.status).toBe("ringing");
       expect(session.timeoutHandle).toBe(originalTimeout);
     });
@@ -282,7 +294,6 @@ describe("call.handler", () => {
     });
 
     it("should remove user from call and emit leave event", async () => {
-      // Add two more participants so call doesn't auto-end when one leaves
       const mockSocket2 = createMockSocket({
         user: { id: 2, username: "bob", email: "bob@test.com" },
       });
@@ -296,21 +307,22 @@ describe("call.handler", () => {
       await mockSocket3._trigger("call:join", { callId: "mock-uuid-1234" });
       jest.clearAllMocks();
 
+      const roomEmit = jest.fn();
+      mockSocket.to.mockReturnValue({ emit: roomEmit });
+
       await mockSocket._trigger("call:leave", { callId: "mock-uuid-1234" });
 
-      // Check socket left the room
       expect(mockSocket.leave).toHaveBeenCalledWith("call_mock-uuid-1234");
 
-      // Check participant was removed (session still exists with 2 participants)
       const session = callSessions.get("mock-uuid-1234");
       expect(session).toBeDefined();
-      expect(session.participantsAccepted.has(1)).toBe(false);
-      expect(session.participantsAccepted.size).toBe(2);
+      expect(session.participants.has(1)).toBe(false);
+      expect(session.participants.size).toBe(2);
 
-      // Check leave event was emitted
-      expect(mockIo.to).toHaveBeenCalledWith("call_mock-uuid-1234");
-      expect(mockIo._mockEmit).toHaveBeenCalledWith("call:leave", {
+      expect(mockSocket.to).toHaveBeenCalledWith("call_mock-uuid-1234");
+      expect(roomEmit).toHaveBeenCalledWith("call:leave", {
         callId: "mock-uuid-1234",
+        conversationId: 1,
         user: mockSocket.data.user,
         reason: "leave",
       });
@@ -319,10 +331,7 @@ describe("call.handler", () => {
     it("should auto-end call when less than 2 participants remain", async () => {
       await mockSocket._trigger("call:leave", { callId: "mock-uuid-1234" });
 
-      // Call should be ended and cleaned up
       expect(callSessions.has("mock-uuid-1234")).toBe(false);
-
-      // Check call:end was emitted
       expect(mockIo._mockEmit).toHaveBeenCalledWith("call:end", {
         callId: "mock-uuid-1234",
         conversationId: 1,
@@ -357,10 +366,7 @@ describe("call.handler", () => {
     it("should end call for all participants and cleanup", async () => {
       await mockSocket._trigger("call:end", { callId: "mock-uuid-1234" });
 
-      // Session should be deleted
       expect(callSessions.has("mock-uuid-1234")).toBe(false);
-
-      // Check end events were emitted
       expect(mockIo.to).toHaveBeenCalledWith("call_mock-uuid-1234");
       expect(mockIo.to).toHaveBeenCalledWith("conversation_1");
       expect(mockIo._mockEmit).toHaveBeenCalledWith("call:end", {
@@ -368,87 +374,6 @@ describe("call.handler", () => {
         conversationId: 1,
         reason: "ended",
       });
-    });
-  });
-
-  describe("call:offer", () => {
-    beforeEach(async () => {
-      handleCall(mockIo, mockSocket);
-      await mockSocket._trigger(
-        "call:initiate",
-        { conversationId: 1 },
-        mockCallback
-      );
-      jest.clearAllMocks();
-    });
-
-    it("should do nothing if callId is missing", async () => {
-      await mockSocket._trigger("call:offer", {});
-
-      expect(mockSocket.to).not.toHaveBeenCalled();
-    });
-
-    it("should do nothing if call does not exist", async () => {
-      await mockSocket._trigger("call:offer", { callId: "non-existent" });
-
-      expect(mockSocket.to).not.toHaveBeenCalled();
-    });
-
-    it("should relay offer to call room", async () => {
-      const mockSocketEmit = jest.fn();
-      mockSocket.to.mockReturnValue({ emit: mockSocketEmit });
-
-      const payload = { callId: "mock-uuid-1234", sdp: "offer-sdp" };
-      await mockSocket._trigger("call:offer", payload);
-
-      expect(mockSocket.to).toHaveBeenCalledWith("call_mock-uuid-1234");
-      expect(mockSocketEmit).toHaveBeenCalledWith("call:offer", payload);
-    });
-  });
-
-  describe("call:answer", () => {
-    beforeEach(async () => {
-      handleCall(mockIo, mockSocket);
-      await mockSocket._trigger(
-        "call:initiate",
-        { conversationId: 1 },
-        mockCallback
-      );
-      jest.clearAllMocks();
-    });
-
-    it("should relay answer to call room", async () => {
-      const mockSocketEmit = jest.fn();
-      mockSocket.to.mockReturnValue({ emit: mockSocketEmit });
-
-      const payload = { callId: "mock-uuid-1234", sdp: "answer-sdp" };
-      await mockSocket._trigger("call:answer", payload);
-
-      expect(mockSocket.to).toHaveBeenCalledWith("call_mock-uuid-1234");
-      expect(mockSocketEmit).toHaveBeenCalledWith("call:answer", payload);
-    });
-  });
-
-  describe("call:candidate", () => {
-    beforeEach(async () => {
-      handleCall(mockIo, mockSocket);
-      await mockSocket._trigger(
-        "call:initiate",
-        { conversationId: 1 },
-        mockCallback
-      );
-      jest.clearAllMocks();
-    });
-
-    it("should relay ICE candidate to call room", async () => {
-      const mockSocketEmit = jest.fn();
-      mockSocket.to.mockReturnValue({ emit: mockSocketEmit });
-
-      const payload = { callId: "mock-uuid-1234", candidate: "ice-candidate" };
-      await mockSocket._trigger("call:candidate", payload);
-
-      expect(mockSocket.to).toHaveBeenCalledWith("call_mock-uuid-1234");
-      expect(mockSocketEmit).toHaveBeenCalledWith("call:candidate", payload);
     });
   });
 
@@ -465,7 +390,6 @@ describe("call.handler", () => {
 
       await mockSocket._trigger("disconnect");
 
-      // User should be removed from call
       expect(mockSocket.leave).toHaveBeenCalledWith("call_mock-uuid-1234");
     });
 
@@ -484,8 +408,7 @@ describe("call.handler", () => {
       expect(mockSocket.leave).not.toHaveBeenCalled();
     });
 
-    it("should cleanup multiple calls if user was in multiple", async () => {
-      // Create first call
+    it("should cleanup multiple calls if user was participating in multiple", async () => {
       handleCall(mockIo, mockSocket);
       await mockSocket._trigger(
         "call:initiate",
@@ -494,22 +417,20 @@ describe("call.handler", () => {
       );
       await mockSocket._trigger("call:join", { callId: "call-1" });
 
-      // Create second call (simulate)
-      const session2 = {
-        conversationId: 2,
-        initiatorId: 1,
-        status: "active",
-        participantsAccepted: new Set([1]),
-        timeoutHandle: null,
-      };
-      callSessions.set("call-2", session2);
+      await mockSocket._trigger(
+        "call:initiate",
+        { conversationId: 2, callId: "call-2" },
+        mockCallback
+      );
+      await mockSocket._trigger("call:join", { callId: "call-2" });
 
       jest.clearAllMocks();
 
       await mockSocket._trigger("disconnect");
 
-      // Both calls should be cleaned up
       expect(mockSocket.leave).toHaveBeenCalledTimes(2);
+      expect(mockSocket.leave).toHaveBeenCalledWith("call_call-1");
+      expect(mockSocket.leave).toHaveBeenCalledWith("call_call-2");
     });
   });
 });
