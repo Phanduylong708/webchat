@@ -8,7 +8,7 @@ import type {
   CallCandidatePayload,
 } from "@/types/rtc.type";
 import { useMeshManager } from "@/hooks/rtc/useMeshManager";
-import { useMedia } from "@/hooks/context/useMedia";
+import { useMediaStore, selectUserStream } from "@/stores/mediaStore";
 import useSocket from "@/hooks/context/useSocket";
 
 /**
@@ -22,8 +22,8 @@ interface RTCProviderProps {
 }
 
 export function RTCProvider({ children, callId, currentUserId }: RTCProviderProps): React.JSX.Element {
-  // Get userStream from MediaProvider for sync
-  const { userStream } = useMedia();
+  // Get userStream from media store for sync
+  const userStream = useMediaStore(selectUserStream);
   // Get socket for emitting ICE candidates
   const { socket } = useSocket();
 

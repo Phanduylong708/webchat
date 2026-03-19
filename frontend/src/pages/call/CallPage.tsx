@@ -15,10 +15,19 @@ import { GroupCallLayout } from "./Group";
 import type { User } from "@/types/chat.type";
 import type { ConversationType, CallParticipant, CallStatus } from "@/types/call.type";
 import type { WbAck } from "@/types/whiteboard.type";
-import { MediaProvider } from "@/contexts/mediaProvider";
 import { RTCProvider } from "@/contexts/rtcProvider";
 import { WhiteboardProvider } from "@/contexts/whiteboardProvider";
-import { useMedia } from "@/hooks/context/useMedia";
+import {
+  useMediaStore,
+  selectUserStream,
+  selectScreenStream,
+  selectIsVideoMuted,
+  selectIsAudioMuted,
+  selectVideoSource,
+  selectIsManagerReady,
+  selectInitError,
+  selectIsStartingUserMedia,
+} from "@/stores/mediaStore";
 import { useRTC } from "@/hooks/context/useRTC";
 import { useWhiteboard } from "@/hooks/context/useWhiteboard";
 import { useRTCSignaling } from "@/hooks/sockets/useRTCSignaling";
@@ -31,7 +40,11 @@ import { StageLayout } from "@/components/call/StageLayout";
 import { Whiteboard } from "@/components/whiteboard/Whiteboard";
 
 function AutoStartMedia({ enabled }: { enabled: boolean }): React.JSX.Element | null {
-  const { startUserMedia, initError, userStream, isStartingUserMedia, isManagerReady } = useMedia();
+  const startUserMedia = useMediaStore((s) => s.startUserMedia);
+  const initError = useMediaStore(selectInitError);
+  const isManagerReady = useMediaStore(selectIsManagerReady);
+  const userStream = useMediaStore(selectUserStream);
+  const isStartingUserMedia = useMediaStore(selectIsStartingUserMedia);
   const startedRef = useRef(false);
 
   useEffect(() => {
@@ -49,7 +62,8 @@ function AutoStartMedia({ enabled }: { enabled: boolean }): React.JSX.Element | 
 }
 
 function LocalPiP(): React.JSX.Element {
-  const { userStream, isVideoMuted } = useMedia();
+  const userStream = useMediaStore(selectUserStream);
+  const isVideoMuted = useMediaStore(selectIsVideoMuted);
   const { user } = useAuth();
 
   const showVideo = userStream && !isVideoMuted;
@@ -78,6 +92,29 @@ export default function CallPage(): React.JSX.Element {
   const { user } = useAuth();
   const { joinCall, status, endReason, conversationType, participants } = useCall();
   const { isConnected } = useSocket();
+  const initManager = useMediaStore((s) => s.initManager);
+  const disposeManager = useMediaStore((s) => s.disposeManager);
+
+  // Tie MediaStreamManager lifecycle to CallPage mount/unmount.
+  // Must be explicit since there is no longer a MediaProvider wrapper.
+  useEffect(() => {
+    initManager();
+    return () => disposeManager();
+  }, [initManager, disposeManager]);
+
+  // Dispose immediately when call *transitions to* ended — not on initial mount.
+  // CallProvider initialises status as "ended" (idle sentinel), so we must
+  // track the previous value and only act on a real transition away from a
+  // live state. Without this guard the effect fires on mount, disposes the
+  // manager before joinCall() runs, and leaves camera/mic permanently broken.
+  const prevStatusRef = useRef(status);
+  useEffect(() => {
+    const prev = prevStatusRef.current;
+    prevStatusRef.current = status;
+    if (status === "ended" && prev !== "ended") {
+      disposeManager();
+    }
+  }, [status, disposeManager]);
 
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -102,7 +139,6 @@ export default function CallPage(): React.JSX.Element {
         return;
       }
       setIsLoading(false);
-      console.log("Joined call successfully");
       // Fetch remote user metadata for private calls (best-effort)
       if (ack.conversationType === "PRIVATE") {
         try {
@@ -161,20 +197,18 @@ export default function CallPage(): React.JSX.Element {
   }
 
   return (
-    <MediaProvider>
-      <RTCProvider callId={callId ?? null} currentUserId={user?.id ?? null}>
-        <ActiveCallContent
-          callId={callId ?? null}
-          conversationType={conversationType}
-          participants={participants}
-          currentUserId={user?.id ?? null}
-          status={status}
-          remoteUser={remoteUser}
-          showParticipants={showParticipants}
-          setShowParticipants={setShowParticipants}
-        />
-      </RTCProvider>
-    </MediaProvider>
+    <RTCProvider callId={callId ?? null} currentUserId={user?.id ?? null}>
+      <ActiveCallContent
+        callId={callId ?? null}
+        conversationType={conversationType}
+        participants={participants}
+        currentUserId={user?.id ?? null}
+        status={status}
+        remoteUser={remoteUser}
+        showParticipants={showParticipants}
+        setShowParticipants={setShowParticipants}
+      />
+    </RTCProvider>
   );
 }
 
@@ -199,7 +233,12 @@ function ActiveCallContent({
   showParticipants,
   setShowParticipants,
 }: ActiveCallContentProps): React.JSX.Element {
-  const { userStream, screenStream, isVideoMuted, isAudioMuted, videoSource, stopScreenShare } = useMedia();
+  const userStream = useMediaStore(selectUserStream);
+  const screenStream = useMediaStore(selectScreenStream);
+  const isVideoMuted = useMediaStore(selectIsVideoMuted);
+  const isAudioMuted = useMediaStore(selectIsAudioMuted);
+  const videoSource = useMediaStore(selectVideoSource);
+  const stopScreenShare = useMediaStore((s) => s.stopScreenShare);
   const { socket, isConnected } = useSocket();
   const { getManager, isManagerReady, isLocalStreamSynced, getRemoteStream, remoteStreamsVersion } = useRTC();
 

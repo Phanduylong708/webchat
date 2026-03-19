@@ -1,7 +1,18 @@
 import { useCall } from "@/hooks/context/useCall";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { useMedia } from "@/hooks/context/useMedia";
+import {
+  useMediaStore,
+  selectIsAudioMuted,
+  selectIsVideoMuted,
+  selectIsStartingUserMedia,
+  selectIsStartingScreenShare,
+  selectScreenStream,
+  selectToggleAudio,
+  selectToggleVideo,
+  selectStartScreenShare,
+  selectStopScreenShare,
+} from "@/stores/mediaStore";
 import { useWhiteboard } from "@/hooks/context/useWhiteboard";
 import { Mic, MicOff, Video, VideoOff, Users, Monitor, PhoneOff, Presentation } from "lucide-react";
 
@@ -11,17 +22,15 @@ interface CallControlsProps {
 
 export function CallControls({ onToggleParticipants }: CallControlsProps = {}): React.JSX.Element {
   const { conversationType, status, leaveCall, participants } = useCall();
-  const {
-    isAudioMuted,
-    isVideoMuted,
-    isStartingUserMedia,
-    isStartingScreenShare,
-    screenStream,
-    toggleAudio,
-    toggleVideo,
-    startScreenShare,
-    stopScreenShare,
-  } = useMedia();
+  const isAudioMuted = useMediaStore(selectIsAudioMuted);
+  const isVideoMuted = useMediaStore(selectIsVideoMuted);
+  const isStartingUserMedia = useMediaStore(selectIsStartingUserMedia);
+  const isStartingScreenShare = useMediaStore(selectIsStartingScreenShare);
+  const screenStream = useMediaStore(selectScreenStream);
+  const toggleAudio = useMediaStore(selectToggleAudio);
+  const toggleVideo = useMediaStore(selectToggleVideo);
+  const startScreenShare = useMediaStore(selectStartScreenShare);
+  const stopScreenShare = useMediaStore(selectStopScreenShare);
   const { isActive: isWhiteboardActive, openWhiteboard, closeWhiteboard } = useWhiteboard();
 
   if (status === "ended") return <></>;
