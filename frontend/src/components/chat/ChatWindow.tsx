@@ -273,6 +273,7 @@ function ChatWindow(): React.JSX.Element {
         />
       </div>
       <MessageList
+        conversationId={activeConversation.id}
         onRequestEdit={handleRequestEdit}
         onRequestReply={handleRequestReply}
         onRequestDelete={handleRequestDelete}

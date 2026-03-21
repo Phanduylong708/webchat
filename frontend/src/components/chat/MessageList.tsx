@@ -1,12 +1,12 @@
-import { useSearchParams } from "react-router-dom";
-import { useMessage } from "@/hooks/context/useMessage";
 import { useAuth } from "@/hooks/context/useAuth";
+import { useMessagesQuery } from "@/hooks/queries/messages";
 import type { DisplayMessage } from "@/types/chat.type";
 import MessageItem from "./MessageItem";
 import TypingIndicator from "./TypingIndicator";
 import InfiniteScroll from "react-infinite-scroll-component";
 
 type Props = {
+  conversationId: number;
   onRequestEdit?: (message: DisplayMessage) => void;
   onRequestReply?: (message: DisplayMessage) => void;
   onRequestDelete?: (message: DisplayMessage) => void;
@@ -17,6 +17,7 @@ type Props = {
 };
 
 export default function MessageList({
+  conversationId,
   onRequestEdit,
   onRequestReply,
   onRequestDelete,
@@ -25,24 +26,16 @@ export default function MessageList({
   pinnedMessageIds,
   editingMessageId = null,
 }: Props) {
-  const [searchParams] = useSearchParams();
-  const activeConversationId = Number(searchParams.get("conversationId")) || null;
-
-  const { messagesByConversation, loadingMessages, loadOlderMessages, pagination, error } = useMessage();
-  const paginationInfo = activeConversationId ? pagination.get(activeConversationId) : undefined;
   const { user } = useAuth();
+  const { data, isPending, isError, hasNextPage, fetchNextPage } = useMessagesQuery(conversationId);
 
-  if (!activeConversationId) {
-    return (
-      <div className="flex flex-col items-center justify-center h-full text-muted-foreground">
-        <p className="text-lg">Select a conversation to start chatting</p>
-      </div>
-    );
-  }
+  // Reverse pages so oldest batch comes first, then flatMap within each page.
+  // pages[0] is the newest batch (initial fetch), pages[N] is the oldest (loaded via fetchNextPage).
+  // Reversing gives chronological order oldest → newest, which matches the flex-col-reverse container.
+  const messages = data?.pages.slice().reverse().flatMap((page) => page.messages) ?? [];
 
-  const messages = messagesByConversation.get(activeConversationId) || [];
-
-  if (loadingMessages) {
+  // Initial load — query in flight and nothing cached yet
+  if (isPending && messages.length === 0) {
     return (
       <div className="flex items-center justify-center h-full">
         <p className="text-center text-muted-foreground py-8">Loading messages...</p>
@@ -50,24 +43,27 @@ export default function MessageList({
     );
   }
 
-  if (error && messages.length === 0) {
-    return <div className="text-center text-destructive py-8">Error: {error}</div>;
+  // Fetch failed and no cached data to fall back on
+  if (isError && messages.length === 0) {
+    return <div className="text-center text-destructive py-8">Failed to load messages</div>;
   }
 
   if (messages.length === 0) {
     return <div className="text-center text-muted-foreground py-8">No messages yet</div>;
   }
 
+  // If isError but messages.length > 0, we still render the list —
+  // a background refetch failure shouldn't hide cached data the user can read.
   return (
     //prettier-ignore
     <div id="scrollableDiv" className="flex flex-col-reverse flex-1 overflow-y-auto px-4 py-6">
       <InfiniteScroll
         dataLength={messages.length}
-        next={() => loadOlderMessages(activeConversationId)}
-        hasMore = {paginationInfo?.hasMore ?? false}
-        loader= {null}
+        next={fetchNextPage}
+        hasMore={hasNextPage ?? false}
+        loader={null}
         scrollableTarget="scrollableDiv"
-        inverse ={true}
+        inverse={true}
       >
         <div className="space-y-1">
         {messages.map((message, index) => {
@@ -101,7 +97,7 @@ export default function MessageList({
             </div>
           );
         })}
-        <TypingIndicator conversationId={activeConversationId} />
+        <TypingIndicator conversationId={conversationId} />
         </div>
       </InfiniteScroll>
     </div>
