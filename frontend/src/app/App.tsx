@@ -5,7 +5,7 @@ import { IncomingCallDialog } from "@/features/call/components/IncomingCallDialo
 import { useAuth } from "@/features/auth/providers/useAuth";
 import { Outlet } from "react-router-dom";
 import { Toaster } from "sonner";
-import { ThemeProvider } from "@/components/ThemeProvider";
+import { ThemeProvider } from "@/app/providers/ThemeProvider";
 import React from "react";
 
 function AppContent() {

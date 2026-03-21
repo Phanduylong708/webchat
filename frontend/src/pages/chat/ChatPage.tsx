@@ -2,7 +2,7 @@ import { ConversationUiProvider } from "@/features/conversation/providers/conver
 import { useMessageSockets } from "@/features/chat/hooks/useMessageSockets";
 import ConversationListPanel from "@/features/conversation/components/ConversationListPanel";
 import ChatWindow from "@/features/chat/components/ChatWindow";
-import MainContentPanel from "@/components/layout/MainContentPanel";
+import MainContentPanel from "@/app/components/MainContentPanel";
 
 export default function ChatPage(): React.JSX.Element {
   useMessageSockets();

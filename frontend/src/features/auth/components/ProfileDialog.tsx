@@ -6,7 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { getOptimizedAvatarUrl, getAvatarFallback } from "@/utils/image.util";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { uploadMyAvatarApi } from "@/api/user.api";
+import { uploadMyAvatarApi } from "@/features/auth/api/user.api";
 import { Dialog, DialogClose, DialogOverlay, DialogPortal, DialogTrigger } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 

@@ -6,7 +6,7 @@ import EmojiPicker, { Theme, type EmojiClickData } from "emoji-picker-react";
 import { useTheme } from "next-themes";
 import useSocket from "@/app/providers/useSocket";
 import { useAuth } from "@/features/auth/providers/useAuth";
-import { uploadMediaApi } from "@/api/media.api";
+import { uploadMediaApi } from "@/features/chat/api/media.api";
 import { toast } from "sonner";
 import { insertTextAtCaret } from "@/utils/caret.util";
 import { getEditSaveState } from "@/utils/edit-mode.util";

@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo } from "react";
 import FriendListPanel from "@/features/friends/components/FriendListPanel";
-import MainContentPanel from "@/components/layout/MainContentPanel";
+import MainContentPanel from "@/app/components/MainContentPanel";
 import FriendProfile from "@/features/friends/components/FriendProfile";
 import EmptyState from "@/features/friends/components/EmptyState";
 import { useSearchParams } from "react-router-dom";

@@ -18,7 +18,7 @@ vi.mock("@/features/auth/providers/useAuth", () => ({
   useAuth: () => ({ user: { id: 1, username: "alice", avatar: null } }),
 }));
 
-vi.mock("@/api/media.api", () => ({
+vi.mock("@/features/chat/api/media.api", () => ({
   uploadMediaApi: vi.fn(),
 }));
 

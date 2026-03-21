@@ -7,7 +7,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import LoginPage from "@/features/auth/pages/LoginPage";
 import SignUp from "@/features/auth/pages/SignUp";
 import HomePage from "@/pages/home/HomePage";
-import ProtectedRoute from "@/components/ProtectedRoute";
+import ProtectedRoute from "@/app/ProtectedRoute";
 import FriendsPage from "@/features/friends/pages/FriendsPage";
 import ChatPage from "@/pages/chat/ChatPage";
 import CallPage from "@/features/call/pages/CallPage";

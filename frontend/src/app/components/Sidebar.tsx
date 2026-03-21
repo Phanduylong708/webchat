@@ -3,12 +3,12 @@ import { User, MessageCircle } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/features/auth/providers/useAuth";
 import { LogOut } from "lucide-react";
-import { ProfileDialog } from "@/components/profile/ProfileDialog";
+import { ProfileDialog } from "@/features/auth/components/ProfileDialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { getOptimizedAvatarUrl } from "@/utils/image.util";
-import { ThemeToggle } from "@/components/ThemeToggle";
+import { ThemeToggle } from "@/app/components/ThemeToggle";
 
-export default function SideBar(): React.JSX.Element {
+export default function Sidebar(): React.JSX.Element {
   const { user, logout } = useAuth();
   const location = useLocation();
   const isFriendsPage = location.pathname === "/friends";

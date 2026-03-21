@@ -1,4 +1,4 @@
-import SideBar from "@/components/layout/SideBar";
+import Sidebar from "@/app/components/Sidebar";
 import { useAuth } from "@/features/auth/providers/useAuth";
 import { Outlet } from "react-router-dom";
 function HomePage() {
@@ -9,7 +9,7 @@ function HomePage() {
 
   return (
     <div className="grid grid-cols-[minmax(56px,80px)_minmax(0,1fr)] h-screen">
-      <SideBar />
+      <Sidebar />
       <Outlet />
     </div>
   );
