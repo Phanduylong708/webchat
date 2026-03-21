@@ -125,27 +125,7 @@ export interface OptimisticMeta {
   _optimistic: true;
   _status: "sending" | "failed";
   _previewUrl?: string;   // URL.createObjectURL for local image preview
-  _progress?: number;     // upload progress 0–100
 }
 
 export type OptimisticMessage = Messages & OptimisticMeta;
 export type DisplayMessage = Messages | OptimisticMessage;
-
-
-
-export interface MessageState {
-  messagesByConversation: Map<number, DisplayMessage[]>; // cache messages per conversation
-  pagination: Map<number, { nextCursor: number | null; hasMore: boolean }>; // meta for infinite scroll
-  loadingMessages: boolean;
-  loadingOlderByConversation: Set<number>;
-  error: string | null;
-}
-
-export interface MessageContextValue extends MessageState {
-  fetchMessages(conversationId: number): Promise<void>;
-  sendMessage(payload: SendMessageInput): Promise<void>;
-  loadOlderMessages(conversationId: number): Promise<void>;
-  insertOptimisticMessage(message: OptimisticMessage): void;
-  updateOptimistic(conversationId: number, messageId: number, patch: Partial<Pick<OptimisticMeta, "_status" | "_progress">>): void;
-  removeOptimisticMessage(conversationId: number, messageId: number): void;
-}
