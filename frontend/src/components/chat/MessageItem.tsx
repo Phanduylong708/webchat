@@ -2,7 +2,8 @@ import { useCallback, useMemo } from "react";
 import type { DisplayMessage } from "@/types/chat.type";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { getOptimizedAvatarUrl, getAvatarFallback, getOptimizedMessageImageUrl } from "@/utils/image.util";
-import { useMessage } from "@/hooks/context/useMessage";
+import { useRemoveOptimisticMessageFromCache } from "@/hooks/queries/messages";
+import { useMessageStore, selectUploadProgressForMessage } from "@/stores/messageStore";
 import { Loader2, AlertCircle, X } from "lucide-react";
 import { getEmojiSizing, renderTwemojiTokens, tokenizeEmojiContent } from "@/utils/emoji.util";
 import MessageActionsMenu from "./MessageActionsMenu";
@@ -12,7 +13,6 @@ import {
   findReplyTargetRow,
   getReplyPreviewText,
 } from "./message-item/messageItem.logic";
-
 interface MessageItemProps {
   message: DisplayMessage;
   isOwn: boolean;
@@ -51,6 +51,10 @@ function ImageBubble({ message }: { message: DisplayMessage }) {
   const isSending = isOpt && message._status === "sending";
   const isFailed = isOpt && message._status === "failed";
 
+  // Upload progress lives in Zustand store, not in the message cache.
+  // This way only this bubble re-renders on each progress tick, not the full list.
+  const uploadProgress = useMessageStore(selectUploadProgressForMessage(message.id));
+
   // Determine image source: optimistic preview → server attachment
   const src =
     isOpt && message._previewUrl
@@ -81,9 +85,9 @@ function ImageBubble({ message }: { message: DisplayMessage }) {
       {isSending && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/20">
           <Loader2 className="size-6 text-white animate-spin" />
-          {isOpt && message._progress != null && message._progress < 100 && (
+          {uploadProgress != null && uploadProgress < 100 && (
             <span className="absolute bottom-2 right-2 text-xs text-white bg-black/50 px-1.5 py-0.5 rounded">
-              {message._progress}%
+              {uploadProgress}%
             </span>
           )}
         </div>
@@ -102,13 +106,13 @@ function ImageBubble({ message }: { message: DisplayMessage }) {
 // ── Failed Actions ──
 
 function FailedActions({ message }: { message: DisplayMessage }) {
-  const { removeOptimisticMessage } = useMessage();
+  const removeOptimisticMessageFromCache = useRemoveOptimisticMessageFromCache();
   if (!isOptimistic(message) || message._status !== "failed") return null;
 
   return (
     <button
       type="button"
-      onClick={() => removeOptimisticMessage(message.conversationId, message.id)}
+      onClick={() => removeOptimisticMessageFromCache(message.conversationId, message.id)}
       className="flex items-center gap-1 text-xs text-destructive hover:text-destructive/80 transition-colors mt-0.5"
     >
       <X className="size-3" />

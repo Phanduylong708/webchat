@@ -202,10 +202,9 @@ export function useInsertOptimisticMessageIntoCache() {
 // ---------------------------------------------------------------------------
 // useUpdateOptimisticMessageInCache
 //
-// Used by ChatInput to patch an existing optimistic message mid-flight,
-// e.g. updating _progress during upload or marking _status as "failed".
-// Limit: this scans all pages then scans all messages.
-// This is fine for now. Trade off for simplicity
+// Used by ChatInput to mark an optimistic message as "failed" after a send error.
+// Progress tracking is intentionally excluded — upload progress lives in
+// messageStore (Zustand) to avoid re-rendering the full message list on every tick.
 // ---------------------------------------------------------------------------
 
 export function useUpdateOptimisticMessageInCache() {
@@ -214,7 +213,7 @@ export function useUpdateOptimisticMessageInCache() {
   return function updateOptimisticMessage(
     conversationId: number,
     optimisticMessageId: number,
-    patch: Partial<Pick<OptimisticMessage, "_status" | "_progress">>,
+    patch: Partial<Pick<OptimisticMessage, "_status">>,
   ): void {
     queryClient.setQueryData<InfiniteData<MessagesPage>>(messagesQueryKey(conversationId), (currentCache) => {
       if (!currentCache) return currentCache;

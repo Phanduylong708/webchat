@@ -25,6 +25,11 @@ import {
   useInsertOptimisticMessageIntoCache,
   useUpdateOptimisticMessageInCache,
 } from "@/hooks/queries/messages";
+import {
+  useMessageStore,
+  selectSetUploadProgress,
+  selectClearUploadProgress,
+} from "@/stores/messageStore";
 
 // ── Main Component ──
 
@@ -85,6 +90,8 @@ export default function ChatInput(props: Props): React.JSX.Element {
   const sendMessageMutation = useSendMessageMutation();
   const insertOptimisticMessageIntoCache = useInsertOptimisticMessageIntoCache();
   const updateOptimisticMessageInCache = useUpdateOptimisticMessageInCache();
+  const setUploadProgress = useMessageStore(selectSetUploadProgress);
+  const clearUploadProgress = useMessageStore(selectClearUploadProgress);
   const {
     selectedFile,
     previewUrl,
@@ -154,9 +161,13 @@ export default function ChatInput(props: Props): React.JSX.Element {
   async function uploadWithProgress(file: File, tempId: number): Promise<number[]> {
     const attachment = await uploadMediaApi(file, {
       onProgress: (percent) => {
-        updateOptimisticMessageInCache(conversationId, tempId, { _progress: percent });
+        // Progress goes to Zustand store, not TanStack cache — avoids re-rendering
+        // the entire message list on every upload tick.
+        setUploadProgress(tempId, percent);
       },
     });
+    // Upload done — progress state has no meaning after this point
+    clearUploadProgress(tempId);
     return [attachment.id];
   }
 
@@ -244,6 +255,7 @@ export default function ChatInput(props: Props): React.JSX.Element {
       attachmentIds = await uploadWithProgress(file, tempId);
     } catch (uploadError) {
       updateOptimisticMessageInCache(conversationId, tempId, { _status: "failed" });
+      clearUploadProgress(tempId);
       const msg = toUserMessage(uploadError, "Upload failed");
       toast.error(msg);
       return;
