@@ -37,6 +37,7 @@ describe("MessageItem empty caption rendering", () => {
     const { container } = render(
       <MessageItem
         message={message}
+        scrollContainerId="scrollableDiv-1"
         isOwn={true}
         isFirstInGroup={true}
         isLastInGroup={true}
@@ -61,6 +62,7 @@ describe("MessageItem empty caption rendering", () => {
     const { container } = render(
       <MessageItem
         message={message}
+        scrollContainerId="scrollableDiv-1"
         isOwn={true}
         isFirstInGroup={true}
         isLastInGroup={true}

@@ -28,6 +28,7 @@ export default function MessageList({
 }: Props) {
   const { user } = useAuth();
   const { data, isPending, isError, hasNextPage, fetchNextPage } = useMessagesQuery(conversationId);
+  const scrollContainerId = `scrollableDiv-${conversationId}`;
 
   // Reverse pages so oldest batch comes first, then flatMap within each page.
   // pages[0] is the newest batch (initial fetch), pages[N] is the oldest (loaded via fetchNextPage).
@@ -56,13 +57,13 @@ export default function MessageList({
   // a background refetch failure shouldn't hide cached data the user can read.
   return (
     //prettier-ignore
-    <div id="scrollableDiv" className="flex flex-col-reverse flex-1 overflow-y-auto px-4 py-6">
+    <div id={scrollContainerId} className="flex flex-col-reverse flex-1 overflow-y-auto px-4 py-6">
       <InfiniteScroll
         dataLength={messages.length}
         next={fetchNextPage}
         hasMore={hasNextPage ?? false}
         loader={null}
-        scrollableTarget="scrollableDiv"
+        scrollableTarget={scrollContainerId}
         inverse={true}
       >
         <div className="space-y-1">
@@ -84,6 +85,7 @@ export default function MessageList({
             >
               <MessageItem
                 message={message}
+                scrollContainerId={scrollContainerId}
                 isOwn={isOwn}
                 isFirstInGroup={isFirstInGroup}
                 isLastInGroup={isLastInGroup}

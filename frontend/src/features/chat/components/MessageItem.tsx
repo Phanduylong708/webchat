@@ -15,6 +15,7 @@ import {
 } from "@/features/chat/components/message-item/messageItem.logic";
 interface MessageItemProps {
   message: DisplayMessage;
+  scrollContainerId: string;
   isOwn: boolean;
   isFirstInGroup: boolean;
   isLastInGroup: boolean;
@@ -210,6 +211,7 @@ function ReplyQuoteBlock({
 
 export default function MessageItem({
   message,
+  scrollContainerId,
   isOwn,
   isFirstInGroup,
   isLastInGroup,
@@ -237,7 +239,6 @@ export default function MessageItem({
     const replyToMessageId = message.replyToMessageId;
     if (replyToMessageId == null) return;
 
-    const scrollContainerId = "scrollableDiv";
     const scrollContainer = document.getElementById(scrollContainerId);
     if (!scrollContainer) return;
 
@@ -255,7 +256,7 @@ export default function MessageItem({
       timeoutMs: REPLY_HIGHLIGHT_TIMEOUT_MS,
       timeoutAttr: REPLY_HIGHLIGHT_TIMEOUT_ATTR,
     });
-  }, [message.replyToMessageId]);
+  }, [message.replyToMessageId, scrollContainerId]);
 
   // ── Own messages: right-aligned, no avatar ──
   if (isOwn) {
