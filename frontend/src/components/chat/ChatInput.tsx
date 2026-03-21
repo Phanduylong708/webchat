@@ -4,7 +4,6 @@ import { Check, Send, Smile } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import EmojiPicker, { Theme, type EmojiClickData } from "emoji-picker-react";
 import { useTheme } from "next-themes";
-import { useMessage } from "@/hooks/context/useMessage";
 import useSocket from "@/hooks/context/useSocket";
 import { useAuth } from "@/hooks/context/useAuth";
 import { uploadMediaApi } from "@/api/media.api";
@@ -21,6 +20,11 @@ import ReplyModeBanner from "./chat-input/ReplyModeBanner";
 import type { ReplyToPreview } from "@/types/chat.type";
 import { buildReplySendFields, getReplyToFromTarget, toUserMessage } from "./chat-input/chatInput.logic";
 import { buildOptimisticMediaMessage } from "@/utils/message.utils";
+import {
+  useSendMessageMutation,
+  useInsertOptimisticMessageIntoCache,
+  useUpdateOptimisticMessageInCache,
+} from "@/hooks/queries/messages";
 
 // ── Main Component ──
 
@@ -78,7 +82,9 @@ export default function ChatInput(props: Props): React.JSX.Element {
   const { socket } = useSocket();
   const { notifyTypingActivity, stopTyping } = useTypingIndicator({ socket, conversationId });
   const { user } = useAuth();
-  const { sendMessage, insertOptimisticMessage, updateOptimistic } = useMessage();
+  const sendMessageMutation = useSendMessageMutation();
+  const insertOptimisticMessageIntoCache = useInsertOptimisticMessageIntoCache();
+  const updateOptimisticMessageInCache = useUpdateOptimisticMessageInCache();
   const {
     selectedFile,
     previewUrl,
@@ -148,7 +154,7 @@ export default function ChatInput(props: Props): React.JSX.Element {
   async function uploadWithProgress(file: File, tempId: number): Promise<number[]> {
     const attachment = await uploadMediaApi(file, {
       onProgress: (percent) => {
-        updateOptimistic(conversationId, tempId, { _progress: percent });
+        updateOptimisticMessageInCache(conversationId, tempId, { _progress: percent });
       },
     });
     return [attachment.id];
@@ -216,7 +222,8 @@ export default function ChatInput(props: Props): React.JSX.Element {
     const replySendFields = buildReplySendFields(replyTo);
 
     // Insert optimistic bubble immediately — bubble is now in message list
-    insertOptimisticMessage(
+    insertOptimisticMessageIntoCache(
+      conversationId,
       buildOptimisticMediaMessage({
         tempId,
         conversationId,
@@ -236,14 +243,14 @@ export default function ChatInput(props: Props): React.JSX.Element {
     try {
       attachmentIds = await uploadWithProgress(file, tempId);
     } catch (uploadError) {
-      updateOptimistic(conversationId, tempId, { _status: "failed" });
+      updateOptimisticMessageInCache(conversationId, tempId, { _status: "failed" });
       const msg = toUserMessage(uploadError, "Upload failed");
       toast.error(msg);
       return;
     }
 
     // Send via socket — reuse existing optimistic bubble
-    await sendMessage({
+    await sendMessageMutation.mutateAsync({
       conversationId,
       content: trimmed.length > 0 ? trimmed : undefined,
       attachmentIds,
@@ -256,7 +263,7 @@ export default function ChatInput(props: Props): React.JSX.Element {
     const replyTo = getReplyToFromTarget(replyTarget);
     const replySendFields = buildReplySendFields(replyTo);
     // sendMessage creates its own optimistic bubble
-    const sendPromise = sendMessage({
+    const sendPromise = sendMessageMutation.mutateAsync({
       conversationId,
       content: trimmed,
       ...replySendFields,
