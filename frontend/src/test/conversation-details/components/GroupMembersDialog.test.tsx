@@ -13,8 +13,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { ConversationsDetail } from "@/types/chat.type";
 import { queryClient } from "@/lib/queryClient";
-import { conversationDetailsQueryKey } from "@/hooks/queries/conversations";
-import GroupMembersDialog from "../../../components/chat/GroupMembersDialog";
+import { conversationDetailsQueryKey } from "@/features/conversation/hooks/conversations";
+import GroupMembersDialog from "@/features/conversation/components/GroupMembersDialog";
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -26,8 +26,8 @@ vi.mock("@/features/auth/providers/useAuth", () => ({
 
 const mockRemoveMemberMutateAsync = vi.fn();
 
-vi.mock("@/hooks/queries/conversations", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/hooks/queries/conversations")>();
+vi.mock("@/features/conversation/hooks/conversations", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/features/conversation/hooks/conversations")>();
   return {
     ...actual,
     useLeaveGroupMutation: () => ({ mutateAsync: vi.fn(), isPending: false }),
@@ -35,7 +35,7 @@ vi.mock("@/hooks/queries/conversations", async (importOriginal) => {
   };
 });
 
-vi.mock("../../../components/chat/AddMemberDialog", () => ({
+vi.mock("@/features/conversation/components/AddMemberDialog", () => ({
   default: () => null,
 }));
 

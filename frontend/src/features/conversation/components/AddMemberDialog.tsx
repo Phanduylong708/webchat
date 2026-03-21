@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useAddMemberMutation, useConversationDetailsQuery } from "@/hooks/queries/conversations";
+import { useAddMemberMutation, useConversationDetailsQuery } from "@/features/conversation/hooks/conversations";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,

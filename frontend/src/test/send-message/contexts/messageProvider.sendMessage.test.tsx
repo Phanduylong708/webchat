@@ -11,8 +11,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { ConversationsResponse, Messages, SendMessageInput } from "@/types/chat.type";
-import { conversationsQueryKey } from "@/hooks/queries/conversations";
-import { useSendMessageMutation } from "@/hooks/queries/messages";
+import { conversationsQueryKey } from "@/features/conversation/hooks/conversations";
+import { useSendMessageMutation } from "@/features/chat/hooks/messages";
 
 const mockSocketObj = {
   connected: true,

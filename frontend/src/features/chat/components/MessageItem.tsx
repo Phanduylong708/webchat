@@ -2,17 +2,17 @@ import { useCallback, useMemo } from "react";
 import type { DisplayMessage } from "@/types/chat.type";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { getOptimizedAvatarUrl, getAvatarFallback, getOptimizedMessageImageUrl } from "@/utils/image.util";
-import { useRemoveOptimisticMessageFromCache } from "@/hooks/queries/messages";
+import { useRemoveOptimisticMessageFromCache } from "@/features/chat/hooks/messages";
 import { useMessageStore, selectUploadProgressForMessage } from "@/stores/messageStore";
 import { Loader2, AlertCircle, X } from "lucide-react";
 import { getEmojiSizing, renderTwemojiTokens, tokenizeEmojiContent } from "@/utils/emoji.util";
-import MessageActionsMenu from "./MessageActionsMenu";
+import MessageActionsMenu from "@/features/chat/components/MessageActionsMenu";
 import { toast } from "sonner";
 import {
   applyReplyHighlight,
   findReplyTargetRow,
   getReplyPreviewText,
-} from "./message-item/messageItem.logic";
+} from "@/features/chat/components/message-item/messageItem.logic";
 interface MessageItemProps {
   message: DisplayMessage;
   isOwn: boolean;

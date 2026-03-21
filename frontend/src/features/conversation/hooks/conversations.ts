@@ -6,7 +6,7 @@ import {
   leaveGroupApi,
   removeMemberApi,
   getConversationsDetails,
-} from "@/api/conversation.api";
+} from "@/features/conversation/api/conversation.api";
 import type { ConversationsDetail, ConversationsResponse } from "@/types/chat.type";
 import { useAuth } from "@/features/auth/providers/useAuth";
 

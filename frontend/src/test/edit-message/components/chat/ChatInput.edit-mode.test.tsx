@@ -2,7 +2,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import ChatInput from "../../../../components/chat/ChatInput";
+import ChatInput from "@/features/chat/components/ChatInput";
 
 const toastErrorMock = vi.fn();
 

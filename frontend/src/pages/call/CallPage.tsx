@@ -9,7 +9,7 @@ import { getOptimizedAvatarUrl } from "@/utils/image.util";
 import { callEndReasonMessages } from "@/types/call.type";
 import { CallControls } from "@/components/call/CallControls";
 import { Loader2, AlertCircle, Home } from "lucide-react";
-import { getConversationsDetails } from "@/api/conversation.api";
+import { getConversationsDetails } from "@/features/conversation/api/conversation.api";
 import { PrivateCallLayout } from "./Private";
 import { GroupCallLayout } from "./Group";
 import type { User } from "@/types/chat.type";

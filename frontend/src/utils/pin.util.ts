@@ -1,6 +1,6 @@
 import type { AttachmentItem, PinnedMessageItem } from "@/types/chat.type";
 import { queryClient } from "@/lib/queryClient";
-import { conversationPinsQueryKey } from "@/hooks/queries/pins";
+import { conversationPinsQueryKey } from "@/features/chat/hooks/pins";
 
 export function sortPinnedItemsDesc(items: PinnedMessageItem[]): PinnedMessageItem[] {
   return [...items].sort((left, right) => {

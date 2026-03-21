@@ -9,7 +9,7 @@ import { getOptimizedAvatarUrl } from "@/utils/image.util";
 import { Button } from "@/components/ui/button";
 import { MessageCircle, UserMinus } from "lucide-react";
 import RemoveFriendDialog from "./RemoveFriendDialog";
-import { startPrivateChatApi } from "@/api/conversation.api";
+import { startPrivateChatApi } from "@/features/conversation/api/conversation.api";
 import useSocket from "@/hooks/context/useSocket";
 
 interface FriendProfileProps {

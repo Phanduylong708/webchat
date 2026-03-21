@@ -13,7 +13,7 @@ import {
   mapPinnedAttachments,
   patchPinnedItemsCache,
 } from "@/utils/pin.util";
-import { conversationsQueryKey } from "@/hooks/queries/conversations";
+import { conversationsQueryKey } from "@/features/conversation/hooks/conversations";
 
 type MessageDeletedPayload = {
   conversationId: number;

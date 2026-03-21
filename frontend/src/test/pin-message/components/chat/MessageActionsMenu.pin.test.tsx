@@ -2,7 +2,7 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { DisplayMessage } from "@/types/chat.type";
-import MessageActionsMenu from "@/components/chat/MessageActionsMenu";
+import MessageActionsMenu from "@/features/chat/components/MessageActionsMenu";
 
 function makeMessage(overrides: Partial<DisplayMessage> & { id: number; conversationId: number }): DisplayMessage {
   const base: DisplayMessage = {

@@ -5,8 +5,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { ConversationsResponse, DisplayMessage } from "@/types/chat.type";
 import { queryClient } from "@/lib/queryClient";
-import { conversationsQueryKey } from "@/hooks/queries/conversations";
-import { useConversationSockets } from "../../../../hooks/sockets/useConversationSockets";
+import { conversationsQueryKey } from "@/features/conversation/hooks/conversations";
+import { useConversationSockets } from "@/features/conversation/hooks/useConversationSockets";
 
 // --- Mock useSocket and useAuth so hook can self-provision socket/userId ---
 

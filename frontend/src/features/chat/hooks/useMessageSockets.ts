@@ -7,7 +7,7 @@ import {
   replaceUpdatedMessageAcrossAllPages,
   removeMessageAndClearOrphanedReplyLinks,
   type MessagesPage,
-} from "@/hooks/queries/messages";
+} from "@/features/chat/hooks/messages";
 import type { Messages } from "@/types/chat.type";
 
 type MessageDeletedPayload = {

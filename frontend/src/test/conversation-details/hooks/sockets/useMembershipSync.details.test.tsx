@@ -18,8 +18,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { ConversationsDetail, ConversationsResponse, User } from "@/types/chat.type";
 import { queryClient } from "@/lib/queryClient";
-import { conversationsQueryKey, conversationDetailsQueryKey } from "@/hooks/queries/conversations";
-import { useConversationSockets } from "@/hooks/sockets/useConversationSockets";
+import { conversationsQueryKey, conversationDetailsQueryKey } from "@/features/conversation/hooks/conversations";
+import { useConversationSockets } from "@/features/conversation/hooks/useConversationSockets";
 
 // ---------------------------------------------------------------------------
 // Mocks

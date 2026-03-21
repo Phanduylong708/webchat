@@ -1,8 +1,8 @@
 import { useAuth } from "@/features/auth/providers/useAuth";
-import { useMessagesQuery } from "@/hooks/queries/messages";
+import { useMessagesQuery } from "@/features/chat/hooks/messages";
 import type { DisplayMessage } from "@/types/chat.type";
-import MessageItem from "./MessageItem";
-import TypingIndicator from "./TypingIndicator";
+import MessageItem from "@/features/chat/components/MessageItem";
+import TypingIndicator from "@/features/chat/components/TypingIndicator";
 import InfiniteScroll from "react-infinite-scroll-component";
 
 type Props = {

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { useConversationsQuery } from "@/hooks/queries/conversations";
+import { useConversationsQuery } from "@/features/conversation/hooks/conversations";
 import { useOnlineUsers } from "@/hooks/useOnlineUsers";
 import { useConversationUi } from "@/hooks/context/useConversationUi";
 import { Separator } from "@/components/ui/separator";
@@ -9,15 +9,15 @@ import { StackedAvatars } from "@/components/ui/stacked-avatars";
 import { getOptimizedAvatarUrl, getAvatarFallback } from "@/utils/image.util";
 import type { DisplayMessage, ReplyToPreview } from "@/types/chat.type";
 import useSocket from "@/hooks/context/useSocket";
-import MessageList from "./MessageList";
-import ChatInput from "./ChatInput";
-import GroupMembersDialog from "./GroupMembersDialog";
-import DeleteMessageDialog from "./DeleteMessageDialog";
-import PinnedMessagesBanner from "./PinnedMessagesBanner";
-import PinnedMessagesPanel from "./PinnedMessagesPanel";
-import type { DeleteMessageTarget } from "./DeleteMessageDialog";
+import MessageList from "@/features/chat/components/MessageList";
+import ChatInput from "@/features/chat/components/ChatInput";
+import GroupMembersDialog from "@/features/conversation/components/GroupMembersDialog";
+import DeleteMessageDialog from "@/features/chat/components/DeleteMessageDialog";
+import PinnedMessagesBanner from "@/features/chat/components/PinnedMessagesBanner";
+import PinnedMessagesPanel from "@/features/chat/components/PinnedMessagesPanel";
+import type { DeleteMessageTarget } from "@/features/chat/components/DeleteMessageDialog";
 import { CallButton } from "@/components/call/CallButton";
-import { useConversationPinsQuery, usePinMessageMutation, useUnpinMessageMutation } from "@/hooks/queries/pins";
+import { useConversationPinsQuery, usePinMessageMutation, useUnpinMessageMutation } from "@/features/chat/hooks/pins";
 import { toast } from "sonner";
 
 type MessageDeletedPayload = {

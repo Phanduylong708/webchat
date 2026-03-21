@@ -1,6 +1,6 @@
 import { useCallback, useState, type JSX } from "react";
 import { useSearchParams } from "react-router-dom";
-import { useConversationSockets } from "@/hooks/sockets/useConversationSockets";
+import { useConversationSockets } from "@/features/conversation/hooks/useConversationSockets";
 import { ConversationUiContext } from "./conversationUiContext";
 
 export function ConversationUiProvider({ children }: { children: React.ReactNode }): JSX.Element {

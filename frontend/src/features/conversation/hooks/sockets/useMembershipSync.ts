@@ -4,7 +4,7 @@ import type { Socket } from "socket.io-client";
 import { toast } from "sonner";
 import type { ConversationsDetail, ConversationsResponse, User } from "@/types/chat.type";
 import { resolveLeavingUsername } from "@/utils/conversation.utils";
-import { conversationsQueryKey, conversationDetailsQueryKey } from "@/hooks/queries/conversations";
+import { conversationsQueryKey, conversationDetailsQueryKey } from "@/features/conversation/hooks/conversations";
 
 type SystemMessageSetter = Dispatch<SetStateAction<Map<number, string>>>;
 

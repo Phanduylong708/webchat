@@ -1,14 +1,14 @@
 import { useSearchParams } from "react-router-dom";
-import { useConversationsQuery } from "@/hooks/queries/conversations";
+import { useConversationsQuery } from "@/features/conversation/hooks/conversations";
 import { useOnlineUsers } from "@/hooks/useOnlineUsers";
 import type { ConversationsResponse } from "@/types/chat.type";
-import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
-import { StackedAvatars } from "../ui/stacked-avatars";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { StackedAvatars } from "@/components/ui/stacked-avatars";
 import { getOptimizedAvatarUrl, getAvatarFallback } from "@/utils/image.util";
-import { Separator } from "../ui/separator";
-import { Input } from "../ui/input";
-import { ScrollArea } from "../ui/scroll-area";
-import CreateGroupDialog from "../chat/CreateGroupDialog";
+import { Separator } from "@/components/ui/separator";
+import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import CreateGroupDialog from "@/features/conversation/components/CreateGroupDialog";
 
 const PREVIEW_DISPLAY: Record<string, string> = {
   image: "Photo",

@@ -1,5 +1,5 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { getConversationPins } from "@/api/conversation.api";
+import { getConversationPins } from "@/features/conversation/api/conversation.api";
 import useSocket from "@/hooks/context/useSocket";
 import { emitWithAckTimeout } from "@/utils/socketAck.util";
 import type { PinnedMessageItem } from "@/types/chat.type";

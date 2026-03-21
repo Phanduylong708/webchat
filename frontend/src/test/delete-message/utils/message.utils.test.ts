@@ -5,7 +5,7 @@ import type { DisplayMessage } from "@/types/chat.type";
 import {
   removeMessageAndClearOrphanedReplyLinks,
   type MessagesPage,
-} from "@/hooks/queries/messages";
+} from "@/features/chat/hooks/messages";
 
 function makeMessage(overrides: Partial<DisplayMessage> & { id: number; conversationId: number }): DisplayMessage {
   const base: DisplayMessage = {

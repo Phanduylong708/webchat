@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useCreateGroupMutation } from "@/hooks/queries/conversations";
+import { useCreateGroupMutation } from "@/features/conversation/hooks/conversations";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {

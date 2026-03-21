@@ -1,7 +1,7 @@
 import { cleanup, render } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
-import MessageItem from "@/components/chat/MessageItem";
+import MessageItem from "@/features/chat/components/MessageItem";
 import type { OptimisticMessage } from "@/types/chat.type";
 
 afterEach(() => {

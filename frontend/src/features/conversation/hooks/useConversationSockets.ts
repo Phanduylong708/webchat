@@ -1,9 +1,9 @@
 import { useEffect, type Dispatch, type SetStateAction } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useTypingSync } from "@/hooks/sockets/conversation/useTypingSync";
-import { useMessageSync } from "@/hooks/sockets/conversation/useMessageSync";
-import { useMembershipSync } from "@/hooks/sockets/conversation/useMembershipSync";
-import { conversationsQueryKey } from "@/hooks/queries/conversations";
+import { useTypingSync } from "@/features/conversation/hooks/sockets/useTypingSync";
+import { useMessageSync } from "@/features/conversation/hooks/sockets/useMessageSync";
+import { useMembershipSync } from "@/features/conversation/hooks/sockets/useMembershipSync";
+import { conversationsQueryKey } from "@/features/conversation/hooks/conversations";
 import useSocket from "@/hooks/context/useSocket";
 import { useAuth } from "@/features/auth/providers/useAuth";
 

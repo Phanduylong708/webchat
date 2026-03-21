@@ -3,8 +3,8 @@ import { type InfiniteData, QueryClient, QueryClientProvider } from "@tanstack/r
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { DisplayMessage } from "@/types/chat.type";
-import { messagesQueryKey, type MessagesPage } from "@/hooks/queries/messages";
-import { useMessageSockets } from "@/hooks/sockets/useMessageSockets";
+import { messagesQueryKey, type MessagesPage } from "@/features/chat/hooks/messages";
+import { useMessageSockets } from "@/features/chat/hooks/useMessageSockets";
 
 class MockSocket {
   handlers = new Map<string, (...args: unknown[]) => void>();

@@ -8,8 +8,8 @@ import {
   useRemoveMemberMutation,
   useConversationDetailsQuery,
   conversationDetailsQueryKey,
-} from "@/hooks/queries/conversations";
-import type { ConversationsDetail } from "@/hooks/queries/conversations";
+} from "@/features/conversation/hooks/conversations";
+import type { ConversationsDetail } from "@/features/conversation/hooks/conversations";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -27,7 +27,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
-import AddMemberDialog from "./AddMemberDialog";
+import AddMemberDialog from "@/features/conversation/components/AddMemberDialog";
 import { getOptimizedAvatarUrl, getAvatarFallback } from "@/utils/image.util";
 
 interface GroupMembersDialogProps {

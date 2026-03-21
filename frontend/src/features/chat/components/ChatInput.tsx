@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Textarea } from "../ui/textarea";
+import { Textarea } from "@/components/ui/textarea";
 import { Check, Send, Smile } from "lucide-react";
-import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import EmojiPicker, { Theme, type EmojiClickData } from "emoji-picker-react";
 import { useTheme } from "next-themes";
 import useSocket from "@/hooks/context/useSocket";
@@ -11,20 +11,20 @@ import { toast } from "sonner";
 import { insertTextAtCaret } from "@/utils/caret.util";
 import { getEditSaveState } from "@/utils/edit-mode.util";
 import { emitWithAckTimeout } from "@/utils/socketAck.util";
-import { useAttachmentSelection } from "./chat-input/useAttachmentSelection";
-import { useTypingIndicator } from "./chat-input/useTypingIndicator";
-import AttachmentMenu from "./chat-input/AttachmentMenu";
-import AttachmentPreview from "./chat-input/AttachmentPreview";
-import EditModeBanner from "./chat-input/EditModeBanner";
-import ReplyModeBanner from "./chat-input/ReplyModeBanner";
+import { useAttachmentSelection } from "@/features/chat/components/chat-input/useAttachmentSelection";
+import { useTypingIndicator } from "@/features/chat/components/chat-input/useTypingIndicator";
+import AttachmentMenu from "@/features/chat/components/chat-input/AttachmentMenu";
+import AttachmentPreview from "@/features/chat/components/chat-input/AttachmentPreview";
+import EditModeBanner from "@/features/chat/components/chat-input/EditModeBanner";
+import ReplyModeBanner from "@/features/chat/components/chat-input/ReplyModeBanner";
 import type { ReplyToPreview } from "@/types/chat.type";
-import { buildReplySendFields, getReplyToFromTarget, toUserMessage } from "./chat-input/chatInput.logic";
+import { buildReplySendFields, getReplyToFromTarget, toUserMessage } from "@/features/chat/components/chat-input/chatInput.logic";
 import { buildOptimisticMediaMessage } from "@/utils/message.utils";
 import {
   useSendMessageMutation,
   useInsertOptimisticMessageIntoCache,
   useUpdateOptimisticMessageInCache,
-} from "@/hooks/queries/messages";
+} from "@/features/chat/hooks/messages";
 import {
   useMessageStore,
   selectSetUploadProgress,
