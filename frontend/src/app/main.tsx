@@ -11,7 +11,6 @@ import ProtectedRoute from "@/app/ProtectedRoute";
 import FriendsPage from "@/features/friends/pages/FriendsPage";
 import ChatPage from "@/pages/chat/ChatPage";
 import CallPage from "@/features/call/pages/CallPage";
-import WhiteboardTestPage from "@/features/whiteboard/pages/WhiteboardTestPage";
 import { queryClient } from "@/lib/queryClient";
 
 const router = createBrowserRouter([
@@ -48,8 +47,6 @@ const router = createBrowserRouter([
       },
       { path: "login", element: <LoginPage /> },
       { path: "signup", element: <SignUp /> },
-      // Dev routes - only accessible in development
-      ...(import.meta.env.DEV ? [{ path: "dev/whiteboard", element: <WhiteboardTestPage /> }] : []),
     ],
   },
 ]);
