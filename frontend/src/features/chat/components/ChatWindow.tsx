@@ -16,7 +16,7 @@ import DeleteMessageDialog from "@/features/chat/components/DeleteMessageDialog"
 import PinnedMessagesBanner from "@/features/chat/components/PinnedMessagesBanner";
 import PinnedMessagesPanel from "@/features/chat/components/PinnedMessagesPanel";
 import type { DeleteMessageTarget } from "@/features/chat/components/DeleteMessageDialog";
-import { CallButton } from "@/components/call/CallButton";
+import { CallButton } from "@/features/call/components/CallButton";
 import { useConversationPinsQuery, usePinMessageMutation, useUnpinMessageMutation } from "@/features/chat/hooks/pins";
 import { toast } from "sonner";
 

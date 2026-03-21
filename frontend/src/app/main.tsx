@@ -10,7 +10,7 @@ import HomePage from "@/pages/home/HomePage";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import FriendsPage from "@/features/friends/pages/FriendsPage";
 import ChatPage from "@/pages/chat/ChatPage";
-import CallPage from "@/pages/call/CallPage";
+import CallPage from "@/features/call/pages/CallPage";
 import WhiteboardTestPage from "@/features/whiteboard/pages/WhiteboardTestPage";
 import { queryClient } from "@/lib/queryClient";
 

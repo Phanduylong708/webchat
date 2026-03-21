@@ -1,7 +1,7 @@
 import { AuthProvider } from "@/features/auth/providers/authContext";
 import { SocketProvider } from "@/contexts/socketProvider";
-import { CallProvider } from "@/contexts/callProvider";
-import { IncomingCallDialog } from "@/components/call/IncomingCallDialog";
+import { CallProvider } from "@/features/call/providers/callProvider";
+import { IncomingCallDialog } from "@/features/call/components/IncomingCallDialog";
 import { useAuth } from "@/features/auth/providers/useAuth";
 import { Outlet } from "react-router-dom";
 import { Toaster } from "sonner";

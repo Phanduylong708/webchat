@@ -1,0 +1,106 @@
+import { memo } from "react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { getOptimizedAvatarUrl } from "@/utils/image.util";
+import { MicOff } from "lucide-react";
+import type { CallParticipant } from "@/features/call/types/call.type";
+import { cn } from "@/lib/utils";
+import MediaVideo from "@/features/call/components/media/MediaVideo";
+
+interface ParticipantTileProps {
+  participant: CallParticipant;
+  isMe: boolean;
+  compact?: boolean;
+  // Props for self video (only used when isMe === true)
+  showSelfVideo?: boolean;
+  selfStream?: MediaStream | null;
+  // Props for self mute state (only used when isMe === true)
+  selfAudioMuted?: boolean;
+  selfVideoMuted?: boolean;
+  // Props for remote video (only used when isMe === false)
+  remoteStream?: MediaStream | null;
+  connectionState?: RTCPeerConnectionState | null;
+  errorState?: string | null;
+}
+
+function ParticipantTileComponent({
+  participant,
+  isMe,
+  compact = false,
+  showSelfVideo = false,
+  selfStream = null,
+  selfAudioMuted = false,
+  selfVideoMuted = false,
+  remoteStream = null,
+  errorState = null,
+}: ParticipantTileProps): React.JSX.Element {
+  // Determine mute state from signaled state (remote) or props (self)
+  const audioMuted = isMe ? selfAudioMuted : participant.audioMuted;
+  const videoMuted = isMe ? selfVideoMuted : participant.videoMuted;
+
+  // Determine what to show:
+  // - Self: show video if showSelfVideo is true (already considers selfVideoMuted)
+  // - Remote: show video if remoteStream exists AND videoMuted is false
+  const shouldShowSelfVideo = isMe && showSelfVideo;
+  const shouldShowRemoteVideo = !isMe && remoteStream !== null && !videoMuted;
+  const shouldShowVideo = shouldShowSelfVideo || shouldShowRemoteVideo;
+
+  // Determine the stream to display
+  const displayStream = isMe ? selfStream : remoteStream;
+
+  // Show error indicator for remote participants with connection issues
+  const hasError = !isMe && errorState !== null;
+
+  return (
+    <div
+      className={cn(
+        "relative w-full h-full bg-zinc-900 rounded-xl border overflow-hidden shadow-md group transition-all duration-300",
+        compact ? "min-h-[120px]" : "min-h-40",
+        hasError ? "border-red-500/50" : "border-white/5",
+      )}
+    >
+      {/* Always mount MediaVideo for remote streams to keep audio playing */}
+      {displayStream && !isMe && (
+        <MediaVideo
+          stream={displayStream}
+          muted={false}
+          playsInline
+          className={cn("w-full h-full object-cover", !shouldShowRemoteVideo && "invisible absolute")}
+        />
+      )}
+
+      {/* Self video - only mount when showing */}
+      {shouldShowSelfVideo && displayStream && (
+        <MediaVideo stream={displayStream} muted playsInline className="w-full h-full object-cover" />
+      )}
+
+      {/* Avatar fallback when video not shown */}
+      {!shouldShowVideo && (
+        <div className="w-full h-full flex flex-col items-center justify-center bg-zinc-850 relative">
+          <Avatar className={cn("border-4 border-zinc-800 shadow-sm", compact ? "h-12 w-12" : "h-20 w-20")}>
+            <AvatarImage src={getOptimizedAvatarUrl(participant.avatar, 80)} />
+            <AvatarFallback className="bg-zinc-700 text-zinc-400">
+              {participant.username.charAt(0).toUpperCase()}
+            </AvatarFallback>
+          </Avatar>
+          {hasError && <span className="mt-2 text-xs text-red-400">{errorState}</span>}
+        </div>
+      )}
+
+      <div
+        className={cn(
+          "absolute flex items-center justify-between",
+          compact ? "bottom-2 left-2 right-2" : "bottom-3 left-3 right-3",
+        )}
+      >
+        <div className="px-2 py-1 rounded bg-black/60 backdrop-blur-md border border-white/5 flex items-center gap-2 max-w-[85%]">
+          <span className="text-xs font-medium text-white truncate">
+            {isMe ? "You" : participant.username}
+          </span>
+          {audioMuted && <MicOff className="h-3 w-3 text-zinc-400 shrink-0" />}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export const ParticipantTile = memo(ParticipantTileComponent);
