@@ -113,6 +113,10 @@ export interface Messages {
   attachments: AttachmentItem[];
   replyToMessageId?: number | null;
   replyTo?: ReplyToPreview | null;
+  // Set on the client after an optimistic message is confirmed by the server.
+  // Preserves the original temp ID as the React list key so the DOM node
+  // isn't unmounted and remounted when the real ID arrives.
+  _stableKey?: number;
 }
 
 // Client-only metadata for optimistic (unsent/in-flight/failed) messages.
