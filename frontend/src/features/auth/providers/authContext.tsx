@@ -6,8 +6,8 @@ import type {
   RegisterRequest,
 } from "@/types/auth.type";
 import { removeToken, saveToken, getToken } from "@/utils/localStorage.util";
-import { loginUser, registerUser, getCurrentUser } from "@/api/auth.api";
-import { queryClient } from "../lib/queryClient";
+import { loginUser, registerUser, getCurrentUser } from "@/features/auth/api/auth.api";
+import { queryClient } from "@/lib/queryClient";
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 function AuthProvider({ children }: { children: React.ReactNode }) {

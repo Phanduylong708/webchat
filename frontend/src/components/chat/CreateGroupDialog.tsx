@@ -16,7 +16,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { getOptimizedAvatarUrl, getAvatarFallback } from "@/utils/image.util";
 import { Plus } from "lucide-react";
-import { useFriendsQuery } from "@/hooks/queries/friends";
+import { useFriendsQuery } from "@/features/friends/hooks/friends";
 
 export default function CreateGroupDialog(): React.JSX.Element {
   const [isOpen, setIsOpen] = useState(false);

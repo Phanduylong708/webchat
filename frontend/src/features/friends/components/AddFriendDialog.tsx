@@ -11,7 +11,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Plus } from "lucide-react";
-import { useAddFriendMutation } from "@/hooks/queries/friends";
+import { useAddFriendMutation } from "@/features/friends/hooks/friends";
 
 interface AddFriendDialogProps {
   onFriendAdded: (friendId: number) => void;

@@ -1,8 +1,8 @@
-import { AuthProvider } from "@/contexts/authContext";
-import { SocketProvider } from "./contexts/socketProvider";
+import { AuthProvider } from "@/features/auth/providers/authContext";
+import { SocketProvider } from "@/contexts/socketProvider";
 import { CallProvider } from "@/contexts/callProvider";
 import { IncomingCallDialog } from "@/components/call/IncomingCallDialog";
-import { useAuth } from "@/hooks/context/useAuth";
+import { useAuth } from "@/features/auth/providers/useAuth";
 import { Outlet } from "react-router-dom";
 import { Toaster } from "sonner";
 import { ThemeProvider } from "@/components/ThemeProvider";

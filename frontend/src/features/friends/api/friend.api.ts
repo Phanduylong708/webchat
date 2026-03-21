@@ -1,5 +1,5 @@
 import { api } from "@/lib/axios.config";
-import type { Friend } from "@/types/friend.type";
+import type { Friend } from "@/features/friends/types/friend.type";
 import { handleApiError } from "@/utils/apiError.util";
 
 async function getFriends(): Promise<Friend[]> {

@@ -5,7 +5,7 @@ import { useMessageSync } from "@/hooks/sockets/conversation/useMessageSync";
 import { useMembershipSync } from "@/hooks/sockets/conversation/useMembershipSync";
 import { conversationsQueryKey } from "@/hooks/queries/conversations";
 import useSocket from "@/hooks/context/useSocket";
-import { useAuth } from "@/hooks/context/useAuth";
+import { useAuth } from "@/features/auth/providers/useAuth";
 
 type TypingSetter = Dispatch<SetStateAction<Map<number, Map<number, string>>>>;
 type SystemMessageSetter = Dispatch<SetStateAction<Map<number, string>>>;

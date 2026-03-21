@@ -1,5 +1,5 @@
 import { useInfiniteQuery, useMutation, useQueryClient, type InfiniteData } from "@tanstack/react-query";
-import { useAuth } from "@/hooks/context/useAuth";
+import { useAuth } from "@/features/auth/providers/useAuth";
 import useSocket from "@/hooks/context/useSocket";
 import { getMessages } from "@/api/message.api";
 import { emitWithAckTimeout } from "@/utils/socketAck.util";

@@ -50,7 +50,7 @@ vi.mock("@/hooks/context/useSocket", () => ({
   }),
 }));
 
-vi.mock("@/hooks/context/useAuth", () => ({
+vi.mock("@/features/auth/providers/useAuth", () => ({
   useAuth: () => ({ user: { id: 1, username: "alice", avatar: null } }),
 }));
 

@@ -1,11 +1,11 @@
 import React, { useCallback, useEffect, useMemo } from "react";
-import FriendListPanel from "@/components/layout/FriendListPanel";
+import FriendListPanel from "@/features/friends/components/FriendListPanel";
 import MainContentPanel from "@/components/layout/MainContentPanel";
-import FriendProfile from "@/components/friends/FriendProfile";
-import EmptyState from "@/components/friends/EmptyState";
+import FriendProfile from "@/features/friends/components/FriendProfile";
+import EmptyState from "@/features/friends/components/EmptyState";
 import { useSearchParams } from "react-router-dom";
-import { useFriendsQuery } from "@/hooks/queries/friends";
-import type { Friend } from "@/types/friend.type";
+import { useFriendsQuery } from "@/features/friends/hooks/friends";
+import type { Friend } from "@/features/friends/types/friend.type";
 
 export default function FriendPage(): React.JSX.Element {
   const friendsQuery = useFriendsQuery();

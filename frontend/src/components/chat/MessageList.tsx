@@ -1,4 +1,4 @@
-import { useAuth } from "@/hooks/context/useAuth";
+import { useAuth } from "@/features/auth/providers/useAuth";
 import { useMessagesQuery } from "@/hooks/queries/messages";
 import type { DisplayMessage } from "@/types/chat.type";
 import MessageItem from "./MessageItem";

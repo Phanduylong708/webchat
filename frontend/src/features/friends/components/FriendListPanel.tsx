@@ -1,15 +1,15 @@
 import React from "react";
 import formatLastSeen from "@/utils/helper.util";
-import { Button } from "../ui/button";
-import { Separator } from "../ui/separator";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
 import { Trash2 } from "lucide-react";
-import { Input } from "../ui/input";
-import { ScrollArea } from "../ui/scroll-area";
-import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
+import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { getOptimizedAvatarUrl, getAvatarFallback } from "@/utils/image.util";
-import type { Friend } from "@/types/friend.type";
-import AddFriendDialog from "../friends/AddFriendDialog";
-import RemoveFriendDialog from "../friends/RemoveFriendDialog";
+import type { Friend } from "@/features/friends/types/friend.type";
+import AddFriendDialog from "@/features/friends/components/AddFriendDialog";
+import RemoveFriendDialog from "@/features/friends/components/RemoveFriendDialog";
 import useSocket from "@/hooks/context/useSocket";
 
 interface FriendListPanelProps {

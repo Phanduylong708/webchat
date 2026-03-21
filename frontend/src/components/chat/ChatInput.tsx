@@ -5,7 +5,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import EmojiPicker, { Theme, type EmojiClickData } from "emoji-picker-react";
 import { useTheme } from "next-themes";
 import useSocket from "@/hooks/context/useSocket";
-import { useAuth } from "@/hooks/context/useAuth";
+import { useAuth } from "@/features/auth/providers/useAuth";
 import { uploadMediaApi } from "@/api/media.api";
 import { toast } from "sonner";
 import { insertTextAtCaret } from "@/utils/caret.util";

@@ -1,7 +1,7 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import type { Friend } from "@/types/friend.type";
+import type { Friend } from "@/features/friends/types/friend.type";
 import formatLastSeen from "@/utils/helper.util";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";

@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { Loader2, PinOff } from "lucide-react";
 import { toast } from "sonner";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { useAuth } from "@/hooks/context/useAuth";
+import { useAuth } from "@/features/auth/providers/useAuth";
 import { useConversationPinsQuery, useUnpinMessageMutation } from "@/hooks/queries/pins";
 import { useConversationDetailsQuery } from "@/hooks/queries/conversations";
 import type { ConversationsResponse, PinnedMessageItem } from "@/types/chat.type";

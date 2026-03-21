@@ -8,7 +8,7 @@ import {
   getConversationsDetails,
 } from "@/api/conversation.api";
 import type { ConversationsDetail, ConversationsResponse } from "@/types/chat.type";
-import { useAuth } from "@/hooks/context/useAuth";
+import { useAuth } from "@/features/auth/providers/useAuth";
 
 const CONVERSATIONS_GC_TIME = 60 * 60 * 1000;
 

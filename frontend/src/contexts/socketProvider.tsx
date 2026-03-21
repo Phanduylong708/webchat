@@ -5,7 +5,7 @@ import {
   initializeSocket,
   disconnectSocket,
 } from "@/lib/socket.client";
-import { useAuth } from "@/hooks/context/useAuth";
+import { useAuth } from "@/features/auth/providers/useAuth";
 import { getToken } from "@/utils/localStorage.util";
 import { SocketContext } from "./socketContext";
 import type { PresenceEntry } from "@/types/socket.type";

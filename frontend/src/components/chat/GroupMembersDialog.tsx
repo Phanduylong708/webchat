@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Search, Users } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useAuth } from "@/hooks/context/useAuth";
+import { useAuth } from "@/features/auth/providers/useAuth";
 import {
   useLeaveGroupMutation,
   useRemoveMemberMutation,

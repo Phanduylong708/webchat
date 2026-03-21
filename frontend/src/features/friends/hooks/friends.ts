@@ -4,9 +4,9 @@ import {
   getFriends,
   removeFriendById,
   searchUserByUsername,
-} from "@/api/friend.api";
-import type { Friend } from "@/types/friend.type";
-import { useAuth } from "@/hooks/context/useAuth";
+} from "@/features/friends/api/friend.api";
+import type { Friend } from "@/features/friends/types/friend.type";
+import { useAuth } from "@/features/auth/providers/useAuth";
 
 const FRIENDS_GC_TIME = 60 * 60 * 1000;
 

@@ -1,7 +1,7 @@
 import React from "react";
 import { User, MessageCircle } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
-import { useAuth } from "@/hooks/context/useAuth";
+import { useAuth } from "@/features/auth/providers/useAuth";
 import { LogOut } from "lucide-react";
 import { ProfileDialog } from "@/components/profile/ProfileDialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";

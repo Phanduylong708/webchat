@@ -1,5 +1,5 @@
 import React, { useCallback, useState } from "react";
-import type { Friend } from "@/types/friend.type";
+import type { Friend } from "@/features/friends/types/friend.type";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -11,7 +11,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { useRemoveFriendMutation } from "@/hooks/queries/friends";
+import { useRemoveFriendMutation } from "@/features/friends/hooks/friends";
 
 interface RemoveFriendDialogProps {
   friend: Friend;

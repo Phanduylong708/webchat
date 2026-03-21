@@ -1,5 +1,5 @@
 import SideBar from "@/components/layout/SideBar";
-import { useAuth } from "@/hooks/context/useAuth";
+import { useAuth } from "@/features/auth/providers/useAuth";
 import { Outlet } from "react-router-dom";
 function HomePage() {
   const { loading } = useAuth();
