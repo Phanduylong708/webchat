@@ -29,7 +29,7 @@ import {
   useMessageStore,
   selectSetUploadProgress,
   selectClearUploadProgress,
-} from "@/stores/messageStore";
+} from "@/features/chat/stores/messageStore";
 
 // ── Main Component ──
 

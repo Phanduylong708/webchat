@@ -3,7 +3,7 @@ import type { DisplayMessage } from "@/types/chat.type";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { getOptimizedAvatarUrl, getAvatarFallback, getOptimizedMessageImageUrl } from "@/utils/image.util";
 import { useRemoveOptimisticMessageFromCache } from "@/features/chat/hooks/messages";
-import { useMessageStore, selectUploadProgressForMessage } from "@/stores/messageStore";
+import { useMessageStore, selectUploadProgressForMessage } from "@/features/chat/stores/messageStore";
 import { Loader2, AlertCircle, X } from "lucide-react";
 import { getEmojiSizing, renderTwemojiTokens, tokenizeEmojiContent } from "@/utils/emoji.util";
 import MessageActionsMenu from "@/features/chat/components/MessageActionsMenu";
