@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { MessageCircle, UserMinus } from "lucide-react";
 import RemoveFriendDialog from "./RemoveFriendDialog";
 import { startPrivateChatApi } from "@/features/conversation/api/conversation.api";
-import useSocket from "@/hooks/context/useSocket";
+import useSocket from "@/app/providers/useSocket";
 
 interface FriendProfileProps {
   friend: Friend;

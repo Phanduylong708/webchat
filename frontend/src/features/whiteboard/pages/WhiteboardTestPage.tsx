@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import { WhiteboardProvider } from "@/features/whiteboard/providers/whiteboardProvider";
-import useSocket from "@/hooks/context/useSocket";
+import useSocket from "@/app/providers/useSocket";
 import { useWhiteboard } from "@/features/whiteboard/providers/useWhiteboard";
 import { useFabric } from "@/features/whiteboard/hooks/useFabric";
 import { useWhiteboardOrchestration } from "@/features/whiteboard/hooks/useWhiteboardOrchestration";

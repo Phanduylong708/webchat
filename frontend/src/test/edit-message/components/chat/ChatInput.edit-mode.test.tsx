@@ -10,7 +10,7 @@ vi.mock("next-themes", () => ({
   useTheme: () => ({ theme: "light" }),
 }));
 
-vi.mock("@/hooks/context/useSocket", () => ({
+vi.mock("@/app/providers/useSocket", () => ({
   default: () => ({ socket: null }),
 }));
 

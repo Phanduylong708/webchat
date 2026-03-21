@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useCall } from "@/features/call/providers/useCall";
 import { useAuth } from "@/features/auth/providers/useAuth";
-import useSocket from "@/hooks/context/useSocket";
+import useSocket from "@/app/providers/useSocket";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { getOptimizedAvatarUrl } from "@/utils/image.util";

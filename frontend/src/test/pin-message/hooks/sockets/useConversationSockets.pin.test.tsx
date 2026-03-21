@@ -30,7 +30,7 @@ class MockSocket {
 
 const mockSocket = new MockSocket();
 
-vi.mock("@/hooks/context/useSocket", () => ({
+vi.mock("@/app/providers/useSocket", () => ({
   default: () => ({
     socket: mockSocket,
     isConnected: true,

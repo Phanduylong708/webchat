@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useQueryClient, type InfiniteData } from "@tanstack/react-query";
-import useSocket from "@/hooks/context/useSocket";
+import useSocket from "@/app/providers/useSocket";
 import {
   messagesQueryKey,
   appendIncomingMessageToCache,

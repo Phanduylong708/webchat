@@ -7,7 +7,7 @@ import type {
   CallJoinAck,
   ConversationType,
 } from "@/features/call/types/call.type";
-import useSocket from "@/hooks/context/useSocket";
+import useSocket from "@/app/providers/useSocket";
 import { useCallSockets } from "@/features/call/hooks/sockets/useCallSockets";
 
 function getInitialStatus(): CallStatus {

@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import useSocket from "@/hooks/context/useSocket";
+import useSocket from "@/app/providers/useSocket";
 
 export function useOnlineUsers(): Set<number> {
   const { isConnected, presenceByUserId } = useSocket();

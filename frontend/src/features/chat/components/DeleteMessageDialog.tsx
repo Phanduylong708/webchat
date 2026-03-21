@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react";
 import { toast } from "sonner";
-import useSocket from "@/hooks/context/useSocket";
+import useSocket from "@/app/providers/useSocket";
 import { emitWithAckTimeout } from "@/utils/socketAck.util";
 import {
   AlertDialog,

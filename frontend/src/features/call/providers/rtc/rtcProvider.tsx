@@ -9,7 +9,7 @@ import type {
 } from "@/features/call/types/rtc.type";
 import { useMeshManager } from "@/features/call/hooks/rtc/useMeshManager";
 import { useMediaStore, selectUserStream } from "@/features/call/stores/mediaStore";
-import useSocket from "@/hooks/context/useSocket";
+import useSocket from "@/app/providers/useSocket";
 
 /**
  * Provides WebRTC state and actions for a call session.

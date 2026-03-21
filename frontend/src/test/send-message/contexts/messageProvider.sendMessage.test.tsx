@@ -21,7 +21,7 @@ const mockSocketObj = {
   off: vi.fn(),
 };
 
-vi.mock("@/hooks/context/useSocket", () => ({
+vi.mock("@/app/providers/useSocket", () => ({
   default: () => ({
     socket: mockSocketObj,
     isConnected: true,

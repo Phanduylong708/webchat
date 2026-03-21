@@ -8,7 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { StackedAvatars } from "@/components/ui/stacked-avatars";
 import { getOptimizedAvatarUrl, getAvatarFallback } from "@/utils/image.util";
 import type { DisplayMessage, ReplyToPreview } from "@/types/chat.type";
-import useSocket from "@/hooks/context/useSocket";
+import useSocket from "@/app/providers/useSocket";
 import MessageList from "@/features/chat/components/MessageList";
 import ChatInput from "@/features/chat/components/ChatInput";
 import GroupMembersDialog from "@/features/conversation/components/GroupMembersDialog";

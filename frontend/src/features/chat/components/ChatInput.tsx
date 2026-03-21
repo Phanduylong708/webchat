@@ -4,7 +4,7 @@ import { Check, Send, Smile } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import EmojiPicker, { Theme, type EmojiClickData } from "emoji-picker-react";
 import { useTheme } from "next-themes";
-import useSocket from "@/hooks/context/useSocket";
+import useSocket from "@/app/providers/useSocket";
 import { useAuth } from "@/features/auth/providers/useAuth";
 import { uploadMediaApi } from "@/api/media.api";
 import { toast } from "sonner";

@@ -10,7 +10,7 @@ import { getOptimizedAvatarUrl, getAvatarFallback } from "@/utils/image.util";
 import type { Friend } from "@/features/friends/types/friend.type";
 import AddFriendDialog from "@/features/friends/components/AddFriendDialog";
 import RemoveFriendDialog from "@/features/friends/components/RemoveFriendDialog";
-import useSocket from "@/hooks/context/useSocket";
+import useSocket from "@/app/providers/useSocket";
 
 interface FriendListPanelProps {
   friends: Friend[];
