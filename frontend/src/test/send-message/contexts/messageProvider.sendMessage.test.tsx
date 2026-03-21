@@ -1,25 +1,18 @@
 /**
- * Tests for the sender-side conversation cache patch in MessageProvider.sendMessage.
+ * Tests for the sender-side conversation cache patch in useSendMessageMutation.
  *
  * Receivers get the preview update via the "newMessage" socket broadcast.
- * The sender is excluded from that broadcast (socket.to(room)), so the fix
- * patches the cache manually after the server ack arrives. These tests lock
- * that path against regression.
+ * The sender is excluded from that broadcast (socket.to(room)), so the mutation
+ * patches the cache manually after the server ack arrives.
  */
 
 import { act, cleanup, render, waitFor } from "@testing-library/react";
-import { QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import type { ConversationsResponse, Messages } from "@/types/chat.type";
-import { queryClient } from "@/lib/queryClient";
+import type { ConversationsResponse, Messages, SendMessageInput } from "@/types/chat.type";
 import { conversationsQueryKey } from "@/hooks/queries/conversations";
-import { MessageProvider } from "../../../contexts/messageProvider";
-import { useMessage } from "../../../hooks/context/useMessage";
-
-// ---------------------------------------------------------------------------
-// Module mocks
-// ---------------------------------------------------------------------------
+import { useSendMessageMutation } from "@/hooks/queries/messages";
 
 const mockSocketObj = {
   connected: true,
@@ -43,25 +36,16 @@ vi.mock("@/hooks/context/useAuth", () => ({
   }),
 }));
 
-// Prevent real socket listener setup in useMessageSockets.
-vi.mock("@/hooks/sockets/useMessageSockets", () => ({
-  useMessageSockets: () => undefined,
-}));
-
-// Intercept emitWithAckTimeout so tests control what the server "acks" back.
 const mockEmitWithAckTimeout = vi.fn();
 vi.mock("@/utils/socketAck.util", () => ({
   emitWithAckTimeout: (...args: unknown[]) => mockEmitWithAckTimeout(...args),
 }));
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
 function makeConversation(
   overrides: Partial<ConversationsResponse> & { id: number },
 ): ConversationsResponse {
   const { id, ...rest } = overrides;
+
   return {
     id,
     title: null,
@@ -85,52 +69,36 @@ function makeServerMessage(overrides: Partial<Messages> & { id: number; conversa
   };
 }
 
-function getConversations(): ConversationsResponse[] {
-  return queryClient.getQueryData<ConversationsResponse[]>(conversationsQueryKey(1)) ?? [];
-}
-
-// A child component that exposes sendMessage so tests can call it.
-let capturedSendMessage: ((payload: import("@/types/chat.type").SendMessageInput) => Promise<void>) | null = null;
+let capturedMutateAsync: ((payload: SendMessageInput) => Promise<Messages>) | null = null;
 
 function Probe() {
-  const { sendMessage } = useMessage();
-  capturedSendMessage = sendMessage;
+  const { mutateAsync } = useSendMessageMutation();
+  capturedMutateAsync = mutateAsync;
   return null;
 }
 
-function mountProvider() {
+function mountHarness(queryClient: QueryClient) {
   render(
     <QueryClientProvider client={queryClient}>
-      <MessageProvider>
-        <Probe />
-      </MessageProvider>
+      <Probe />
     </QueryClientProvider>,
   );
 }
 
-// ---------------------------------------------------------------------------
-// Teardown
-// ---------------------------------------------------------------------------
-
 afterEach(() => {
-  queryClient.clear();
   cleanup();
-  capturedSendMessage = null;
+  capturedMutateAsync = null;
   mockEmitWithAckTimeout.mockReset();
   mockSocketObj.emit.mockReset();
   mockSocketObj.on.mockReset();
   mockSocketObj.off.mockReset();
 });
 
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
-
-describe("MessageProvider.sendMessage — sender-side conversation cache patch", () => {
+describe("useSendMessageMutation — sender-side conversation cache patch", () => {
   it("updates lastMessage preview and reorders conversations after sender ack", async () => {
-    // Conversation 1: older last message → will receive new message from sender.
-    // Conversation 2: newer last message → should float to top only if it's the most recent.
-    const initial: ConversationsResponse[] = [
+    const queryClient = new QueryClient();
+
+    queryClient.setQueryData(conversationsQueryKey(1), [
       makeConversation({
         id: 2,
         lastMessage: {
@@ -155,14 +123,12 @@ describe("MessageProvider.sendMessage — sender-side conversation cache patch",
           attachments: [],
         },
       }),
-    ];
-    queryClient.setQueryData(conversationsQueryKey(1), initial);
+    ]);
 
     const serverMessage = makeServerMessage({
       id: 11,
       conversationId: 1,
       content: "hello",
-      // Timestamp newer than both existing messages → conversation 1 should float to top.
       createdAt: "2026-03-13T10:00:00.000Z",
     });
 
@@ -171,51 +137,41 @@ describe("MessageProvider.sendMessage — sender-side conversation cache patch",
       message: serverMessage,
     });
 
-    mountProvider();
+    mountHarness(queryClient);
     await act(async () => {});
 
     await act(async () => {
-      await capturedSendMessage!({ conversationId: 1, content: "hello" });
+      await capturedMutateAsync!({ conversationId: 1, content: "hello" });
     });
 
-    const latest = getConversations();
+    const latest =
+      queryClient.getQueryData<ConversationsResponse[]>(conversationsQueryKey(1)) ?? [];
 
-    // Conversation 1 should now be first (most recent message).
     expect(latest[0].id).toBe(1);
     expect(latest[0].lastMessage?.id).toBe(11);
     expect(latest[0].lastMessage?.content).toBe("hello");
     expect(latest[0].lastMessage?.previewText).toBe("hello");
     expect(latest[0].lastMessage?.createdAt).toBe("2026-03-13T10:00:00.000Z");
-
-    // Conversation 2 stays second.
     expect(latest[1].id).toBe(2);
   });
 
   it("invalidates conversations query when ack message's conversation is not in cache", async () => {
-    // Seed cache with a different conversation — not the one being sent to.
-    const initial: ConversationsResponse[] = [
-      makeConversation({ id: 99 }),
-    ];
-    queryClient.setQueryData(conversationsQueryKey(1), initial);
+    const queryClient = new QueryClient();
+    queryClient.setQueryData(conversationsQueryKey(1), [makeConversation({ id: 99 })]);
 
     const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
-
-    const serverMessage = makeServerMessage({
-      id: 1,
-      // conversationId 42 is NOT in cache.
-      conversationId: 42,
-    });
+    const serverMessage = makeServerMessage({ id: 1, conversationId: 42 });
 
     mockEmitWithAckTimeout.mockResolvedValueOnce({
       success: true,
       message: serverMessage,
     });
 
-    mountProvider();
+    mountHarness(queryClient);
     await act(async () => {});
 
     await act(async () => {
-      await capturedSendMessage!({ conversationId: 42, content: "hello" });
+      await capturedMutateAsync!({ conversationId: 42, content: "hello" });
     });
 
     await waitFor(() => {
@@ -228,10 +184,8 @@ describe("MessageProvider.sendMessage — sender-side conversation cache patch",
   });
 
   it("uses previewText 'image' for IMAGE messages with no text content", async () => {
-    const initial: ConversationsResponse[] = [
-      makeConversation({ id: 1 }),
-    ];
-    queryClient.setQueryData(conversationsQueryKey(1), initial);
+    const queryClient = new QueryClient();
+    queryClient.setQueryData(conversationsQueryKey(1), [makeConversation({ id: 1 })]);
 
     const serverMessage = makeServerMessage({
       id: 5,
@@ -246,14 +200,16 @@ describe("MessageProvider.sendMessage — sender-side conversation cache patch",
       message: serverMessage,
     });
 
-    mountProvider();
+    mountHarness(queryClient);
     await act(async () => {});
 
     await act(async () => {
-      await capturedSendMessage!({ conversationId: 1, content: undefined, attachmentIds: [7] });
+      await capturedMutateAsync!({ conversationId: 1, content: undefined, attachmentIds: [7] });
     });
 
-    const latest = getConversations();
+    const latest =
+      queryClient.getQueryData<ConversationsResponse[]>(conversationsQueryKey(1)) ?? [];
+
     expect(latest[0].lastMessage?.previewText).toBe("image");
     expect(latest[0].lastMessage?.messageType).toBe("IMAGE");
   });

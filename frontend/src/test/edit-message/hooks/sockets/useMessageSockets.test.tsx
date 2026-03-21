@@ -1,26 +1,41 @@
-import { useEffect, useState } from "react";
-import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, render } from "@testing-library/react";
+import { type InfiniteData, QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { DisplayMessage } from "@/types/chat.type";
-import { useMessageSockets } from "../../../../hooks/sockets/useMessageSockets";
+import { messagesQueryKey, type MessagesPage } from "@/hooks/queries/messages";
+import { useMessageSockets } from "@/hooks/sockets/useMessageSockets";
 
 class MockSocket {
   handlers = new Map<string, (...args: unknown[]) => void>();
+
   on = vi.fn((event: string, handler: (...args: unknown[]) => void) => {
     this.handlers.set(event, handler);
   });
+
   off = vi.fn((event: string, handler: (...args: unknown[]) => void) => {
     const existing = this.handlers.get(event);
     if (existing === handler) {
       this.handlers.delete(event);
     }
   });
+
   trigger(event: string, ...args: unknown[]) {
     const handler = this.handlers.get(event);
     handler?.(...args);
   }
 }
+
+const mockSocket = new MockSocket();
+
+vi.mock("@/hooks/context/useSocket", () => ({
+  default: () => ({
+    socket: mockSocket,
+    isConnected: true,
+    presenceByUserId: new Map(),
+    error: null,
+  }),
+}));
 
 function makeMessage(overrides: Partial<DisplayMessage> & { id: number; conversationId: number }): DisplayMessage {
   const base: DisplayMessage = {
@@ -34,36 +49,51 @@ function makeMessage(overrides: Partial<DisplayMessage> & { id: number; conversa
     sender: { id: 1, username: "alice", avatar: null },
     attachments: [],
   };
+
   return { ...base, ...overrides } as DisplayMessage;
 }
 
-afterEach(() => cleanup());
+function makeMessagesCache(...pages: DisplayMessage[][]): InfiniteData<MessagesPage> {
+  return {
+    pages: pages.map((messages) => ({
+      messages,
+      meta: { nextCursor: null, hasMore: false },
+    })),
+    pageParams: pages.map(() => undefined),
+  };
+}
+
+function Harness() {
+  useMessageSockets();
+  return null;
+}
+
+function mountHarness(queryClient: QueryClient) {
+  render(
+    <QueryClientProvider client={queryClient}>
+      <Harness />
+    </QueryClientProvider>,
+  );
+}
+
+afterEach(() => {
+  cleanup();
+  mockSocket.handlers.clear();
+  mockSocket.on.mockClear();
+  mockSocket.off.mockClear();
+});
 
 describe("useMessageSockets", () => {
-  it("patches cache on messageUpdated", async () => {
-    const socket = new MockSocket();
-
+  it("patches query cache on messageUpdated and preserves _stableKey", async () => {
+    const queryClient = new QueryClient();
     const original = Object.assign(makeMessage({ id: 10, conversationId: 1 }), {
-      _stableKey: "temp-1",
-    }) as DisplayMessage & { _stableKey: string };
+      _stableKey: -10,
+    }) as DisplayMessage & { _stableKey: number };
 
-    const initial = new Map<number, DisplayMessage[]>([[1, [original]]]);
-    let latest = initial;
+    queryClient.setQueryData(messagesQueryKey(1), makeMessagesCache([original]));
 
-    function Harness() {
-      const [state, setState] = useState(initial);
-      useMessageSockets({ socket: socket as unknown as never, setMessagesByConversation: setState });
-      useEffect(() => {
-        latest = state;
-      }, [state]);
-      return null;
-    }
-
-    render(<Harness />);
+    mountHarness(queryClient);
     await act(async () => {});
-
-    expect(socket.on).toHaveBeenCalledWith("newMessage", expect.any(Function));
-    expect(socket.on).toHaveBeenCalledWith("messageUpdated", expect.any(Function));
 
     const updated = makeMessage({
       id: 10,
@@ -73,21 +103,21 @@ describe("useMessageSockets", () => {
     });
 
     act(() => {
-      socket.trigger("messageUpdated", updated);
+      mockSocket.trigger("messageUpdated", updated);
     });
 
-    expect(latest.get(1)?.[0].content).toBe("new");
-    expect((latest.get(1)?.[0] as unknown as { _stableKey?: string })._stableKey).toBe("temp-1");
+    const latest = queryClient.getQueryData<InfiniteData<MessagesPage>>(messagesQueryKey(1));
+    expect(latest?.pages[0].messages[0].content).toBe("new");
+    expect((latest?.pages[0].messages[0] as DisplayMessage & { _stableKey?: number })._stableKey).toBe(-10);
   });
 
-  it("removes deleted messages and clears reply links on messageDeleted", async () => {
-    const socket = new MockSocket();
+  it("removes deleted messages and clears reply links across loaded pages", async () => {
+    const queryClient = new QueryClient();
 
-    const initial = new Map<number, DisplayMessage[]>([
-      [
-        1,
+    queryClient.setQueryData(
+      messagesQueryKey(1),
+      makeMessagesCache(
         [
-          makeMessage({ id: 10, conversationId: 1, content: "target" }),
           makeMessage({
             id: 11,
             conversationId: 1,
@@ -101,54 +131,38 @@ describe("useMessageSockets", () => {
             },
           }),
         ],
-      ],
-    ]);
+        [makeMessage({ id: 10, conversationId: 1, content: "target" })],
+      ),
+    );
 
-    let latest = initial;
-
-    function Harness() {
-      const [state, setState] = useState(initial);
-      useMessageSockets({ socket: socket as unknown as never, setMessagesByConversation: setState });
-      useEffect(() => {
-        latest = state;
-      }, [state]);
-      return null;
-    }
-
-    render(<Harness />);
+    mountHarness(queryClient);
     await act(async () => {});
 
     act(() => {
-      socket.trigger("messageDeleted", { conversationId: 1, messageId: 10 });
+      mockSocket.trigger("messageDeleted", { conversationId: 1, messageId: 10 });
     });
 
-    expect((latest.get(1) ?? []).map((message) => message.id)).toEqual([11]);
-    expect(latest.get(1)?.[0].replyToMessageId).toBeNull();
-    expect(latest.get(1)?.[0].replyTo).toBeNull();
+    const latest = queryClient.getQueryData<InfiniteData<MessagesPage>>(messagesQueryKey(1));
+    expect(latest?.pages[0].messages.map((message) => message.id)).toEqual([11]);
+    expect(latest?.pages[0].messages[0].replyToMessageId).toBeNull();
+    expect(latest?.pages[0].messages[0].replyTo).toBeNull();
+    expect(latest?.pages[1].messages).toEqual([]);
   });
 
   it("does not create an empty cache entry when messageDeleted arrives for an unloaded conversation", async () => {
-    const socket = new MockSocket();
-    const initial = new Map<number, DisplayMessage[]>([[1, [makeMessage({ id: 10, conversationId: 1 })]]]);
-    let latest = initial;
+    const queryClient = new QueryClient();
+    const initialCache = makeMessagesCache([makeMessage({ id: 10, conversationId: 1 })]);
 
-    function Harness() {
-      const [state, setState] = useState(initial);
-      useMessageSockets({ socket: socket as unknown as never, setMessagesByConversation: setState });
-      useEffect(() => {
-        latest = state;
-      }, [state]);
-      return null;
-    }
+    queryClient.setQueryData(messagesQueryKey(1), initialCache);
 
-    render(<Harness />);
+    mountHarness(queryClient);
     await act(async () => {});
 
     act(() => {
-      socket.trigger("messageDeleted", { conversationId: 99, messageId: 10 });
+      mockSocket.trigger("messageDeleted", { conversationId: 99, messageId: 10 });
     });
 
-    expect(latest).toBe(initial);
-    expect(latest.has(99)).toBe(false);
+    expect(queryClient.getQueryData(messagesQueryKey(99))).toBeUndefined();
+    expect(queryClient.getQueryData(messagesQueryKey(1))).toBe(initialCache);
   });
 });

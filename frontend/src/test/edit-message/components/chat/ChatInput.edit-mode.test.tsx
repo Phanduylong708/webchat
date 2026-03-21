@@ -1,4 +1,5 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import ChatInput from "../../../../components/chat/ChatInput";
@@ -17,14 +18,6 @@ vi.mock("@/hooks/context/useAuth", () => ({
   useAuth: () => ({ user: { id: 1, username: "alice", avatar: null } }),
 }));
 
-vi.mock("@/hooks/context/useMessage", () => ({
-  useMessage: () => ({
-    sendMessage: vi.fn(),
-    insertOptimisticMessage: vi.fn(),
-    updateOptimistic: vi.fn(),
-  }),
-}));
-
 vi.mock("@/api/media.api", () => ({
   uploadMediaApi: vi.fn(),
 }));
@@ -40,12 +33,17 @@ afterEach(() => {
   toastErrorMock.mockClear();
 });
 
+function renderWithQueryClient(ui: React.ReactNode) {
+  const queryClient = new QueryClient();
+  return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
+}
+
 describe("ChatInput edit mode", () => {
   it("shows edit bar, disables attachments, and enables Save only when not noop", async () => {
     const onCancelEdit = vi.fn();
     const onSaveEdit = vi.fn(async () => {});
 
-    render(
+    renderWithQueryClient(
       <ChatInput
         conversationId={1}
         editTarget={{
@@ -81,7 +79,7 @@ describe("ChatInput edit mode", () => {
   });
 
   it("keeps edit mode and shows toast when save fails without socket", async () => {
-    render(
+    renderWithQueryClient(
       <ChatInput
         conversationId={1}
         editTarget={{
