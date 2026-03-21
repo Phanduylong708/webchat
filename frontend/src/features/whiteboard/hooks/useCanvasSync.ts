@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import * as fabric from "fabric";
-import type { ObjectID, SerializedObject } from "@/types/whiteboard.type";
+import type { ObjectID, SerializedObject } from "@/features/whiteboard/types/whiteboard.type";
 import { deserializeToFabric, getObjectId } from "./utils/whiteboard.utils";
 
 function applyUpdatesToFabricObject(

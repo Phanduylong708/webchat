@@ -1,6 +1,6 @@
 import { useContext } from "react";
-import { WhiteboardContext } from "@/contexts/whiteboardContext";
-import type { WhiteboardContextValue } from "@/types/whiteboard.type";
+import { WhiteboardContext } from "@/features/whiteboard/providers/whiteboardContext";
+import type { WhiteboardContextValue } from "@/features/whiteboard/types/whiteboard.type";
 
 export function useWhiteboard(): WhiteboardContextValue {
   const context = useContext(WhiteboardContext);

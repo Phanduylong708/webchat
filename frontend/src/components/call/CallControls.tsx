@@ -13,7 +13,7 @@ import {
   selectStartScreenShare,
   selectStopScreenShare,
 } from "@/stores/mediaStore";
-import { useWhiteboard } from "@/hooks/context/useWhiteboard";
+import { useWhiteboard } from "@/features/whiteboard/providers/useWhiteboard";
 import { Mic, MicOff, Video, VideoOff, Users, Monitor, PhoneOff, Presentation } from "lucide-react";
 
 interface CallControlsProps {

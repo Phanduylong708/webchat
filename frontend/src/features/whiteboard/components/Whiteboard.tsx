@@ -1,14 +1,14 @@
 import { useCallback, useEffect } from "react";
 import type { Socket } from "socket.io-client";
-import type { WbAck, PartialSerializedObject, ObjectPatch, SerializedObject } from "@/types/whiteboard.type";
-import { useWhiteboard } from "@/hooks/context/useWhiteboard";
-import { useFabric } from "@/hooks/whiteboard/useFabric";
-import { useCanvasSync } from "@/hooks/whiteboard/useCanvasSync";
-import { useWhiteboardOrchestration } from "@/hooks/whiteboard/useWhiteboardOrchestration";
-import { useCursorPresence } from "@/hooks/whiteboard/useCursorPresence";
-import { WhiteboardCanvas } from "@/components/whiteboard/WhiteboardCanvas";
-import { WhiteboardToolbar } from "@/components/whiteboard/WhiteboardToolbar";
-import { WhiteboardControls } from "@/components/whiteboard/WhiteboardControls";
+import type { WbAck, PartialSerializedObject, ObjectPatch, SerializedObject } from "@/features/whiteboard/types/whiteboard.type";
+import { useWhiteboard } from "@/features/whiteboard/providers/useWhiteboard";
+import { useFabric } from "@/features/whiteboard/hooks/useFabric";
+import { useCanvasSync } from "@/features/whiteboard/hooks/useCanvasSync";
+import { useWhiteboardOrchestration } from "@/features/whiteboard/hooks/useWhiteboardOrchestration";
+import { useCursorPresence } from "@/features/whiteboard/hooks/useCursorPresence";
+import { WhiteboardCanvas } from "@/features/whiteboard/components/WhiteboardCanvas";
+import { WhiteboardToolbar } from "@/features/whiteboard/components/WhiteboardToolbar";
+import { WhiteboardControls } from "@/features/whiteboard/components/WhiteboardControls";
 import { cn } from "@/lib/utils";
 
 interface WhiteboardProps {

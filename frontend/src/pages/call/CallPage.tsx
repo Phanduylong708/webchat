@@ -14,9 +14,9 @@ import { PrivateCallLayout } from "./Private";
 import { GroupCallLayout } from "./Group";
 import type { User } from "@/types/chat.type";
 import type { ConversationType, CallParticipant, CallStatus } from "@/types/call.type";
-import type { WbAck } from "@/types/whiteboard.type";
+import type { WbAck } from "@/features/whiteboard/types/whiteboard.type";
 import { RTCProvider } from "@/contexts/rtcProvider";
-import { WhiteboardProvider } from "@/contexts/whiteboardProvider";
+import { WhiteboardProvider } from "@/features/whiteboard/providers/whiteboardProvider";
 import {
   useMediaStore,
   selectUserStream,
@@ -29,7 +29,7 @@ import {
   selectIsStartingUserMedia,
 } from "@/stores/mediaStore";
 import { useRTC } from "@/hooks/context/useRTC";
-import { useWhiteboard } from "@/hooks/context/useWhiteboard";
+import { useWhiteboard } from "@/features/whiteboard/providers/useWhiteboard";
 import { useRTCSignaling } from "@/hooks/sockets/useRTCSignaling";
 import { useRTCPeerLifecycle } from "@/hooks/rtc/useRTCPeerLifecycle";
 import { useScreenShareRTC } from "@/hooks/rtc/useScreenShareRTC";
@@ -37,7 +37,7 @@ import { useEmitMediaState } from "@/hooks/sockets/useEmitMediaState";
 import { useStagePresenter } from "@/hooks/call/useStagePresenter";
 import MediaVideo from "@/components/call/MediaVideo";
 import { StageLayout } from "@/components/call/StageLayout";
-import { Whiteboard } from "@/components/whiteboard/Whiteboard";
+import { Whiteboard } from "@/features/whiteboard/components/Whiteboard";
 
 function AutoStartMedia({ enabled }: { enabled: boolean }): React.JSX.Element | null {
   const startUserMedia = useMediaStore((s) => s.startUserMedia);

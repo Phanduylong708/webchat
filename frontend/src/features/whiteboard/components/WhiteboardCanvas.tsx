@@ -1,8 +1,8 @@
 import { useRef, useState, useEffect, useCallback } from "react";
-import { CANVAS_WIDTH, CANVAS_HEIGHT } from "@/hooks/whiteboard/utils/whiteboard.config";
-import type { RemoteCursorPresence } from "@/hooks/whiteboard/useCursorPresence";
-import type { CursorPosition } from "@/types/whiteboard.type";
-import { WhiteboardCursors } from "@/components/whiteboard/WhiteboardCursors";
+import { CANVAS_WIDTH, CANVAS_HEIGHT } from "@/features/whiteboard/hooks/utils/whiteboard.config";
+import type { RemoteCursorPresence } from "@/features/whiteboard/hooks/useCursorPresence";
+import type { CursorPosition } from "@/features/whiteboard/types/whiteboard.type";
+import { WhiteboardCursors } from "@/features/whiteboard/components/WhiteboardCursors";
 import { cn } from "@/lib/utils";
 
 interface WhiteboardCanvasProps {

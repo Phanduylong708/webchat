@@ -4,12 +4,12 @@ import type {
   UseFabricOptions, 
   ShapeToolType, 
   ShapeCreationState 
-} from "@/types/whiteboard.type";
+} from "@/features/whiteboard/types/whiteboard.type";
 import { 
   DEFAULT_STROKE_WIDTH, 
   INITIAL_SHAPE_STATE 
-} from "@/hooks/whiteboard/utils/whiteboard.config";
-import { isShapeTool, serializePath } from "@/hooks/whiteboard/utils/whiteboard.utils";
+} from "@/features/whiteboard/hooks/utils/whiteboard.config";
+import { isShapeTool, serializePath } from "@/features/whiteboard/hooks/utils/whiteboard.utils";
 import * as strategies from "./whiteboard.strategies";
 
 interface UseFabricEventsProps extends UseFabricOptions {

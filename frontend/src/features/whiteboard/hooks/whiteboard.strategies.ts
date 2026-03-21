@@ -3,13 +3,13 @@ import type {
   ShapeToolType, 
   ShapeCreationState, 
   UseFabricOptions 
-} from "@/types/whiteboard.type";
+} from "@/features/whiteboard/types/whiteboard.type";
 import { 
   DRAG_THRESHOLD, 
   INITIAL_SHAPE_STATE,
   EDITING_BORDER_COLOR,
   SELECTION_BORDER_COLOR
-} from "@/hooks/whiteboard/utils/whiteboard.config";
+} from "@/features/whiteboard/hooks/utils/whiteboard.config";
 import { 
   createLine, 
   createShapeObject, 
@@ -19,7 +19,7 @@ import {
   serializeTextbox,
   getObjectId,
   getTransformPatch
-} from "@/hooks/whiteboard/utils/whiteboard.utils";
+} from "@/features/whiteboard/hooks/utils/whiteboard.utils";
 
 /**
  * STRATEGY: SHAPE CREATION

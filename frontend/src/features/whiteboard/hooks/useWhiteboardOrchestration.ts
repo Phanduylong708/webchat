@@ -1,6 +1,6 @@
 import { useCallback } from "react";
 import type { Socket } from "socket.io-client";
-import { useWhiteboardSync } from "@/hooks/whiteboard/useWhiteboardSync";
+import { useWhiteboardSync } from "@/features/whiteboard/hooks/useWhiteboardSync";
 import type {
   CursorPosition,
   ObjectID,
@@ -8,7 +8,7 @@ import type {
   SerializedObject,
   UserID,
   WbAck,
-} from "@/types/whiteboard.type";
+} from "@/features/whiteboard/types/whiteboard.type";
 
 export interface UseWhiteboardOrchestrationParams {
   socket: Socket | null;

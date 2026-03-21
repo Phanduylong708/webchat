@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import * as fabric from "fabric";
-import type { UseFabricOptions, UseFabricReturn } from "@/types/whiteboard.type";
+import type { UseFabricOptions, UseFabricReturn } from "@/features/whiteboard/types/whiteboard.type";
 import {
   CANVAS_OPTIONS,
   SELECTION_COLOR,
   SELECTION_BORDER_COLOR,
   SELECTION_LINE_WIDTH,
   OBJECT_CONTROL_CONFIG,
-} from "@/hooks/whiteboard/utils/whiteboard.config";
+} from "@/features/whiteboard/hooks/utils/whiteboard.config";
 import { useFabricEvents } from "./useFabricEvents";
 
 export function useFabric(options: UseFabricOptions): UseFabricReturn {

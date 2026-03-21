@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import type { Socket } from "socket.io-client";
-import type { UserID, CursorPosition } from "@/types/whiteboard.type";
+import type { UserID, CursorPosition } from "@/features/whiteboard/types/whiteboard.type";
 
 export interface RemoteCursorPresence {
   userId: UserID;

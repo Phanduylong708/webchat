@@ -1,4 +1,4 @@
-import type { RemoteCursorPresence } from "@/hooks/whiteboard/useCursorPresence";
+import type { RemoteCursorPresence } from "@/features/whiteboard/hooks/useCursorPresence";
 import { cn } from "@/lib/utils";
 
 interface WhiteboardCursorsProps {

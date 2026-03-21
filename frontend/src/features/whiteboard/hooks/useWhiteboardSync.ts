@@ -7,7 +7,7 @@ import type {
   WbDeletePayload,
   WbCursorPayload,
   WbPendingEvent,
-} from "@/types/whiteboard.type";
+} from "@/features/whiteboard/types/whiteboard.type";
 
 type TimeoutHandle = ReturnType<typeof setTimeout>;
 

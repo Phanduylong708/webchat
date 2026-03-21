@@ -1,5 +1,5 @@
 import { MousePointer2, Pencil, Square, Circle, Minus, Type, Eraser } from "lucide-react";
-import type { ToolType } from "@/types/whiteboard.type";
+import type { ToolType } from "@/features/whiteboard/types/whiteboard.type";
 import { cn } from "@/lib/utils";
 
 const TOOLS: { id: ToolType; label: string; icon: React.ElementType }[] = [

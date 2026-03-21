@@ -1,6 +1,6 @@
 import * as fabric from "fabric";
 import type { TComplexPathData } from "fabric";
-import type { PartialSerializedObject, ShapeToolType, ObjectPatch, SerializedObject } from "@/types/whiteboard.type";
+import type { PartialSerializedObject, ShapeToolType, ObjectPatch, SerializedObject } from "@/features/whiteboard/types/whiteboard.type";
 import { DEFAULT_STROKE_WIDTH, DEFAULT_FONT_SIZE, DEFAULT_FONT_FAMILY, DEFAULT_TEXT_WIDTH } from "./whiteboard.config";
 
 export function serializePath(path: fabric.Path): PartialSerializedObject {

@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
-import { WhiteboardContext } from "@/contexts/whiteboardContext";
+import { WhiteboardContext } from "@/features/whiteboard/providers/whiteboardContext";
 import type {
   WhiteboardContextValue,
   ToolType,
@@ -9,7 +9,7 @@ import type {
   UserID,
   WhiteboardProviderProps,
   WbAck,
-} from "@/types/whiteboard.type";
+} from "@/features/whiteboard/types/whiteboard.type";
 
 const DEFAULT_COLOR = "#000000";
 

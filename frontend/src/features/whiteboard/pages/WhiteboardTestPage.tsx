@@ -1,14 +1,14 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
-import { WhiteboardProvider } from "@/contexts/whiteboardProvider";
+import { WhiteboardProvider } from "@/features/whiteboard/providers/whiteboardProvider";
 import useSocket from "@/hooks/context/useSocket";
-import { useWhiteboard } from "@/hooks/context/useWhiteboard";
-import { useFabric } from "@/hooks/whiteboard/useFabric";
-import { useWhiteboardOrchestration } from "@/hooks/whiteboard/useWhiteboardOrchestration";
-import { useCanvasSync } from "@/hooks/whiteboard/useCanvasSync";
-import { Whiteboard } from "@/components/whiteboard/Whiteboard";
+import { useWhiteboard } from "@/features/whiteboard/providers/useWhiteboard";
+import { useFabric } from "@/features/whiteboard/hooks/useFabric";
+import { useWhiteboardOrchestration } from "@/features/whiteboard/hooks/useWhiteboardOrchestration";
+import { useCanvasSync } from "@/features/whiteboard/hooks/useCanvasSync";
+import { Whiteboard } from "@/features/whiteboard/components/Whiteboard";
 import type { Socket } from "socket.io-client";
-import type { ToolType, PartialSerializedObject, ObjectPatch, SerializedObject, WbAck } from "@/types/whiteboard.type";
+import type { ToolType, PartialSerializedObject, ObjectPatch, SerializedObject, WbAck } from "@/features/whiteboard/types/whiteboard.type";
 
 interface LogEntry {
   id: number;
