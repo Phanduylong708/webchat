@@ -1,53 +1,61 @@
 import { useEffect } from "react";
-import type { Socket } from "socket.io-client";
-import type { DisplayMessage } from "@/types/chat.type";
+import { useQueryClient, type InfiniteData } from "@tanstack/react-query";
+import useSocket from "@/hooks/context/useSocket";
 import {
-  addMessageToMap,
-  clearReplyLinksInMap,
-  removeMessageFromMap,
-  updateMessageInMap,
-} from "@/utils/message.utils";
+  messagesQueryKey,
+  appendIncomingMessageToCache,
+  replaceUpdatedMessageAcrossAllPages,
+  removeMessageAndClearOrphanedReplyLinks,
+  type MessagesPage,
+} from "@/hooks/queries/messages";
+import type { Messages } from "@/types/chat.type";
 
 type MessageDeletedPayload = {
   conversationId: number;
   messageId: number;
 };
 
-type MessageSetter = React.Dispatch<
-  React.SetStateAction<Map<number, DisplayMessage[]>>
->;
+// Subscribes to all server-pushed message events and patches the TanStack cache.
+// All 3 events share the same dependency array, so they live in one effect.
+export function useMessageSockets(): void {
+  const queryClient = useQueryClient();
+  const { socket } = useSocket();
 
-interface UseMessageSocketsParams {
-  socket: Socket | null;
-  setMessagesByConversation: MessageSetter;
-}
-
-// Keeps message cache in sync when server pushes new messages (e.g., other users).
-export function useMessageSockets({
-  socket,
-  setMessagesByConversation,
-}: UseMessageSocketsParams): void {
   useEffect(() => {
     if (!socket) return;
-    function handleNewMessage(message: DisplayMessage) {
-      setMessagesByConversation((prev) =>
-        addMessageToMap(prev, message.conversationId, message)
+
+    function handleNewMessage(incomingMessage: Messages) {
+      // newMessage is only emitted to OTHER users in the room (socket.to(room)).
+      // The sender's cache is already patched in useSendMessageMutation onSuccess.
+      queryClient.setQueryData<InfiniteData<MessagesPage>>(
+        messagesQueryKey(incomingMessage.conversationId),
+        (currentCache) => {
+          if (!currentCache) return currentCache;
+          return appendIncomingMessageToCache(currentCache, incomingMessage);
+        },
       );
     }
-    function handleMessageUpdated(message: DisplayMessage) {
-      setMessagesByConversation((prev) =>
-        updateMessageInMap(prev, message.conversationId, message.id, message)
+
+    function handleMessageUpdated(updatedMessage: Messages) {
+      queryClient.setQueryData<InfiniteData<MessagesPage>>(
+        messagesQueryKey(updatedMessage.conversationId),
+        (currentCache) => {
+          if (!currentCache) return currentCache;
+          return replaceUpdatedMessageAcrossAllPages(currentCache, updatedMessage);
+        },
       );
     }
+
     function handleMessageDeleted(payload: MessageDeletedPayload) {
-      setMessagesByConversation((prev) => {
-        if (!prev.has(payload.conversationId)) {
-          return prev;
-        }
-        const withoutDeleted = removeMessageFromMap(prev, payload.conversationId, payload.messageId);
-        return clearReplyLinksInMap(withoutDeleted, payload.conversationId, payload.messageId);
-      });
+      queryClient.setQueryData<InfiniteData<MessagesPage>>(
+        messagesQueryKey(payload.conversationId),
+        (currentCache) => {
+          if (!currentCache) return currentCache;
+          return removeMessageAndClearOrphanedReplyLinks(currentCache, payload.messageId);
+        },
+      );
     }
+
     socket.on("newMessage", handleNewMessage);
     socket.on("messageUpdated", handleMessageUpdated);
     socket.on("messageDeleted", handleMessageDeleted);
@@ -56,5 +64,5 @@ export function useMessageSockets({
       socket.off("messageUpdated", handleMessageUpdated);
       socket.off("messageDeleted", handleMessageDeleted);
     };
-  }, [socket, setMessagesByConversation]);
+  }, [socket, queryClient]);
 }
