@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useConversationsQuery } from "@/features/conversation/hooks/conversations";
 import { useOnlineUsers } from "@/hooks/useOnlineUsers";
-import { useConversationUi } from "@/hooks/context/useConversationUi";
+import { useConversationUi } from "@/features/conversation/providers/useConversationUi";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { StackedAvatars } from "@/components/ui/stacked-avatars";

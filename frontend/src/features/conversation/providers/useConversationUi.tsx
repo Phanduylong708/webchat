@@ -1,5 +1,5 @@
 import { useContext } from "react";
-import { ConversationUiContext, type ConversationUiContextValue } from "@/contexts/conversationUiContext";
+import { ConversationUiContext, type ConversationUiContextValue } from "@/features/conversation/providers/conversationUiContext";
 
 export function useConversationUi(): ConversationUiContextValue {
   const ctx = useContext(ConversationUiContext);

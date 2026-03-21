@@ -1,4 +1,4 @@
-import { ConversationUiProvider } from "@/contexts/conversationUiProvider";
+import { ConversationUiProvider } from "@/features/conversation/providers/conversationUiProvider";
 import { useMessageSockets } from "@/features/chat/hooks/useMessageSockets";
 import ConversationListPanel from "@/features/conversation/components/ConversationListPanel";
 import ChatWindow from "@/features/chat/components/ChatWindow";

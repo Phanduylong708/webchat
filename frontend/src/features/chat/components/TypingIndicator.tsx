@@ -1,4 +1,4 @@
-import { useConversationUi } from "@/hooks/context/useConversationUi";
+import { useConversationUi } from "@/features/conversation/providers/useConversationUi";
 
 export default function TypingIndicator({
   conversationId,
