@@ -57,13 +57,12 @@ The repository is split into two independent packages:
 │       └── server.js
 ├── frontend/
 │   └── src/
-│       ├── api/
+│       ├── app/
 │       ├── components/
-│       ├── contexts/
+│       ├── features/
 │       ├── hooks/
 │       ├── lib/
 │       ├── pages/
-│       ├── stores/
 │       ├── test/
 │       ├── types/
 │       └── utils/
