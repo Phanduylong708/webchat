@@ -6,13 +6,14 @@ import { useRemoveOptimisticMessageFromCache } from "@/features/chat/hooks/messa
 import { useMessageStore, selectUploadProgressForMessage } from "@/features/chat/stores/messageStore";
 import { Loader2, AlertCircle, X } from "lucide-react";
 import { getEmojiSizing, renderTwemojiTokens, tokenizeEmojiContent } from "@/utils/emoji.util";
-import MessageActionsMenu from "@/features/chat/components/MessageActionsMenu";
+import MessageActionsMenu from "@/features/chat/components/message/MessageActionsMenu";
 import { toast } from "sonner";
 import {
   applyReplyHighlight,
   findReplyTargetRow,
   getReplyPreviewText,
-} from "@/features/chat/components/message-item/messageItem.logic";
+} from "@/features/chat/components/message/messageItem.logic";
+
 interface MessageItemProps {
   message: DisplayMessage;
   scrollContainerId: string;

@@ -20,7 +20,7 @@ import {
   buildReplySendFields,
   getReplyToFromTarget,
   toUserMessage,
-} from "@/features/chat/components/chat-input/chatInput.logic";
+} from "@/features/chat/hooks/chatComposer.utils";
 
 // ---------------------------------------------------------------------------
 // Local types

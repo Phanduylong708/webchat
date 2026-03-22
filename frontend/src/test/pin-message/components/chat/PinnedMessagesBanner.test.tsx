@@ -1,6 +1,6 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import PinnedMessagesBanner from "@/features/chat/components/PinnedMessagesBanner";
+import PinnedMessagesBanner from "@/features/chat/components/pin/PinnedMessagesBanner";
 import type { PinSummary } from "@/types/chat.type";
 
 afterEach(() => cleanup());

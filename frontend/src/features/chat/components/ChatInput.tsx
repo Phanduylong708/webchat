@@ -6,15 +6,15 @@ import { useTheme } from "next-themes";
 import useSocket from "@/app/providers/useSocket";
 import { insertTextAtCaret } from "@/utils/caret.util";
 import { getEditSaveState } from "@/utils/edit-mode.util";
-import { useAttachmentSelection } from "@/features/chat/components/chat-input/useAttachmentSelection";
-import { useTypingIndicator } from "@/features/chat/components/chat-input/useTypingIndicator";
-import AttachmentMenu from "@/features/chat/components/chat-input/AttachmentMenu";
-import AttachmentPreview from "@/features/chat/components/chat-input/AttachmentPreview";
-import ChatEmojiPicker from "@/features/chat/components/chat-input/ChatEmojiPicker";
+import { useAttachmentSelection } from "@/features/chat/components/attachment/useAttachmentSelection";
+import { useTypingIndicator } from "@/features/chat/hooks/useTypingIndicator";
+import AttachmentMenu from "@/features/chat/components/attachment/AttachmentMenu";
+import AttachmentPreview from "@/features/chat/components/attachment/AttachmentPreview";
+import ChatEmojiPicker from "@/features/chat/components/emoji/ChatEmojiPicker";
 import EditModeBanner from "@/features/chat/components/chat-input/EditModeBanner";
 import ReplyModeBanner from "@/features/chat/components/chat-input/ReplyModeBanner";
 import type { ReplyToPreview } from "@/types/chat.type";
-import { useChatComposerSubmit } from "@/features/chat/components/chat-input/useChatComposerSubmit";
+import { useChatComposerSubmit } from "@/features/chat/hooks/useChatComposerSubmit";
 
 // ── Main Component ──
 
