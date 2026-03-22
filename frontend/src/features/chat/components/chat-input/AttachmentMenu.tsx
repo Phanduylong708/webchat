@@ -17,7 +17,7 @@ export default function AttachmentMenu({ onSelectImage, disabled }: Props) {
           type="button"
           aria-label="Attach"
           disabled={disabled}
-          className="size-[44px] flex items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-50 transition-colors shrink-0"
+          className="size-11 flex items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-50 transition-colors shrink-0"
         >
           <Paperclip className="size-[18px]" />
         </button>
