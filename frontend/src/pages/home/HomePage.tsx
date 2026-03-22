@@ -1,10 +1,15 @@
 import Sidebar from "@/app/components/Sidebar";
 import { useAuth } from "@/features/auth/providers/useAuth";
+import { Loader2 } from "lucide-react";
 import { Outlet } from "react-router-dom";
 function HomePage() {
   const { loading } = useAuth();
   if (loading) {
-    return <div>Loading...</div>;
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <Loader2 className="size-6 animate-spin text-muted-foreground" />
+      </div>
+    );
   }
 
   return (

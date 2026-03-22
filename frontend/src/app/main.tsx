@@ -1,4 +1,4 @@
-import { StrictMode } from "react";
+import { lazy, StrictMode, Suspense } from "react";
 import { createRoot } from "react-dom/client";
 import "../index.css";
 import App from "./App";
@@ -10,8 +10,10 @@ import HomePage from "@/pages/home/HomePage";
 import ProtectedRoute from "@/app/ProtectedRoute";
 import FriendsPage from "@/features/friends/pages/FriendsPage";
 import ChatPage from "@/pages/chat/ChatPage";
-import CallPage from "@/features/call/pages/CallPage";
 import { queryClient } from "@/lib/queryClient";
+import { Loader2 } from "lucide-react";
+
+const CallPage = lazy(() => import("@/features/call/pages/CallPage"));
 
 const router = createBrowserRouter([
   {
@@ -41,7 +43,15 @@ const router = createBrowserRouter([
         path: "call/:callId",
         element: (
           <ProtectedRoute>
-            <CallPage />
+            <Suspense
+              fallback={
+                <div className="flex min-h-screen items-center justify-center">
+                  <Loader2 className="size-6 animate-spin text-muted-foreground" />
+                </div>
+              }
+            >
+              <CallPage />
+            </Suspense>
           </ProtectedRoute>
         ),
       },

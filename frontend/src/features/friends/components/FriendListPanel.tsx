@@ -2,7 +2,7 @@ import React from "react";
 import formatLastSeen from "@/utils/helper.util";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Trash2 } from "lucide-react";
+import { Loader2, Trash2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -101,7 +101,11 @@ export default function FriendListPanel({
 
   function renderFriendList(): React.JSX.Element {
     if (isLoading) {
-      return <div className="text-center text-muted-foreground py-8">Loading...</div>;
+      return (
+        <div className="flex min-h-32 items-center justify-center py-8">
+          <Loader2 className="size-5 animate-spin text-muted-foreground" />
+        </div>
+      );
     }
 
     if (errorMessage && friends.length === 0) {

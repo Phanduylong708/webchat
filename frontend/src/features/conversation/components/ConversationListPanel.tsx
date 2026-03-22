@@ -2,6 +2,7 @@ import { useSearchParams } from "react-router-dom";
 import { useConversationsQuery } from "@/features/conversation/hooks/conversations";
 import { useOnlineUsers } from "@/hooks/useOnlineUsers";
 import type { ConversationsResponse } from "@/types/chat.type";
+import { Loader2 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { StackedAvatars } from "@/components/ui/stacked-avatars";
 import { getOptimizedAvatarUrl, getAvatarFallback } from "@/utils/image.util";
@@ -101,7 +102,11 @@ export default function ConversationListPanel(): React.JSX.Element {
 
   function renderConversationList(): React.JSX.Element {
     if (isLoading) {
-      return <div className="text-center text-muted-foreground py-8">Loading...</div>;
+      return (
+        <div className="flex min-h-32 items-center justify-center py-8">
+          <Loader2 className="size-5 animate-spin text-muted-foreground" />
+        </div>
+      );
     }
 
     if (error && conversations.length === 0) {
