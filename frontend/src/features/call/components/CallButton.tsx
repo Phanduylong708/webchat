@@ -1,6 +1,11 @@
 import type { JSX } from "react";
-import { useCall } from "@/features/call/providers/useCall";
 import { Button } from "@/components/ui/button";
+import {
+  selectCurrentCallId,
+  selectInitiateCall,
+  selectIsInitiatingCall,
+  useAppSideCallStore,
+} from "@/features/call/stores/appSideCallStore";
 import { Video } from "lucide-react";
 
 interface CallButtonProps {
@@ -12,15 +17,14 @@ interface CallButtonProps {
  * The button is disabled if a call is already in progress.
  */
 export function CallButton({ conversationId }: CallButtonProps): JSX.Element {
-  const { initiateCall, status } = useCall();
-
-  // A call is considered active if its status is not 'ended'.
-  // This prevents starting a new call while one is ringing, connecting, or active.
-  const isCallActive = status !== "ended";
+  const currentCallId = useAppSideCallStore(selectCurrentCallId);
+  const isInitiatingCall = useAppSideCallStore(selectIsInitiatingCall);
+  const initiateCall = useAppSideCallStore(selectInitiateCall);
+  const isDisabled = Boolean(currentCallId) || isInitiatingCall;
 
   const handleInitiateCall = () => {
-    if (isCallActive) return;
-    initiateCall(conversationId);
+    if (isDisabled) return;
+    void initiateCall(conversationId);
   };
 
   return (
@@ -28,7 +32,7 @@ export function CallButton({ conversationId }: CallButtonProps): JSX.Element {
       size="icon"
       variant="outline"
       onClick={handleInitiateCall}
-      disabled={isCallActive}
+      disabled={isDisabled}
       aria-label="Start video call"
     >
       <Video />

@@ -1,5 +1,4 @@
 import type { JSX } from "react";
-import { useCall } from "@/features/call/providers/useCall";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -11,10 +10,18 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  selectAcceptIncomingCall,
+  selectDeclineIncomingCall,
+  selectIncomingCall,
+  useAppSideCallStore,
+} from "@/features/call/stores/appSideCallStore";
 import { Phone, PhoneOff } from "lucide-react";
 
 export function IncomingCallDialog(): JSX.Element | null {
-  const { incomingCall, acceptCall, declineCall } = useCall();
+  const incomingCall = useAppSideCallStore(selectIncomingCall);
+  const acceptIncomingCall = useAppSideCallStore(selectAcceptIncomingCall);
+  const declineIncomingCall = useAppSideCallStore(selectDeclineIncomingCall);
 
   if (!incomingCall) return null;
 
@@ -59,14 +66,14 @@ export function IncomingCallDialog(): JSX.Element | null {
         {/* FOOTER: buttons */}
         <AlertDialogFooter className="flex flex-row items-center justify-center gap-8 sm:justify-center sm:space-x-0 w-full">
           <AlertDialogCancel
-            onClick={declineCall}
+            onClick={declineIncomingCall}
             className=" h-14 w-14 rounded-full border-none bg-red-500 dark:bg-red-500 text-white hover:bg-red-600 dark:hover:bg-red-600 hover:text-white shadow-sm transition-colors"
           >
             <PhoneOff />
           </AlertDialogCancel>
 
           <AlertDialogAction
-            onClick={acceptCall}
+            onClick={acceptIncomingCall}
             className="h-14 w-14 rounded-full bg-green-500 text-white hover:bg-green-600 hover:text-white shadow-sm transition-colors"
           >
             <Phone />
