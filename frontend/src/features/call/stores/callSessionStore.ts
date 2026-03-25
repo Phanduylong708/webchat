@@ -7,6 +7,7 @@ import type {
   CallLeavePayload,
   CallMediaStatePayload,
   CallParticipant,
+  CallStatus,
   ConversationType,
 } from "@/features/call/types/call.type";
 
@@ -55,7 +56,7 @@ const initialCallSessionState = {
 // Note 4: The backend still speaks in its older status language, where a call
 // may be `ringing`. The call-page store collapses `ringing` into `connecting`
 // because the call tab only needs to know "not active yet" versus "active".
-function toSessionStatus(status: "ringing" | "connecting" | "active" | "ended"): CallSessionStatus {
+function toSessionStatus(status: CallStatus): CallSessionStatus {
   if (status === "active") return "active";
   if (status === "ended") return "ended";
   return "connecting";
