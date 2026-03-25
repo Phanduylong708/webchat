@@ -1,4 +1,3 @@
-import { useCall } from "@/features/call/providers/useCall";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
@@ -13,6 +12,13 @@ import {
   selectStartScreenShare,
   selectStopScreenShare,
 } from "@/features/call/stores/mediaStore";
+import {
+  selectCallSessionConversationType,
+  selectCallSessionParticipants,
+  selectCallSessionStatus,
+  selectLeaveCurrentCall,
+  useCallSessionStore,
+} from "@/features/call/stores/callSessionStore";
 import { useWhiteboard } from "@/features/whiteboard/providers/useWhiteboard";
 import { Mic, MicOff, Video, VideoOff, Users, Monitor, PhoneOff, Presentation } from "lucide-react";
 
@@ -21,7 +27,10 @@ interface CallControlsProps {
 }
 
 export function CallControls({ onToggleParticipants }: CallControlsProps = {}): React.JSX.Element {
-  const { conversationType, status, leaveCall, participants } = useCall();
+  const conversationType = useCallSessionStore(selectCallSessionConversationType);
+  const status = useCallSessionStore(selectCallSessionStatus);
+  const participants = useCallSessionStore(selectCallSessionParticipants);
+  const leaveCurrentCall = useCallSessionStore(selectLeaveCurrentCall);
   const isAudioMuted = useMediaStore(selectIsAudioMuted);
   const isVideoMuted = useMediaStore(selectIsVideoMuted);
   const isStartingUserMedia = useMediaStore(selectIsStartingUserMedia);
@@ -136,7 +145,7 @@ export function CallControls({ onToggleParticipants }: CallControlsProps = {}): 
           {/* 3. Hangup - Most prominent */}
           <Button
             size="icon"
-            onClick={leaveCall}
+            onClick={leaveCurrentCall}
             className="bg-red-600 hover:bg-red-700 text-white rounded-full shadow-lg shadow-red-500/20 ml-2"
           >
             <PhoneOff className="size-5 fill-current" />

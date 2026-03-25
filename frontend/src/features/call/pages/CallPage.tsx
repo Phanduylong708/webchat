@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { useCall } from "@/features/call/providers/useCall";
+import { useParams } from "react-router-dom";
 import { useAuth } from "@/features/auth/providers/useAuth";
 import useSocket from "@/app/providers/useSocket";
 import { Button } from "@/components/ui/button";
@@ -33,11 +32,22 @@ import { useWhiteboard } from "@/features/whiteboard/providers/useWhiteboard";
 import { useRTCSignaling } from "@/features/call/hooks/sockets/useRTCSignaling";
 import { useRTCPeerLifecycle } from "@/features/call/hooks/rtc/useRTCPeerLifecycle";
 import { useScreenShareRTC } from "@/features/call/hooks/rtc/useScreenShareRTC";
+import { useCallSessionSockets } from "@/features/call/hooks/sockets/useCallSessionSockets";
 import { useEmitMediaState } from "@/features/call/hooks/media/useEmitMediaState";
 import { useStagePresenter } from "@/features/call/hooks/useStagePresenter";
 import MediaVideo from "@/features/call/components/media/MediaVideo";
 import { StageLayout } from "@/features/call/components/StageLayout";
 import { Whiteboard } from "@/features/whiteboard/components/Whiteboard";
+import {
+  selectCallSessionConversationType,
+  selectCallSessionEndReason,
+  selectCallSessionParticipants,
+  selectCallSessionStatus,
+  selectJoinCall,
+  useCallSessionStore,
+} from "@/features/call/stores/callSessionStore";
+
+type ActiveCallStatus = Extract<CallStatus, "connecting" | "active">;
 
 function AutoStartMedia({ enabled }: { enabled: boolean }): React.JSX.Element | null {
   const startUserMedia = useMediaStore((s) => s.startUserMedia);
@@ -88,12 +98,17 @@ function LocalPiP(): React.JSX.Element {
 
 export default function CallPage(): React.JSX.Element {
   const { callId } = useParams<{ callId: string }>();
-  const navigate = useNavigate();
   const { user } = useAuth();
-  const { joinCall, status, endReason, conversationType, participants } = useCall();
   const { isConnected } = useSocket();
+  const joinCall = useCallSessionStore(selectJoinCall);
+  const status = useCallSessionStore(selectCallSessionStatus);
+  const endReason = useCallSessionStore(selectCallSessionEndReason);
+  const conversationType = useCallSessionStore(selectCallSessionConversationType);
+  const participants = useCallSessionStore(selectCallSessionParticipants);
   const initManager = useMediaStore((s) => s.initManager);
   const disposeManager = useMediaStore((s) => s.disposeManager);
+
+  useCallSessionSockets();
 
   // Tie MediaStreamManager lifecycle to CallPage mount/unmount.
   // Must be explicit since there is no longer a MediaProvider wrapper.
@@ -102,11 +117,8 @@ export default function CallPage(): React.JSX.Element {
     return () => disposeManager();
   }, [initManager, disposeManager]);
 
-  // Dispose immediately when call *transitions to* ended — not on initial mount.
-  // CallProvider initialises status as "ended" (idle sentinel), so we must
-  // track the previous value and only act on a real transition away from a
-  // live state. Without this guard the effect fires on mount, disposes the
-  // manager before joinCall() runs, and leaves camera/mic permanently broken.
+  // Dispose media only when the session transitions into `ended`.
+  // The manager must survive normal re-renders while the call is connecting or active.
   const prevStatusRef = useRef(status);
   useEffect(() => {
     const prev = prevStatusRef.current;
@@ -152,8 +164,8 @@ export default function CallPage(): React.JSX.Element {
       }
     }
 
-    handleJoin();
-  }, [callId, joinCall, navigate, isConnected, user?.id]);
+    void handleJoin();
+  }, [callId, joinCall, isConnected, user?.id]);
 
   // 1. Loading State (Dark theme enforced)
   if (isLoading) {
@@ -196,6 +208,10 @@ export default function CallPage(): React.JSX.Element {
     );
   }
 
+  if (status === "idle") return <></>;
+
+  const activeStatus: ActiveCallStatus = status === "active" ? "active" : "connecting";
+
   return (
     <RTCProvider callId={callId ?? null} currentUserId={user?.id ?? null}>
       <ActiveCallContent
@@ -203,7 +219,7 @@ export default function CallPage(): React.JSX.Element {
         conversationType={conversationType}
         participants={participants}
         currentUserId={user?.id ?? null}
-        status={status}
+        status={activeStatus}
         remoteUser={remoteUser}
         showParticipants={showParticipants}
         setShowParticipants={setShowParticipants}
@@ -217,7 +233,7 @@ interface ActiveCallContentProps {
   conversationType: ConversationType | null;
   participants: CallParticipant[];
   currentUserId: number | null;
-  status: CallStatus;
+  status: ActiveCallStatus;
   remoteUser: User | null;
   showParticipants: boolean;
   setShowParticipants: React.Dispatch<React.SetStateAction<boolean>>;
