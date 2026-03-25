@@ -1,7 +1,5 @@
 import { AuthProvider } from "@/features/auth/providers/authContext";
 import { SocketProvider } from "@/app/providers/socketProvider";
-import { CallProvider } from "@/features/call/providers/callProvider";
-import { IncomingCallDialog } from "@/features/call/components/IncomingCallDialog";
 import { useAuth } from "@/features/auth/providers/useAuth";
 import { Outlet } from "react-router-dom";
 import { Toaster } from "sonner";
@@ -23,10 +21,7 @@ export default function App() {
     <ThemeProvider>
       <AuthProvider>
         <SocketProvider>
-          <CallProvider>
-            <IncomingCallDialog />
-            <AppContent />
-          </CallProvider>
+          <AppContent />
         </SocketProvider>
         <Toaster position="top-center" richColors duration={3000} />
       </AuthProvider>
