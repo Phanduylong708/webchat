@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import type { Socket } from "socket.io-client";
-import { useCall } from "@/features/call/providers/useCall";
 import type { VideoSource } from "@/features/call/types/media.type";
+import { selectCallSessionCallId, useCallSessionStore } from "@/features/call/stores/callSessionStore";
 
 interface UseEmitMediaStateParams {
   socket: Socket | null;
@@ -17,7 +17,7 @@ export function useEmitMediaState({
   isVideoMuted,
   videoSource,
 }: UseEmitMediaStateParams): void {
-  const { callId } = useCall();
+  const callId = useCallSessionStore(selectCallSessionCallId);
 
   useEffect(() => {
     if (!socket || !callId) return;
