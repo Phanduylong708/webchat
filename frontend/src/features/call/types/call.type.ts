@@ -77,34 +77,6 @@ export interface IncomingCall {
   caller: CallParticipant;
 }
 
-export interface CallState {
-  status: CallStatus;
-  callId: string | null;
-  conversationId: number | null;
-  conversationType: ConversationType | null;
-  isInitiator: boolean;
-  participants: CallParticipant[];
-  incomingCall: IncomingCall | null;
-  endReason: CallEndReason | null;
-}
-
-export interface CallContextValue extends CallState {
-  /** Initiate a call for a conversation (caller) */
-  initiateCall: (conversationId: number) => Promise<void>;
-  /** Accept incoming call (callee) - opens call page */
-  acceptCall: () => void;
-  /** Decline incoming call (callee) - emits call:decline */
-  declineCall: () => void;
-  /** Join a call by callId (used by CallPage on mount) */
-  joinCall: (callId: string) => Promise<CallJoinAck>;
-  /** Leave the current call */
-  leaveCall: () => void;
-  /** End the call for everyone */
-  endCall: () => void;
-  /** Reset call state to idle */
-  resetCall: () => void;
-}
-
 export const callEndReasonMessages: Record<CallEndReason, string> = {
   ended: "Call ended",
   timeout: "No answer",
