@@ -67,9 +67,7 @@ function HomePage() {
           <Outlet context={{ openMobileNav, closeMobileNav }} />
         </div>
       </div>
-      <MobileNavDrawer open={isMobileNavOpen} onClose={closeMobileNav}>
-        <Sidebar />
-      </MobileNavDrawer>
+      <MobileNavDrawer open={isMobileNavOpen} onClose={closeMobileNav} />
     </>
   );
 }
