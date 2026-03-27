@@ -7,7 +7,7 @@ import { getOptimizedAvatarUrl, getAvatarFallback } from "@/utils/image.util";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { uploadMyAvatarApi } from "@/features/auth/api/user.api";
-import { Dialog, DialogClose, DialogOverlay, DialogPortal, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogClose, DialogOverlay, DialogPortal, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 
 type EditableField = "displayName" | "email";
@@ -127,6 +127,7 @@ export function ProfileDialog({ trigger }: { trigger?: React.ReactNode }): React
       <DialogPortal>
         <DialogOverlay className="bg-(--overlay-dim)!" />
         <DialogPrimitive.Content
+          aria-describedby={undefined}
           className={cn(
             "bg-(--surface-raised) data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0",
             "data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed top-1/2 left-1/2 z-50",
@@ -134,6 +135,8 @@ export function ProfileDialog({ trigger }: { trigger?: React.ReactNode }): React
             "p-0 shadow-lg duration-200 focus:outline-none",
           )}
         >
+          <DialogTitle className="sr-only">Profile settings</DialogTitle>
+
           <div className="relative h-[100px]" style={{ background: "var(--signature-gradient)" }}>
             <DialogClose asChild>
               <button

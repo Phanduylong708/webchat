@@ -23,7 +23,7 @@ export default function MobileNavDrawer({
         side="left"
         showCloseButton={false}
         aria-describedby={undefined}
-        className="z-50 flex h-full w-[min(82vw,22rem)] max-w-full flex-col overflow-hidden border-r border-white/10 bg-sidebar p-0 text-sidebar-foreground shadow-2xl md:hidden"
+        className="z-50 flex h-full w-[min(82vw,22rem)] max-w-full flex-col overflow-hidden border-r border-white/10 bg-sidebar p-0 text-sidebar-foreground shadow-xl md:hidden"
       >
         <SheetTitle className="sr-only">App menu</SheetTitle>
 
