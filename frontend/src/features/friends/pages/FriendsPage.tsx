@@ -43,6 +43,7 @@ export default function FriendPage(): React.JSX.Element {
       friendsQuery.data.find((friend) => friend.id === friendIdFromUrl) ?? null
     );
   }, [friendIdFromUrl, friendsQuery.data]);
+  const hasSelectedFriend = Boolean(selectedFriend);
 
   const handleSelectFriend = useCallback(
     (friendId: number) => {
@@ -67,19 +68,24 @@ export default function FriendPage(): React.JSX.Element {
   }, [setSearchParams]);
 
   return (
-    <div className="grid grid-cols-[300px_1fr] h-screen">
-      <FriendListPanel
-        friends={friends}
-        isLoading={friendsQuery.isLoading}
-        error={friendsQuery.error ?? null}
-        refetch={() => {
-          void friendsQuery.refetch();
-        }}
-        selectedFriendId={selectedFriend?.id ?? null}
-        onSelectFriendId={handleSelectFriend}
-        onClearSelection={handleClearSelection}
-      />
-      <MainContentPanel>
+    <div className="h-screen md:grid md:grid-cols-[300px_1fr]">
+      <div className={hasSelectedFriend ? "hidden md:block" : "h-full"}>
+        <FriendListPanel
+          friends={friends}
+          isLoading={friendsQuery.isLoading}
+          error={friendsQuery.error ?? null}
+          refetch={() => {
+            void friendsQuery.refetch();
+          }}
+          selectedFriendId={selectedFriend?.id ?? null}
+          onSelectFriendId={handleSelectFriend}
+          onClearSelection={handleClearSelection}
+        />
+      </div>
+      <MainContentPanel
+        mobileDetail
+        className={hasSelectedFriend ? "h-full" : "hidden md:block"}
+      >
         {selectedFriend ? (
           <FriendProfile friend={selectedFriend} onClearSelection={handleClearSelection} />
         ) : (

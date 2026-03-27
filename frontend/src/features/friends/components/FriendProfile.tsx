@@ -7,7 +7,7 @@ import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { getOptimizedAvatarUrl } from "@/utils/image.util";
 import { Button } from "@/components/ui/button";
-import { MessageCircle, UserMinus } from "lucide-react";
+import { ArrowLeft, MessageCircle, UserMinus } from "lucide-react";
 import RemoveFriendDialog from "./RemoveFriendDialog";
 import { startPrivateChatApi } from "@/features/conversation/api/conversation.api";
 import useSocket from "@/app/providers/useSocket";
@@ -36,7 +36,20 @@ export default function FriendProfile({ friend, onClearSelection }: FriendProfil
   }
 
   return (
-    <Card className="max-w-md mx-auto mt-8">
+    <div className="flex h-full flex-col">
+      <div className="px-4 py-3 md:hidden">
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          onClick={() => onClearSelection?.()}
+          aria-label="Back to friends"
+        >
+          <ArrowLeft className="size-5" />
+        </Button>
+      </div>
+
+      <Card className="mx-auto w-full max-w-md md:mt-8">
       <CardContent className="pt-6">
         <Avatar className="size-24 mx-auto">
           <AvatarImage src={getOptimizedAvatarUrl(friend.avatar, 96)} alt="Friend's Avatar" />
@@ -69,6 +82,7 @@ export default function FriendProfile({ friend, onClearSelection }: FriendProfil
           }}
         ></RemoveFriendDialog>
       </CardFooter>
-    </Card>
+      </Card>
+    </div>
   );
 }
