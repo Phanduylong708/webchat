@@ -1,4 +1,5 @@
 import React from "react";
+import MobilePageHeader from "@/app/components/navigation/MobilePageHeader";
 import formatLastSeen from "@/utils/helper.util";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -11,6 +12,8 @@ import type { Friend } from "@/features/friends/types/friend.type";
 import AddFriendDialog from "@/features/friends/components/AddFriendDialog";
 import RemoveFriendDialog from "@/features/friends/components/RemoveFriendDialog";
 import useSocket from "@/app/providers/useSocket";
+import type { HomeLayoutOutletContext } from "@/pages/home/HomePage";
+import { useOutletContext } from "react-router-dom";
 
 interface FriendListPanelProps {
   friends: Friend[];
@@ -98,6 +101,7 @@ export default function FriendListPanel({
 }: FriendListPanelProps): React.JSX.Element {
   const errorMessage = error?.message ?? null;
   const { isConnected, presenceByUserId } = useSocket();
+  const { openMobileNav } = useOutletContext<HomeLayoutOutletContext>();
 
   function renderFriendList(): React.JSX.Element {
     if (isLoading) {
@@ -149,7 +153,8 @@ export default function FriendListPanel({
 
   return (
     <div className="h-full flex flex-col bg-muted border-r border-border">
-      <div className="p-4 flex items-center justify-between">
+      <MobilePageHeader title="Friends" onOpenNav={openMobileNav} action={<AddFriendDialog onFriendAdded={onSelectFriendId} />} />
+      <div className="hidden p-4 md:flex items-center justify-between">
         <h2 className="text-xl font-semibold">Friends</h2>
         <AddFriendDialog onFriendAdded={onSelectFriendId} />
       </div>

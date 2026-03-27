@@ -1,3 +1,4 @@
+import MobilePageHeader from "@/app/components/navigation/MobilePageHeader";
 import { useSearchParams } from "react-router-dom";
 import { useConversationsQuery } from "@/features/conversation/hooks/conversations";
 import { useOnlineUsers } from "@/hooks/useOnlineUsers";
@@ -10,6 +11,8 @@ import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import CreateGroupDialog from "@/features/conversation/components/CreateGroupDialog";
+import type { HomeLayoutOutletContext } from "@/pages/home/HomePage";
+import { useOutletContext } from "react-router-dom";
 
 const PREVIEW_DISPLAY: Record<string, string> = {
   image: "Photo",
@@ -99,6 +102,7 @@ function ConversationItem({ conversation }: { conversation: ConversationsRespons
 
 export default function ConversationListPanel(): React.JSX.Element {
   const { data: conversations = [], isLoading, error } = useConversationsQuery();
+  const { openMobileNav } = useOutletContext<HomeLayoutOutletContext>();
 
   function renderConversationList(): React.JSX.Element {
     if (isLoading) {
@@ -130,7 +134,8 @@ export default function ConversationListPanel(): React.JSX.Element {
 
   return (
     <div className="h-full min-h-0 flex flex-col bg-muted border-r border-border">
-      <div className="p-4 flex items-center justify-between">
+      <MobilePageHeader title="Conversations" onOpenNav={openMobileNav} action={<CreateGroupDialog />} />
+      <div className="hidden p-4 md:flex items-center justify-between">
         <h2 className="text-xl font-semibold">Conversations</h2>
         <CreateGroupDialog />
       </div>
