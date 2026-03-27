@@ -19,6 +19,8 @@ import type { DeleteMessageTarget } from "@/features/chat/components/message/Del
 import { CallButton } from "@/features/call/components/CallButton";
 import { useConversationPinsQuery, usePinMessageMutation, useUnpinMessageMutation } from "@/features/chat/hooks/pins";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import { ArrowLeft } from "lucide-react";
 
 type MessageDeletedPayload = {
   conversationId: number;
@@ -26,7 +28,7 @@ type MessageDeletedPayload = {
 };
 
 function ChatWindow(): React.JSX.Element {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const activeConversationId = Number(searchParams.get("conversationId")) || null;
 
   const { data: conversations = [] } = useConversationsQuery();
@@ -156,6 +158,17 @@ function ChatWindow(): React.JSX.Element {
     setIsPinnedPanelOpen(false);
   }, []);
 
+  const handleBackToList = useCallback(() => {
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.delete("conversationId");
+        return next;
+      },
+      { replace: true },
+    );
+  }, [setSearchParams]);
+
   const handleDeleteSuccess = useCallback(
     (target: DeleteMessageTarget) => {
       if (editTarget?.conversationId === target.conversationId && editTarget.messageId === target.messageId) {
@@ -230,6 +243,16 @@ function ChatWindow(): React.JSX.Element {
       <div className="px-4 py-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3 flex-1 min-w-0">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={handleBackToList}
+              className="shrink-0 md:hidden"
+              aria-label="Back to conversations"
+            >
+              <ArrowLeft className="size-5" />
+            </Button>
             {isGroup ? (
               <StackedAvatars users={previewMembers} />
             ) : (
