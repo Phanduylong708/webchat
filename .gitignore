@@ -58,6 +58,9 @@ docs/*
 frontend/docs/*
 .codex/*
 .agent/*
+.agents/*
+opencode.json
+skills-lock.json
 backups/
 AGENTS.md
 whitelist/*

@@ -1,4 +1,5 @@
 import React, { useCallback, useState } from "react";
+import { toast } from "sonner";
 import type { Friend } from "@/features/friends/types/friend.type";
 import {
   AlertDialog,
@@ -55,6 +56,7 @@ export default function RemoveFriendDialog({
   async function handleRemove() {
     try {
       await removeFriendMutation.mutateAsync(friend.id);
+      toast.success("Friend removed");
       onRemove?.();
       handleOpenChange(false);
     } catch (err) {

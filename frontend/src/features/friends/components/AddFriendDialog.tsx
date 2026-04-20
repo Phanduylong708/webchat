@@ -1,4 +1,5 @@
 import React, { useCallback, useMemo, useState } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -62,6 +63,7 @@ export default function AddFriendDialog({ onFriendAdded }: AddFriendDialogProps)
     setLocalError(null);
     try {
       const friend = await addFriendMutation.mutateAsync(trimmed);
+      toast.success("Friend added");
       onFriendAdded(friend.id);
       setUsername("");
       handleOpenChange(false);

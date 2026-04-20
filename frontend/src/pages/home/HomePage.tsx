@@ -4,6 +4,7 @@ import MobileNavDrawer from "@/app/components/navigation/MobileNavDrawer";
 import { useAuth } from "@/features/auth/providers/useAuth";
 import { IncomingCallDialog } from "@/features/call/components/IncomingCallDialog";
 import { useAppSideCallSockets } from "@/features/call/hooks/sockets/useAppSideCallSockets";
+import { ConversationUiProvider } from "@/features/conversation/providers/conversationUiProvider";
 import { Loader2 } from "lucide-react";
 import { Outlet, useLocation } from "react-router-dom";
 
@@ -59,14 +60,16 @@ function HomePage() {
   return (
     <>
       <IncomingCallDialog />
-      <div className="h-screen md:grid md:grid-cols-[minmax(56px,80px)_minmax(0,1fr)]">
-        <div className="hidden h-full md:block">
-          <Sidebar />
+      <ConversationUiProvider>
+        <div className="h-screen md:grid md:grid-cols-[minmax(56px,80px)_minmax(0,1fr)]">
+          <div className="hidden h-full md:block">
+            <Sidebar />
+          </div>
+          <div className="h-full min-w-0">
+            <Outlet context={{ openMobileNav, closeMobileNav }} />
+          </div>
         </div>
-        <div className="h-full min-w-0">
-          <Outlet context={{ openMobileNav, closeMobileNav }} />
-        </div>
-      </div>
+      </ConversationUiProvider>
       <MobileNavDrawer open={isMobileNavOpen} onClose={closeMobileNav} />
     </>
   );

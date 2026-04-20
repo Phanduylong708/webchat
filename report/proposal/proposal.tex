@@ -1,0 +1,159 @@
+% Generic LaTeX Template - University of Greenwich
+\documentclass[12pt,a4paper]{article}
+
+% Language setting
+\usepackage[english]{babel}
+
+% Set page size and margins
+\usepackage[margin=2.5cm]{geometry}
+
+% Set font to actual Times New Roman (requires XeLaTeX or LuaLaTeX)
+\usepackage{fontspec}
+\setmainfont{Times New Roman}
+
+% Essential packages for academic writing
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage[round,authoryear]{natbib}
+\usepackage{url}
+\usepackage[colorlinks=true, allcolors=blue]{hyperref}
+\usepackage{fancyhdr}
+\usepackage{setspace}
+\usepackage{etoolbox}
+\usepackage{float}
+\usepackage[skip=0.5em]{caption}
+\usepackage{enumitem}
+\usepackage{textcomp}
+
+% Use 1.5 line spacing for the main text.
+\onehalfspacing
+\captionsetup{font={stretch=1}}
+\AtBeginEnvironment{quote}{\singlespacing}
+\AtBeginEnvironment{quotation}{\singlespacing}
+\AtBeginEnvironment{thebibliography}{\singlespacing}
+
+\begin{document}
+
+% Title Page
+\begin{titlepage}
+    \centering
+    {\Large \textbf{UNIVERSITY OF GREENWICH}}\\[1cm]
+    {\Large \textbf{Undergraduate Final Year Project Proposal}}\\[2cm]
+    {\huge \textbf{[Your Project Title]}}\\[2cm]
+    {\Large \textbf{PHAN DUY LONG}}\\[1cm]
+    {\large \textbf{[Your Programme of Study]}}\\[0.5cm]
+    {\large \textbf{[Your Banner ID]}}\\[2cm]
+    \vfill
+\end{titlepage}
+
+% Table of Contents
+\tableofcontents
+\clearpage
+
+% Main content sections
+
+\section{Overview}
+This project proposes a web application for real-time communication, centred on text chat and browser-based calling. The idea comes from a common weakness in everyday online communication. Conversations do not stay in one format for long. People send a few messages, realise the topic is getting awkward in text, then switch to a call. When that happens across separate tools, the flow breaks. Context gets scattered. Small interruptions build up.
+
+The project therefore explores an integrated platform where users can chat, maintain ongoing conversations, and start live calls within the same environment. A shared whiteboard may also be included as a supporting feature during calls. The core of the project, though, is the connection between messaging and calling as part of one continuous user experience.
+
+I think this makes the topic worth pursuing for two reasons. The first is practical. Web users expect fast communication with very little setup, especially in study groups, remote teamwork, and informal online communities. The second is technical. Systems like this are hard to build cleanly. Some parts must preserve data reliably over time, especially conversations and message history. Other parts depend on immediate response, such as live updates and call signalling. Once browser-based media is added, the system becomes more demanding again because client coordination and media exchange have to work together under real-time conditions.
+
+The proposed implementation will use a full-stack web architecture. The frontend will support interaction and interface behaviour. The backend will handle application logic, APIs, and real-time events. A database will store persistent information, while socket-based communication will support low-latency features. Calling will be developed with native WebRTC so that the project engages directly with the mechanisms used by modern browsers for peer-to-peer media communication \citep{alvestrand2021,webrtcw3c2025}.
+
+What I want this proposal to lead to is a working prototype with clear design decisions and a credible evaluation process. The project is mainly concerned with implementation. Its value lies in showing that a single web application can support messaging and live calling in a way that is coherent for users and technically sound enough to justify further development.
+
+\section{Aim}
+
+This project aims to develop and assess a web application that combines real-time text chat with audio and video calling in a single platform.
+
+\section{Objectives}
+\subsection{Requirements analysis}
+\begin{itemize}
+    \item 3.1.1 Review academic and technical sources on real-time communication systems [2.0 weeks]
+    \item 3.1.2 Identify the functional requirements for chat and calling features [1.5 weeks]
+    \item 3.1.3 Define the non-functional requirements, including usability and responsiveness [1.0 week]
+\end{itemize}
+
+\subsection{System design}
+\begin{itemize}
+    \item 3.2.1 Design the overall architecture of the application [1.5 weeks]
+    \item 3.2.2 Design the database structure and core data relationships [1.0 week]
+    \item 3.2.3 Design the communication flow for messaging and calling [1.5 weeks]
+    \item 3.2.4 Produce interface designs for the main user interactions [1.0 week]
+\end{itemize}
+
+\subsection{System implementation}
+\begin{itemize}
+    \item 3.3.1 Develop the frontend interface for authentication, chat, and calling [4.0 weeks]
+    \item 3.3.2 Develop the backend services, APIs, and real-time event handling [4.0 weeks]
+    \item 3.3.3 Implement the database and core persistence features [2.0 weeks]
+    \item 3.3.4 Integrate the chat and calling functions into a single workflow [2.0 weeks]
+\end{itemize}
+
+\subsection{Testing, refinement and evaluation}
+\begin{itemize}
+    \item 3.4.1 Test key functions and edge cases across the application [1.5 weeks]
+    \item 3.4.2 Fix defects and refine the user experience [1.5 weeks]
+    \item 3.4.3 Evaluate the final prototype against the project requirements [1.0 week]
+\end{itemize}
+
+\section{Legal, Social, Ethical and Professional}
+\textbf{Legal:} This project handles personal communication, so data protection and privacy compliance are immediate legal concerns. The system may retain account information and message content. It may also keep limited call metadata where this is needed for operation. Copyright is another issue because users may upload images or other media that they do not own. Unauthorised access to accounts or stored data would raise further legal concerns. Any external libraries or services used in the project must be used within their licence terms.
+
+\textbf{Social:} This project is intended to keep chat and calling in one place, which may be useful for student work and small-group communication. The clearest social risk is misuse. A platform like this can be used for harassment or persistent unwanted contact. Access is another concern. If the system performs poorly on weak networks, some users will be excluded in practice.
+
+\textbf{Ethical:} Privacy is the central ethical issue in this project. A communication system should not collect or keep user data without a clear reason. Users should also be able to understand what the system stores and why. Security belongs here as well. If private messages or call metadata are exposed, the harm is direct and personal.
+
+\textbf{Professional:} This project should be carried out with careful technical judgement and a realistic scope. The main functions need proper testing before any claims are made about reliability. Limits in the final system should be stated plainly. Professional responsibility also means respecting academic integrity and using third-party tools within their licence terms.
+
+\section{Planning (see appendix A)}
+
+The project is planned over 22 weeks. Work will begin with requirements analysis so that the scope of the system is clear before further decisions are made. This stage will be followed by the main design work, including the overall structure of the application and the way chat and calling are expected to operate. Development will then take up most of the schedule. Frontend and backend work can overlap for part of this period, while integration will come later once the core functions are in place. The final weeks are reserved for testing and follow-up fixes. The finished prototype will then be checked against the original requirements. Progress will be tracked against the schedule in Appendix A.
+
+\renewcommand{\refname}{Initial References}
+% References section
+\begin{thebibliography}{99}
+
+\bibitem[Alvestrand(2021)]{alvestrand2021}
+Alvestrand, H.T. (2021) \textit{RFC 8825: Overview: Real-Time Protocols for Browser-Based Applications}. Internet Engineering Task Force (IETF). Available at: \url{https://www.rfc-editor.org/rfc/rfc8825} (Accessed: 1 April 2026).
+
+\bibitem[W3C(2025)]{webrtcw3c2025}
+World Wide Web Consortium (W3C) (2025) \textit{WebRTC: Real-Time Communication in Browsers}. W3C Recommendation, 13 March. Available at: \url{https://www.w3.org/TR/webrtc/} (Accessed: 1 April 2026).
+
+\end{thebibliography}
+
+% Optional: Appendices
+\clearpage
+\appendix
+\section{Appendix - Schedule of Work}
+\begin{figure} [H]
+    \centering
+    \includegraphics[width=1\linewidth]{Screenshot 2026-04-03 154809.png}
+\end{figure}
+
+% Optional: Declaration of AI Use (if required by the university)
+\clearpage
+%TC:ignore
+\begin{center}
+% Placeholder for University of Greenwich logo
+\includegraphics[width=0.4\textwidth]{logo.png}
+\end{center}
+\section*{Declaration of AI Use}
+
+Please append this page to the end of your assignment when you have used AI during the process of undertaking the assignment to acknowledge the ways in which you have used it.
+
+I have used AI while undertaking my assignment in the following ways:
+\begin{itemize}
+    \item To develop research questions on the topic – YES
+    \item To create an outline of the topic – YES
+    \item To explain concepts – YES
+    \item To support my use of language – YES
+    \item To summarise the following articles/resources:
+    \begin{enumerate}
+        \item 
+    \end{enumerate}
+    \item In other ways, as described below:
+\end{itemize}
+%TC:endignore
+\end{document}

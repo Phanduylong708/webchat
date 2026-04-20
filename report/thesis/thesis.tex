@@ -1,0 +1,345 @@
+% Generic LaTeX Template - University of Greenwich
+\documentclass[12pt,a4paper]{article}
+
+% Language setting
+\usepackage[english]{babel}
+
+% Set page size and margins
+\usepackage[margin=2.5cm]{geometry}
+
+% Set font to actual Times New Roman (requires XeLaTeX or LuaLaTeX)
+\usepackage{fontspec}
+\setmainfont{Times New Roman}
+
+% Essential packages for academic writing
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage[round,authoryear]{natbib}
+\usepackage{url}
+\usepackage[colorlinks=true, allcolors=blue]{hyperref}
+\usepackage{fancyhdr}
+\usepackage{setspace}
+\usepackage{etoolbox}
+\usepackage{float}
+\usepackage[skip=0.5em]{caption}
+\usepackage{enumitem}
+\usepackage{textcomp}
+
+% Use 1.5 line spacing for the main text.
+\onehalfspacing
+\captionsetup{font={stretch=1}}
+\AtBeginEnvironment{quote}{\singlespacing}
+\AtBeginEnvironment{quotation}{\singlespacing}
+\AtBeginEnvironment{thebibliography}{\singlespacing}
+
+\begin{document}
+
+% Title Page
+\begin{titlepage}
+    \centering
+    {\Large \textbf{UNIVERSITY OF GREENWICH}}\\[1cm]
+    {\Large \textbf{Undergraduate Final Year Project Proposal}}\\[2cm]
+    {\huge \textbf{WebChat: A Real-Time Communication Platform for Chat and Calling}}\\[2cm]
+    {\Large \textbf{[Your Name]}}\\[1cm]
+    {\large \textbf{[Your Programme of Study]}}\\[0.5cm]
+    {\large \textbf{[Your Banner ID]}}\\[2cm]
+    \vfill
+\end{titlepage}
+
+% ---------------------------------------------------------
+% ACKNOWLEDGEMENTS
+% ---------------------------------------------------------
+\clearpage
+\section*{Acknowledgements}
+\addcontentsline{toc}{section}{Acknowledgements}
+% [Write your acknowledgements here if any]
+
+% Table of Contents
+\tableofcontents
+\clearpage
+
+% Main content sections
+% ---------------------------------------------------------
+% **WORD LIMIT: 6000-7000 WORDS** (excluding references and appendices)
+% 1. INTRODUCTION
+% ---------------------------------------------------------
+\section{Introduction}
+
+\subsection{Introduction about the project subject}
+This project is based on WebChat, a web application for real-time communication. It is built around private and group conversations, with user accounts at the centre and friend management supporting the way people connect inside the system. Users can exchange text messages and share media in ongoing conversations. They can also move into audio or video calls from the same product. The system therefore brings together conversation history with live interaction, which gives the project a practical scope beyond a basic messaging interface.
+
+The feature set itself is familiar. What makes the project worth studying is the work needed to make that system function properly in a browser environment. Message history has to be stored reliably. Live updates have to feel immediate. Calling adds another layer because media streams and signalling state have to remain in step while a session is active. The project also includes a collaborative whiteboard and screen sharing during calls. Both features support the calling experience and extend the ways users can interact during a session. Even so, the centre of WebChat is still messaging and live communication between users. The later sections of this report stay close to that implemented system.
+
+\subsection{Project objectives}
+One of the main objectives of the project was to learn how a real-time communication system could be designed and built as a working web application. WebChat was used for that purpose. The project focused on an authenticated system in which users could hold private or group conversations over time. They needed to exchange messages within those conversations. They also needed a way to share media and move into audio or video calls without leaving the same environment. This gave the work a clear academic purpose, while keeping the objectives tied to a concrete piece of software from the beginning.
+
+Another objective was to understand the practical demands that appear once this kind of system is implemented in the browser and connected to a persistent backend. Conversation history had to remain available across sessions. Real-time updates had to reach the interface quickly enough for the system to feel responsive. Calling introduced another layer of difficulty because media streams and signalling state had to stay coordinated while a session was active. Working through those problems was part of the objective itself. The project also had to bring messaging and calling into one coherent system that could later be judged against its stated requirements.
+
+\subsection{Project plan}
+The project plan followed the technical shape of WebChat. Work had to cover account access, friend and conversation features, live messaging, image attachment, and calling. It also had to handle two different application paths. Conversation data and message history were handled through REST endpoints. Live messaging, presence, and calling were driven by Socket.IO events and call-session state.
+
+The feature scope in the project plan is set out below.
+
+\begin{itemize}
+    \item \textbf{In scope}
+    \begin{itemize}
+        \item user registration and login
+        \item friend management
+        \item private and group conversations
+        \item real-time messaging
+        \item message actions: reply, edit, delete, and pin
+        \item image attachment in conversations
+        \item audio and video calling
+        \item whiteboard and screen sharing within calls
+    \end{itemize}
+    \item \textbf{Out of scope}
+    \begin{itemize}
+        \item two-factor authentication
+        \item advanced group management
+        \item advanced call-room management
+        \item generic file sharing beyond image attachments
+        \item end-to-end encryption
+        \item native mobile applications
+    \end{itemize}
+\end{itemize}
+
+The technical work was divided into four work packages:
+
+\begin{itemize}
+    \item Authentication and access control covered registration, login, JWT issuance, and token checking across both REST requests and Socket.IO handshakes.
+    \item Conversation and messaging covered friendship management, private and group conversation flows, message history retrieval, and live events for sending, editing, deleting, typing, and pinning.
+    \item Image attachment handling was kept as a separate package because uploads and message creation did not happen in one step. Images had to be uploaded first and then associated with the relevant message.
+    \item Calling and in-call collaboration covered call session control, WebRTC signalling, participant media state, and the integration of whiteboard and screen sharing into active calls.
+\end{itemize}
+
+The main milestones were recorded as concrete delivery points in the schedule:
+
+\begin{itemize}
+    \item [dd/mm] -- requirements and scope definition completed
+    \item [dd/mm] -- database schema and API/socket responsibilities defined
+    \item [dd/mm] -- authentication and friend/conversation management completed
+    \item [dd/mm] -- real-time messaging, message actions, and image attachments completed
+    \item [dd/mm] -- audio/video calling and call-session handling completed
+    \item [dd/mm] -- integration testing, defect fixing, and final evaluation completed
+\end{itemize}
+
+Risk and quality control were handled throughout development. The hardest problems were likely to appear at the integration points. Shared authentication had to work across REST and sockets. Message history had to remain consistent with live chat events. Calling then had to fit into the same conversation workflow without breaking earlier features. Quality checks were tied to complete user journeys. Registration, conversation access, message exchange, image attachment, and calling were tested as connected flows. Time was also reserved near the end of the schedule for defects that only appeared once these features were used together.
+
+\subsection{Project outcomes}
+By the end of the project, WebChat had become a working communication web application built around accounts, conversations, messaging, and calls. Users could create accounts and sign in with either a username or an email address. A saved session let them return without logging in again. After signing in, they could move into the friends area and open conversations. They could also join calls. The profile dialog was available from the main interface, and users could replace their avatar there.
+
+From a friend profile, users could add that person as a friend. From that same profile, they could open a private conversation or start a call. Group conversations could be created by entering a title and selecting friends. Their member lists could be opened in a dialog. Members could be added or removed when the current user had permission to do so, and users could leave a group on their own.
+
+Inside conversations, users could load older messages through paginated history and continue with live text chat. Typing activity appeared in real time. Messages could be replied to, edited by their sender, deleted, and pinned. The pinned-messages view could reopen a pinned item and jump back to its position when that message was already present in the loaded history. Image messages were supported through an upload flow, and a caption could be added to the image. Emoji could also be inserted directly into message content.
+
+Calling was part of the finished system as well. Users could start calls and receive them, then continue in a dedicated call tab with microphone and camera controls. Group calls had their own participant panel. Screen sharing was available there. The same call space could also open a collaborative whiteboard. That whiteboard supported freehand drawing, rectangles, ellipses, lines, text objects, erasing, and shared cursor activity. Some unfinished areas remained. Profile editing beyond avatar upload was incomplete. Chat attachments were still limited to images. The whiteboard stayed inside the group-call flow. It did not appear as a separate part of the user flow.
+
+\subsection{Project evaluation}
+WebChat met its central objective at the level of the main communication flows. By the end of the project, account access, friend management, private and group conversations, live messaging, and audio or video calling were all present in working form. That point matters because the project depended on whether these parts could function together inside one environment. Session restoration, conversation history, live message updates, and call entry were all tied into the same product space, so the system was evaluated as one connected application rather than as a set of separate demonstrations.
+
+The finished system also showed that the work had moved past a narrow prototype stage. Conversation use could continue over time because message history remained available and message handling had enough depth to support correction and organisation after the first exchange. Replies, editing, deletion, pinning, image captions, and emoji support all contributed to that. Calling also had enough stability and structure to sit inside normal use. Users could receive a call, continue in a dedicated call tab, manage microphone and camera state, and stay inside the same wider product context. Group calls added screen sharing, a participant panel, and a shared whiteboard with drawing tools, text objects, erasing, and cursor sync.
+
+The unfinished areas were easier to see once those central flows were working. Profile management stopped at avatar upload. Chat attachments stopped at images. The evaluation evidence also remained limited. It came from running the implemented flows, observing the system in use, and checking the core features through functional testing. There was no formal user study behind the judgment. There was also no large-scale validation of performance. Any claim about broader usability across different users, or about reliability under heavier conditions, would need more evidence than the project currently provides.
+
+% ---------------------------------------------------------
+% 2. LITERATURE REVIEW
+% ---------------------------------------------------------
+\section{Literature Review}
+
+\subsection{Concept and characteristics}
+
+WebChat depends on messages and media reaching users fast enough that a
+conversation still feels like a conversation. That requirement sits inside
+a broader technical area. Real-time communication, as a field of study,
+covers any exchange of information where latency must stay below a
+threshold set by human perception or system function.
+
+No single definition dominates the literature, but the most common
+distinction separates hard real-time from soft real-time systems. In hard
+real-time systems, a missed deadline counts as a system failure. In soft
+real-time systems, a missed deadline reduces quality without breaking the
+system itself. \citet{karla2019} placed web-based communication in the
+second category: a late message or a dropped video frame degrades the
+experience, but the application keeps running. That framing fits the kind
+of system WebChat represents.
+
+The web brought an additional problem. HTTP followed a request-response
+model: the client sent a request, the server returned a response, and
+the connection closed. The server had no way to send data on its own
+\citep{loreto2011}. If a new message arrived for a user, the server
+could not push it to the browser. The client had to keep asking. That
+gap between what real-time communication needed and what HTTP could
+provide drove the development of new transport mechanisms for the web.
+
+\subsection{Application domains}
+
+Real-time communication appears across several industries. Consumer messaging and calling platforms are the most visible examples. Slack uses persistent connections so that messages appear on every member's screen within a fraction of a second, and transient events like typing indicators flow between clients without ever being written to a database \citep{thangudu2023}. Discord applies the same principle to voice: participants in a channel hear each other with latency low enough for natural conversation while playing a game, even when thousands of channels run at the same time \citep{vass2018}.
+
+Outside consumer software, the same technical requirement shows up in healthcare, financial trading, industrial monitoring, and online education. The specific latency thresholds differ between domains, but all of them depend on bidirectional data exchange fast enough that users or systems can act on incoming information without noticeable delay. A systematic review of 83 studies confirmed that demand for this kind of communication grew sharply with the shift to remote work \citep{abozariba2025}.
+
+\subsection{Core mechanisms and protocols}
+
+Two technologies have become the standard tools for real-time communication on the web. WebSocket handles the exchange of text and structured data between client and server. WebRTC handles audio and video directly between browsers. They solve different parts of the same problem, and production systems routinely use both together.
+
+WebSocket is a communication protocol defined in RFC 6455 \citep{fette2011}. Where HTTP closes the connection after each response, WebSocket keeps it open so the server can push data to the client at any time without waiting for a request. The connection starts as a normal HTTP request. The client asks the server to switch protocols through an upgrade handshake, and once both sides agree, the link changes from HTTP to WebSocket. After that, either side can send data frames with as little as two bytes of overhead per frame. The trade-off is that each open connection ties up server resources, which becomes a scaling concern when thousands of clients connect at once. Underneath, WebSocket runs on TCP. Every message arrives in order and nothing gets lost, but if one packet stalls, everything behind it waits. This behaviour, called head-of-line blocking, is acceptable for chat messages and notifications, where completeness matters more than speed.
+
+Streaming audio and video introduces a different constraint. A packet retransmitted two seconds late is useless to a video decoder that has already moved on. WebRTC, standardised as a W3C Recommendation \citep{jennings2025}, addresses this by enabling peer-to-peer media exchange directly between browsers. The two endpoints connect to each other, removing a network hop and cutting latency. Establishing that direct link is the hard part because both peers usually sit behind network address translators that hide their real addresses. WebRTC solves this through a process called ICE, Interactive Connectivity Establishment, which gathers every network path available to each peer and tests them in order. Each peer first contacts a STUN server, a lightweight service that tells the peer what its public-facing address looks like from outside the NAT. If a direct path still cannot be established, a TURN server steps in as a relay to forward the traffic between peers, at the cost of extra latency and server bandwidth. Before any media flows, the two peers also need to agree on what to send. They exchange session descriptions through a signaling channel to negotiate codec selection and stream format. Once connected, media travels over UDP. Lost packets are not retransmitted; the stream moves forward. A dropped video frame causes a brief glitch, but the conversation continues without freezing.
+
+\subsection{Industry implementations}
+
+The protocols described above leave many architectural decisions to the application. How a platform connects clients, routes data, and handles scale depends on what it is optimising for. Two widely documented systems illustrate different approaches.
+
+Slack built its real-time messaging entirely on WebSocket. Each client holds a persistent WebSocket connection to the nearest Gateway Server. When a user sends a message, it travels from the API layer to a Channel Server selected by consistent hashing on the channel identifier. That Channel Server then fans the message out to every Gateway Server whose clients are subscribed to the channel, and each Gateway Server pushes it to the relevant browsers and apps. Typing indicators follow the same path but skip the database entirely, since they carry no lasting value. Deploying Gateway Servers across multiple geographic regions keeps the first network hop short, and the full journey from sender to receiver completes in under 500 milliseconds globally \citep{thangudu2023}.
+
+Discord faced a different problem. Voice communication in a gaming channel can involve hundreds of participants at once, and peer-to-peer connections between all of them would be impractical. Discord chose a server-mediated architecture instead: every client sends its audio to a Selective Forwarding Unit, a media server that receives each stream and forwards it individually to the other participants without mixing or decoding. This keeps server processing light while still centralising all traffic through Discord's infrastructure, which hides participants' IP addresses and lets moderators mute or disconnect users at the server level. On desktop and mobile, Discord uses a modified version of the WebRTC native library with a stripped-down connection setup. The standard session negotiation was replaced with a custom exchange of roughly one thousand bytes, and the connectivity checks that WebRTC normally runs to find a path between two peers were removed entirely because every client connects directly to the SFU rather than to each other. Browser clients use the standard WebRTC API, and the SFU translates between the two formats as it forwards packets \citep{vass2018}.
+
+\subsection{Conclusion}
+
+The preceding sections defined real-time communication as a class of systems where latency must stay within human-perceptible thresholds, traced its adoption across domains from messaging and voice to healthcare and industrial control, examined the protocols that make it possible, and reviewed how production platforms built on those protocols at scale. A recurring finding across all four areas is a tension between reliability and latency. Ordered, lossless delivery matters for text but actively harms audio and video, where a late retransmitted frame is worse than a skipped one. Architecture carries a parallel tension: server-mediated designs give the operator control over routing, privacy, and scale, but require dedicated media infrastructure. Peer-to-peer designs remove that infrastructure and the extra hop, but expose participant addresses and scale poorly with group size.
+
+WebChat's architecture sits on the peer-to-peer side of that split. For voice and video, each participant opens a direct WebRTC connection to every other participant in a mesh topology, with no media server between them. This keeps the backend simple but limits group calls to small numbers of participants. The server's only role in call establishment is relaying signaling messages, specifically session descriptions and ICE candidates, over the same persistent WebSocket connection used for chat. It does not inspect or modify any of them. Text messages and presence events reach recipients through event-driven broadcast on the server side. The entire system runs on open standards with no third-party communication SDK, confirming that WebSocket and WebRTC are sufficient to build a working real-time communication system at small-to-medium scale without dedicated media infrastructure.
+
+% ---------------------------------------------------------
+% 3. TECHNOLOGY AND TOOLS
+% ---------------------------------------------------------
+\section{Technology and Tools}
+
+\subsection{React}
+
+React is a JavaScript library for building user interfaces out of reusable components, each managing its own state and rendering logic. WebChat chose React because the interface must respond to events from multiple sources at once: a new message, a participant joining a call, both potentially in the same moment.
+
+React renders the message list, the conversation sidebar, the video call grid, whiteboard UI, etc in Webchat. A single incoming message needs to appear in the conversation and update the sidebar preview. Without a framework, each update is a separate manual operation on the page structure, and the developer must also track which event listeners belong to which screen and remove them when the user navigates away. React handles both problems. The developer describes what a component should look like for a given state, and React determines what changed and updates only those parts of the page. Listener setup and teardown are tied to the component lifecycle, so each feature manages its own listeners and they are removed automatically when the component leaves the screen.
+
+% \subsection{Express}
+% \subsection{Socket.IO}
+% \subsection{WebRTC and MediaStream API}
+% \subsection{Fabric.js}
+% ---------------------------------------------------------
+% 4. SOFTWARE PRODUCT REQUIREMENTS
+% ---------------------------------------------------------
+\section{Software Product Requirements}
+
+\subsection{Review/overview of other similar products}
+
+\subsection{Use Case Diagrams/User Stories}
+
+\subsection{Use Case Specifications/Activity Diagrams \& Context Diagrams/Sequence Diagrams}
+
+\subsection{ERD}
+
+\subsection{Sitemap}
+
+% ---------------------------------------------------------
+% 5. REVIEW OF SOFTWARE DEVELOPMENT METHODOLOGIES
+% ---------------------------------------------------------
+\clearpage
+\section{Review of Software Development Methodologies}
+
+\subsection{Waterfall}
+% (should be short. About 1-2 pages)
+
+\subsection{Spiral}
+% (should be short. About 1-2 pages)
+
+\subsection{RAD (Prototyping)}
+% (should be short. About 1-2 pages)
+
+\subsection{Agile}
+% (should be short. About 1-2 pages)
+
+\subsection{Your selection of a software development methodologies and your justification} % can choose a different method from the list above.
+
+% ---------------------------------------------------------
+% 6. DESIGN AND IMPLEMENTATION OF YOUR DEMO PRODUCT
+% ---------------------------------------------------------
+\section{Design and Implementation of your demo product}
+
+\subsection{Product Analysis and Design}
+\begin{itemize}
+    \item GUI design % low fidelity prototype
+    \item Analysis
+    \item Design (Basic and Detailed) % UI/UX princible (eg. Fitts's law, etc)
+\end{itemize}
+
+\subsection{Features include with screenshots}
+% Major screenshots (about 5-7 screenshots) with short explanations
+
+\subsection{Product Implementation}
+% Major pieces of code (about 5-7 pieces of code) with technical explanations
+
+\subsection{Evaluation of your product (good/bad)} %(about 1-2 pages)
+
+% 7. CONCLUSIONS
+% ---------------------------------------------------------
+\section{Conclusions}
+
+\subsection{What you have learned in this project?}
+% (about 1-2 pages)
+
+\subsection{What is the result of this project?}
+% (about 1-2 pages)
+
+\subsection{Further development of this project}
+% (about 1-2 pages)
+% What can be done next after this project (whether we can improve? Or Product fine-tuning? Or develop another product? Or put product in market? Or any other research follows this project? Or...)
+
+% References section
+\begin{thebibliography}{99}
+%Sample
+\bibitem[Alvestrand(2021)]{alvestrand2021}
+Alvestrand, H.T. (2021) \textit{RFC 8825: Overview: Real-Time Protocols for Browser-Based Applications}. Internet Engineering Task Force (IETF). Available at: \url{https://www.rfc-editor.org/rfc/rfc8825} (Accessed: 1 April 2026).
+
+\bibitem[Karla and Tarnawski(2019)]{karla2019}
+Karla, T. and Tarnawski, J. (2019) `Soft real-time communication with WebSocket and WebRTC protocols performance analysis', in \textit{Proceedings of the 24th International Conference on Methods and Models in Automation and Robotics (MMAR)}. IEEE, pp. 1--6.
+
+\bibitem[Loreto et al.(2011)]{loreto2011}
+Loreto, S., Saint-Andre, P., Salsano, S. and Wilkins, G. (2011) \textit{RFC 6202: Known Issues and Best Practices for the Use of Long Polling and Streaming in Bidirectional HTTP}. Internet Engineering Task Force (IETF). Available at: \url{https://www.rfc-editor.org/rfc/rfc6202} (Accessed: 1 April 2026).
+
+\bibitem[Thangudu(2023)]{thangudu2023}
+Thangudu, S. (2023) `Real-time Messaging', \textit{Slack Engineering Blog}, 11 April. Available at: \url{https://slack.engineering/real-time-messaging/} (Accessed: 7 April 2026).
+
+\bibitem[Vass(2018)]{vass2018}
+Vass, J. (2018) `How Discord Handles Two and Half Million Concurrent Voice Users using WebRTC', \textit{Discord Blog}, 10 September. Available at: \url{https://discord.com/blog/how-discord-handles-two-and-half-million-concurrent-voice-users-using-webrtc} (Accessed: 7 April 2026).
+
+\bibitem[Abozariba et al.(2025)]{abozariba2025}
+Abozariba, R., Aydin, M., Payne, E., Koziel, S. and Ma, X. (2025) `A systematic review on WebRTC for potential applications and challenges beyond audio video streaming', \textit{Multimedia Tools and Applications}, 84, pp. 2909--2946.
+
+\bibitem[Fette and Melnikov(2011)]{fette2011}
+Fette, I. and Melnikov, A. (2011) \textit{RFC 6455: The WebSocket Protocol}. Internet Engineering Task Force (IETF). Available at: \url{https://www.rfc-editor.org/rfc/rfc6455} (Accessed: 8 April 2026).
+
+\bibitem[Jennings et al.(2025)]{jennings2025}
+Jennings, C., Bostr\"{o}m, H., Bruaroey, J.E. and Ovchinnikov, A. (2025) \textit{WebRTC: Real-Time Communication in Browsers}. W3C Recommendation, 13 March. Available at: \url{https://www.w3.org/TR/webrtc/} (Accessed: 8 April 2026).
+
+\end{thebibliography}
+
+% Optional: Appendices
+\clearpage
+\appendix
+\section{Appendix}
+
+
+% Optional: Declaration of AI Use (if required by the university)
+\clearpage
+%TC:ignore
+\begin{center}
+% Placeholder for University of Greenwich logo
+\includegraphics[width=0.4\textwidth]{logo.png}
+\end{center}
+\section*{Declaration of AI Use}
+
+Please append this page to the end of your assignment when you have used AI during the process of undertaking the assignment to acknowledge the ways in which you have used it.
+
+I have used AI while undertaking my assignment in the following ways:
+\begin{itemize}
+    \item To develop research questions on the topic – YES
+    \item To create an outline of the topic – YES
+    \item To explain concepts – YES
+    \item To support my use of language – YES
+    \item To summarise the following articles/resources:
+    \begin{enumerate}
+        \item 
+    \end{enumerate}
+    \item In other ways, as described below:
+\end{itemize}
+%TC:endignore
+\end{document}

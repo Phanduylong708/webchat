@@ -1,4 +1,3 @@
-import { ConversationUiProvider } from "@/features/conversation/providers/conversationUiProvider";
 import { useMessageSockets } from "@/features/chat/hooks/useMessageSockets";
 import ConversationListPanel from "@/features/conversation/components/ConversationListPanel";
 import ChatWindow from "@/features/chat/components/ChatWindow";
@@ -11,18 +10,16 @@ export default function ChatPage(): React.JSX.Element {
   const hasActiveConversation = Boolean(Number(searchParams.get("conversationId")) || null);
 
   return (
-    <ConversationUiProvider>
-      <div className="h-screen md:grid md:grid-cols-[300px_minmax(0,1fr)]">
-        <div className={hasActiveConversation ? "hidden md:block" : "h-full"}>
-          <ConversationListPanel />
-        </div>
-        <MainContentPanel
-          mobileDetail
-          className={hasActiveConversation ? "h-full" : "hidden md:block"}
-        >
-          <ChatWindow />
-        </MainContentPanel>
+    <div className="h-screen md:grid md:grid-cols-[300px_minmax(0,1fr)]">
+      <div className={hasActiveConversation ? "hidden md:block" : "h-full"}>
+        <ConversationListPanel />
       </div>
-    </ConversationUiProvider>
+      <MainContentPanel
+        mobileDetail
+        className={hasActiveConversation ? "h-full" : "hidden md:block"}
+      >
+        <ChatWindow />
+      </MainContentPanel>
+    </div>
   );
 }
